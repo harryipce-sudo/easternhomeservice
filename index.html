@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eastern Home Service Quote Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">E</div>
+        <div>
+          <p class="brand-name">Eastern Home Service</p>
+          <p class="brand-subtitle">Blind Quote Builder</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item active" href="#quote-builder">Quote Builder</a>
+        <a class="nav-item" href="#pricing-guide">Pricing Guide</a>
+        <a class="nav-item" href="#quote-preview">Quote Preview</a>
+      </nav>
+
+      <section class="sidebar-card">
+        <p class="eyebrow">Pricing Rules</p>
+        <ul class="rules-list">
+          <li>Supply retail uses `cost x 1.40`.</li>
+          <li>Installation wholesale baseline is `$20`.</li>
+          <li>Installation retail added to quote is `$35`.</li>
+          <li>Width and height use the next matching table size.</li>
+        </ul>
+      </section>
+
+      <section class="sidebar-card pricing-note">
+        <p class="eyebrow">Loaded Tables</p>
+        <p>Wintex Group 2, Group 3, and Group 4 pricing from your PDF are built into this app.</p>
+      </section>
+    </aside>
+
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <p class="section-kicker">Estimator</p>
+          <h1 id="quote-builder">Roller Blind Quote Builder</h1>
+          <p class="page-copy">Enter the location, number of blinds, group, width, and height. The app finds the correct blind cost and calculates the quote automatically.</p>
+        </div>
+        <div class="header-actions">
+          <button class="ghost-button" id="reset-quote" type="button">Reset</button>
+          <button class="primary-button" id="print-quote" type="button">Generate PDF</button>
+        </div>
+      </header>
+
+      <section class="panel customer-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Customer Details</h2>
+            <p>Optional details to include in the quote preview.</p>
+          </div>
+        </div>
+        <div class="customer-grid">
+          <label>
+            <span>Customer Name</span>
+            <input id="customer-name" type="text" placeholder="Client name">
+          </label>
+          <label>
+            <span>Phone</span>
+            <input id="customer-phone" type="text" placeholder="0400 000 000">
+          </label>
+          <label>
+            <span>Address</span>
+            <input id="customer-address" type="text" placeholder="Job address">
+          </label>
+          <label>
+            <span>Quote Number</span>
+            <input id="quote-number" type="text" placeholder="EHS-001">
+          </label>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="workspace">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Blind Line Items</h2>
+                <p>Add each location or room as a separate line.</p>
+              </div>
+              <button class="secondary-button" id="add-line" type="button">Add Blind</button>
+            </div>
+
+            <div class="table-wrap">
+              <table class="quote-table">
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>Location</th>
+                    <th>Group</th>
+                    <th>Width (mm)</th>
+                    <th>Height (mm)</th>
+                    <th>Service</th>
+                    <th>Matched Table Size</th>
+                    <th>Blind Cost</th>
+                    <th>Line Total</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="quote-lines"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel settings-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Quote Settings</h2>
+                <p>These defaults can be changed at any time.</p>
+              </div>
+            </div>
+            <div class="settings-grid">
+              <label>
+                <span>Supply Markup</span>
+                <div class="input-suffix">
+                  <input id="supply-markup" type="number" min="0" step="1" value="40">
+                  <strong>%</strong>
+                </div>
+              </label>
+              <label>
+                <span>Install Cost Baseline</span>
+                <div class="input-prefix">
+                  <strong>$</strong>
+                  <input id="install-cost" type="number" min="0" step="1" value="20">
+                </div>
+              </label>
+              <label>
+                <span>Install Retail Price</span>
+                <div class="input-prefix">
+                  <strong>$</strong>
+                  <input id="install-retail" type="number" min="0" step="1" value="35">
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel photos-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>House Photos</h2>
+                <p>Save measurement photos for this quote while you are on site.</p>
+              </div>
+            </div>
+            <div class="photos-toolbar">
+              <label class="upload-button" for="house-photos">Add Photos</label>
+              <input id="house-photos" type="file" accept="image/*" multiple hidden>
+              <p class="photos-meta" id="photo-count">0 photos added</p>
+            </div>
+            <div class="photo-grid" id="photo-grid">
+              <div class="photo-empty" id="photo-empty">No house photos added yet.</div>
+            </div>
+          </section>
+
+          <section class="panel" id="pricing-guide">
+            <div class="panel-heading">
+              <div>
+                <h2>Pricing Guide</h2>
+                <p>The calculator automatically rounds up to the next matching width and drop in the loaded table.</p>
+              </div>
+            </div>
+            <div class="guide-grid">
+              <div class="guide-card">
+                <p class="eyebrow">Width Steps</p>
+                <p id="width-guide"></p>
+              </div>
+              <div class="guide-card">
+                <p class="eyebrow">Drop Steps</p>
+                <p id="drop-guide"></p>
+              </div>
+              <div class="guide-card">
+                <p class="eyebrow">How Quote Works</p>
+                <p>Supply retail = blind cost plus markup. If installation is included, the app adds the retail installation amount for each blind.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="summary-column">
+          <section class="summary-card" id="quote-preview">
+            <div class="summary-top">
+              <p class="eyebrow">Live Quote</p>
+              <h2>Quote Summary</h2>
+            </div>
+
+            <div class="summary-metrics">
+              <div>
+                <span>Blind Cost Total</span>
+                <strong id="materials-cost-total">$0.00</strong>
+              </div>
+              <div>
+                <span>Supply Retail Total</span>
+                <strong id="supply-retail-total">$0.00</strong>
+              </div>
+              <div>
+                <span>Install Cost Total</span>
+                <strong id="install-cost-total">$0.00</strong>
+              </div>
+              <div>
+                <span>Install Retail Total</span>
+                <strong id="install-retail-total">$0.00</strong>
+              </div>
+              <div>
+                <span>Subtotal Ex GST</span>
+                <strong id="subtotal-ex-gst">$0.00</strong>
+              </div>
+              <div>
+                <span>GST (10%)</span>
+                <strong id="gst-total">$0.00</strong>
+              </div>
+              <div class="grand-total">
+                <span>Total Quote Incl GST</span>
+                <strong id="grand-total">$0.00</strong>
+              </div>
+            </div>
+
+            <div class="profit-card">
+              <span>Estimated Gross Profit</span>
+              <strong id="gross-profit">$0.00</strong>
+              <p class="profit-percent" id="profit-percent">0.0% profit margin</p>
+              <p id="profit-explainer">Based on supply markup and install retail minus the blind cost and install cost baseline.</p>
+            </div>
+
+            <div class="preview-paper" id="quote-paper">
+              <div class="preview-header">
+                <div>
+                  <p class="preview-brand">Eastern Home Service</p>
+                  <p class="preview-title">Quote</p>
+                </div>
+                <div class="preview-meta">
+                  <span id="preview-quote-number">Quote: Draft</span>
+                  <span id="preview-date"></span>
+                </div>
+              </div>
+              <div class="preview-client">
+                <p id="preview-customer">Customer: -</p>
+                <p id="preview-phone">Phone: -</p>
+                <p id="preview-address">Address: -</p>
+                <p id="preview-photos">House photos: 0</p>
+              </div>
+              <div class="preview-lines" id="preview-lines"></div>
+              <div class="preview-total-row">
+                <span>Subtotal Ex GST</span>
+                <strong id="preview-subtotal">$0.00</strong>
+              </div>
+              <div class="preview-total-row">
+                <span>GST (10%)</span>
+                <strong id="preview-gst">$0.00</strong>
+              </div>
+              <div class="preview-total-row">
+                <span>Total Quote Incl GST</span>
+                <strong id="preview-total">$0.00</strong>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
