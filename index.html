@@ -189,6 +189,39 @@
               <div class="photo-empty" id="photo-empty">No house photos added yet.</div>
             </div>
           </section>
+
+          <section class="panel message-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Client Follow-Up</p>
+                <h2>Customer Message</h2>
+                <p>Auto-generate a clean email or message with the order summary and total quote incl. GST.</p>
+              </div>
+            </div>
+            <div class="message-grid">
+              <div class="message-card">
+                <div class="message-card-top">
+                  <div>
+                    <p class="message-label">Email Draft</p>
+                    <h3>Ready To Send</h3>
+                  </div>
+                  <button class="secondary-button copy-button" id="copy-email" type="button">Copy Email</button>
+                </div>
+                <textarea id="email-draft" class="message-output" readonly></textarea>
+              </div>
+              <div class="message-card">
+                <div class="message-card-top">
+                  <div>
+                    <p class="message-label">Message Draft</p>
+                    <h3>Short Version</h3>
+                  </div>
+                  <button class="secondary-button copy-button" id="copy-message" type="button">Copy Message</button>
+                </div>
+                <textarea id="message-draft" class="message-output" readonly></textarea>
+              </div>
+            </div>
+            <p class="copy-feedback" id="copy-feedback"></p>
+          </section>
         </div>
 
         <aside class="summary-column">

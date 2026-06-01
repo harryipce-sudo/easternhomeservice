@@ -158,7 +158,12 @@ const els = {
   previewLines: document.querySelector("#preview-lines"),
   previewSubtotal: document.querySelector("#preview-subtotal"),
   previewGst: document.querySelector("#preview-gst"),
-  previewTotal: document.querySelector("#preview-total")
+  previewTotal: document.querySelector("#preview-total"),
+  emailDraft: document.querySelector("#email-draft"),
+  messageDraft: document.querySelector("#message-draft"),
+  copyEmail: document.querySelector("#copy-email"),
+  copyMessage: document.querySelector("#copy-message"),
+  copyFeedback: document.querySelector("#copy-feedback")
 };
 
 function createLine() {
@@ -555,6 +560,12 @@ function updateSummary() {
     gstTotal: blindTotals.gstTotal + curtainTotals.gstTotal,
     grandTotal
   });
+
+  syncMessageDrafts({
+    subtotalExGst: blindTotals.subtotalExGst + curtainTotals.subtotalExGst,
+    gstTotal: blindTotals.gstTotal + curtainTotals.gstTotal,
+    grandTotal
+  });
 }
 
 function syncPreview(totals) {
@@ -597,6 +608,79 @@ function syncPreview(totals) {
 
   if (!state.lines.length && !state.curtainLines.length) {
     els.previewLines.innerHTML = `<span class="error-text">Add a product line to build the quote.</span>`;
+  }
+}
+
+function buildOrderSummaryText(totals) {
+  const blindCount = state.lines.length;
+  const curtainCount = state.curtainLines.filter((line) => line.product === "curtain").length;
+  const sheerCount = state.curtainLines.filter((line) => line.product === "sheer").length;
+  const customerName = state.customer.name || "there";
+  const quoteNumber = state.customer.quoteNumber ? `Quote ${state.customer.quoteNumber}` : "your quote";
+  const summaryParts = [];
+
+  if (blindCount) {
+    summaryParts.push(`${blindCount} roller blind${blindCount === 1 ? "" : "s"}`);
+  }
+
+  if (curtainCount) {
+    summaryParts.push(`${curtainCount} curtain${curtainCount === 1 ? "" : "s"}`);
+  }
+
+  if (sheerCount) {
+    summaryParts.push(`${sheerCount} sheer${sheerCount === 1 ? "" : "s"}`);
+  }
+
+  return {
+    productSummary: summaryParts.join(", ") || "0 items",
+    customerName,
+    quoteNumber,
+    totalText: formatCurrency(totals.grandTotal)
+  };
+}
+
+function syncMessageDrafts(totals) {
+  const summary = buildOrderSummaryText(totals);
+
+  els.emailDraft.value = `Hi ${summary.customerName},
+
+Thank you for your enquiry with Eastern Home Service.
+
+${summary.quoteNumber} is ready.
+Order summary: ${summary.productSummary}
+Total amount incl. GST: ${summary.totalText}
+
+A 50% deposit is required once you decide to place the order.
+Lead time for roller blinds is 5-7 days.
+Lead time for curtains and sheers is 4-6 weeks.
+
+Please let us know if you would like to proceed with the order.
+
+Kind regards,
+Eastern Home Service`;
+
+  els.messageDraft.value = `Hi ${summary.customerName}, ${summary.quoteNumber} is ready. Order summary: ${summary.productSummary}. Total incl. GST: ${summary.totalText}. A 50% deposit is required once you decide to place the order. Roller blinds lead time is 5-7 days. Curtains and sheers lead time is 4-6 weeks. Please let us know if you would like to proceed. Eastern Home Service`;
+}
+
+async function copyText(text, label) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.setAttribute("readonly", "");
+      helper.style.position = "absolute";
+      helper.style.left = "-9999px";
+      document.body.appendChild(helper);
+      helper.select();
+      document.execCommand("copy");
+      helper.remove();
+    }
+
+    els.copyFeedback.textContent = `${label} copied.`;
+  } catch (error) {
+    els.copyFeedback.textContent = `Unable to copy ${label.toLowerCase()}.`;
   }
 }
 
@@ -734,6 +818,14 @@ function bindEvents() {
 
   els.printQuote.addEventListener("click", () => {
     window.print();
+  });
+
+  els.copyEmail.addEventListener("click", () => {
+    copyText(els.emailDraft.value, "Email draft");
+  });
+
+  els.copyMessage.addEventListener("click", () => {
+    copyText(els.messageDraft.value, "Message draft");
   });
 }
 
