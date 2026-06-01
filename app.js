@@ -135,6 +135,7 @@ const els = {
   customerPhone: document.querySelector("#customer-phone"),
   customerAddress: document.querySelector("#customer-address"),
   quoteNumber: document.querySelector("#quote-number"),
+  cameraPhotos: document.querySelector("#camera-photos"),
   housePhotos: document.querySelector("#house-photos"),
   photoGrid: document.querySelector("#photo-grid"),
   photoEmpty: document.querySelector("#photo-empty"),
@@ -323,7 +324,7 @@ function renderBlindTable() {
       </td>
       <td data-label="Blind Cost"><span class="table-value">${formatCurrency(computed.blindCostTotal)}</span></td>
       <td data-label="Line Total"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-      <td data-label="Remove"><button class="danger-button" data-delete="${line.id}" type="button">Ã—</button></td>
+      <td data-label="Remove"><button class="danger-button" data-delete="${line.id}" type="button">Remove</button></td>
     `;
 
     els.lines.appendChild(row);
@@ -385,7 +386,7 @@ function renderCurtainTable() {
       <td data-label="Fabric Cost"><span class="table-value">${formatCurrency(computed.fabricCost)}</span></td>
       <td data-label="Track Cost"><span class="table-value">${formatCurrency(computed.trackCost)}</span></td>
       <td data-label="Line Total"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-      <td data-label="Remove"><button class="danger-button" data-delete-curtain="${line.id}" type="button">Ã—</button></td>
+      <td data-label="Remove"><button class="danger-button" data-delete-curtain="${line.id}" type="button">Remove</button></td>
     `;
 
     els.curtainLines.appendChild(row);
@@ -407,7 +408,7 @@ function renderPhotos() {
         <img src="${photo.dataUrl}" alt="${photo.name}">
         <div class="photo-card-footer">
           <span title="${photo.name}">${photo.name}</span>
-          <button class="danger-button" data-delete-photo="${photo.id}" type="button">Ã—</button>
+          <button class="danger-button" data-delete-photo="${photo.id}" type="button">Remove</button>
         </div>
       `;
       els.photoGrid.appendChild(card);
@@ -705,7 +706,7 @@ function bindEvents() {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
-      renderAll();
+      updateSummary();
     }
   });
 
@@ -732,7 +733,7 @@ function bindEvents() {
     const target = event.target;
     if (target.dataset.curtainId && target.dataset.curtainField) {
       setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
-      renderAll();
+      updateSummary();
     }
   });
 
@@ -759,6 +760,14 @@ function bindEvents() {
     const target = event.target;
     if (target.dataset.deletePhoto) {
       removePhoto(target.dataset.deletePhoto);
+    }
+  });
+
+  els.cameraPhotos.addEventListener("change", (event) => {
+    const { files } = event.target;
+    if (files && files.length) {
+      addPhotos(files);
+      event.target.value = "";
     }
   });
 

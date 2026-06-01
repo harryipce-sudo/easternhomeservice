@@ -358,13 +358,15 @@ select {
 }
 
 .danger-button {
-  border: none;
-  background: rgba(201, 56, 56, 0.12);
-  color: #a33131;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  border: 1px solid rgba(201, 56, 56, 0.18);
+  background: rgba(201, 56, 56, 0.1);
+  color: #e37d7d;
+  min-width: 84px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
   cursor: pointer;
+  font-weight: 700;
 }
 
 .summary-column {
@@ -625,7 +627,10 @@ select {
   line-height: 1.6;
   background: rgba(8, 13, 18, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 0.96rem;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  font-size: 1rem;
+  overflow: auto;
 }
 
 .copy-feedback {
@@ -874,10 +879,19 @@ select {
     align-items: stretch;
   }
 
+  .photos-toolbar label {
+    text-align: center;
+  }
+
   .summary-metrics > div {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+
+  .message-output {
+    min-height: 170px;
+    font-size: 16px;
   }
 }
 

@@ -181,7 +181,9 @@
               </div>
             </div>
             <div class="photos-toolbar">
-              <label class="upload-button" for="house-photos">Add Photos</label>
+              <label class="upload-button" for="camera-photos">Take Photo</label>
+              <input id="camera-photos" type="file" accept="image/*" capture="environment" hidden>
+              <label class="ghost-button" for="house-photos">Add From Gallery</label>
               <input id="house-photos" type="file" accept="image/*" multiple hidden>
               <p class="photos-meta" id="photo-count">0 photos added</p>
             </div>
