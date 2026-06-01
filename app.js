@@ -152,13 +152,9 @@ const els = {
   grossProfit: document.querySelector("#gross-profit"),
   profitPercent: document.querySelector("#profit-percent"),
   profitExplainer: document.querySelector("#profit-explainer"),
-  previewQuoteNumber: document.querySelector("#preview-quote-number"),
-  previewDate: document.querySelector("#preview-date"),
   previewCustomer: document.querySelector("#preview-customer"),
   previewPhone: document.querySelector("#preview-phone"),
   previewAddress: document.querySelector("#preview-address"),
-  previewMaterialsGst: document.querySelector("#preview-materials-gst"),
-  previewCurtainGst: document.querySelector("#preview-curtain-gst"),
   previewLines: document.querySelector("#preview-lines"),
   previewSubtotal: document.querySelector("#preview-subtotal"),
   previewGst: document.querySelector("#preview-gst"),
@@ -562,17 +558,9 @@ function updateSummary() {
 }
 
 function syncPreview(totals) {
-  els.previewQuoteNumber.textContent = `Quote: ${state.customer.quoteNumber || "Draft"}`;
-  els.previewDate.textContent = new Date().toLocaleDateString("en-AU", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  });
   els.previewCustomer.textContent = `Customer: ${state.customer.name || "-"}`;
   els.previewPhone.textContent = `Phone: ${state.customer.phone || "-"}`;
   els.previewAddress.textContent = `Address: ${state.customer.address || "-"}`;
-  els.previewMaterialsGst.textContent = formatCurrency(totals.blind.materialsCostGstTotal);
-  els.previewCurtainGst.textContent = formatCurrency(totals.curtain.curtainCostGstTotal);
   els.previewSubtotal.textContent = formatCurrency(totals.subtotalExGst);
   els.previewGst.textContent = formatCurrency(totals.gstTotal);
   els.previewTotal.textContent = formatCurrency(totals.grandTotal);
