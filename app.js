@@ -722,9 +722,6 @@ function bindEvents() {
     const target = event.target;
     if (target.dataset.delete) {
       state.lines = state.lines.filter((line) => line.id !== target.dataset.delete);
-      if (!state.lines.length) {
-        state.lines.push(createLine());
-      }
       renderAll();
     }
   });
@@ -749,9 +746,6 @@ function bindEvents() {
     const target = event.target;
     if (target.dataset.deleteCurtain) {
       state.curtainLines = state.curtainLines.filter((line) => line.id !== target.dataset.deleteCurtain);
-      if (!state.curtainLines.length) {
-        state.curtainLines.push(createCurtainLine());
-      }
       renderAll();
     }
   });
