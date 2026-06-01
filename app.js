@@ -206,8 +206,36 @@ function formatPercent(value) {
   return `${(Number.isFinite(value) ? value : 0).toFixed(1)}%`;
 }
 
+function evaluateCalculatorValue(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : NaN;
+  }
+
+  const normalized = String(value ?? "")
+    .replace(/,/g, "")
+    .replace(/\s+/g, "");
+
+  if (!normalized) {
+    return NaN;
+  }
+
+  if (!/^[+]?\d*\.?\d+(?:[+-]\d*\.?\d+)*$/.test(normalized)) {
+    return NaN;
+  }
+
+  const parts = normalized.match(/[+-]?\d*\.?\d+/g) ?? [];
+  const total = parts.reduce((sum, part) => sum + Number(part), 0);
+
+  return Number.isFinite(total) ? total : NaN;
+}
+
+function normalizeCalculatorField(value) {
+  const calculated = evaluateCalculatorValue(value);
+  return Number.isFinite(calculated) ? calculated : value;
+}
+
 function findBracket(value, list) {
-  const numericValue = Number(value);
+  const numericValue = evaluateCalculatorValue(value);
   if (!numericValue || numericValue < 1) {
     return null;
   }
@@ -264,7 +292,7 @@ function calculateBlindLine(line) {
 
 function calculateCurtainLine(line) {
   const material = CURTAIN_MATERIALS[line.material];
-  const widthM = Math.max(0, Number(line.width) || 0);
+  const widthM = Math.max(0, evaluateCalculatorValue(line.width) || 0);
   const foldRate = Math.max(0, Number(line.foldRate) || 0);
   const fabricMeters = widthM * foldRate;
   const fabricCost = fabricMeters * material.price;
@@ -310,8 +338,8 @@ function renderBlindTable() {
             .join("")}
         </select>
       </td>
-      <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="number" min="1" step="1" value="${line.width}" placeholder="1200"></td>
-      <td data-label="Height (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="number" min="1" step="1" value="${line.height}" placeholder="2100"></td>
+      <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="1200+50"></td>
+      <td data-label="Height (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="text" inputmode="numeric" value="${line.height}" placeholder="2100-20"></td>
       <td data-label="Service">
         <select data-id="${line.id}" data-field="serviceType">
           ${SERVICE_TYPES.map((type) => `<option value="${type.value}" ${line.serviceType === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
@@ -356,8 +384,8 @@ function renderCurtainTable() {
           ${curtainColorOptions(line.material, line.color)}
         </select>
       </td>
-      <td data-label="Width (m)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="number" min="0" step="0.1" value="${line.width}" placeholder="3.0"></td>
-      <td data-label="Drop (m)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="number" min="0" step="0.1" value="${line.drop}" placeholder="2.4"></td>
+      <td data-label="Width (m)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="text" inputmode="decimal" value="${line.width}" placeholder="3+0.2"></td>
+      <td data-label="Drop (m)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="text" inputmode="decimal" value="${line.drop}" placeholder="2.4-0.1"></td>
       <td data-label="Fold Rate">
         <select data-curtain-id="${line.id}" data-curtain-field="foldRate">
           ${FOLD_RATES.map((rate) => `<option value="${rate}" ${Number(line.foldRate) === rate ? "selected" : ""}>x${rate}</option>`).join("")}
@@ -468,7 +496,7 @@ function setBlindValue(id, field, value) {
     return {
       ...line,
       [field]: field === "width" || field === "height"
-        ? value === "" ? "" : Number(value)
+        ? value
         : value
     };
   });
@@ -483,7 +511,7 @@ function setCurtainValue(id, field, value) {
     const next = {
       ...line,
       [field]: ["width", "drop", "foldRate"].includes(field)
-        ? value === "" ? "" : Number(value)
+        ? (field === "foldRate" ? (value === "" ? "" : Number(value)) : value)
         : value
     };
 
@@ -714,6 +742,9 @@ function bindEvents() {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
+      if (target.dataset.field === "width" || target.dataset.field === "height") {
+        setBlindValue(target.dataset.id, target.dataset.field, normalizeCalculatorField(target.value));
+      }
       renderAll();
     }
   });
@@ -738,6 +769,9 @@ function bindEvents() {
     const target = event.target;
     if (target.dataset.curtainId && target.dataset.curtainField) {
       setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
+      if (target.dataset.curtainField === "width" || target.dataset.curtainField === "drop") {
+        setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, normalizeCalculatorField(target.value));
+      }
       renderAll();
     }
   });
