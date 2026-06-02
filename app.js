@@ -670,25 +670,40 @@ function buildOrderSummaryText(totals) {
 
 function syncMessageDrafts(totals) {
   const summary = buildOrderSummaryText(totals);
+  const emailLines = [
+    `Hi ${summary.customerName},`,
+    "",
+    "Thank you for your enquiry with Eastern Home Service.",
+    "",
+    `${summary.quoteNumber} is ready.`,
+    `Order summary: ${summary.productSummary}`,
+    `Total amount incl. GST: ${summary.totalText}`,
+    "",
+    "Please note:",
+    "- 50% deposit is required once you decide to place the order.",
+    "- Roller blinds lead time: 5-7 days.",
+    "- Curtains and sheers lead time: 4-6 weeks.",
+    "",
+    "Please let us know if you would like to proceed.",
+    "",
+    "Kind regards,",
+    "Eastern Home Service"
+  ];
 
-  els.emailDraft.value = `Hi ${summary.customerName},
+  const messageParts = [
+    `Hi ${summary.customerName},`,
+    `${summary.quoteNumber} is ready.`,
+    `Order summary: ${summary.productSummary}.`,
+    `Total incl. GST: ${summary.totalText}.`,
+    "50% deposit is required to confirm the order.",
+    "Roller blinds lead time: 5-7 days.",
+    "Curtains and sheers lead time: 4-6 weeks.",
+    "Please let us know if you would like to proceed.",
+    "Eastern Home Service"
+  ];
 
-Thank you for your enquiry with Eastern Home Service.
-
-${summary.quoteNumber} is ready.
-Order summary: ${summary.productSummary}
-Total amount incl. GST: ${summary.totalText}
-
-A 50% deposit is required once you decide to place the order.
-Lead time for roller blinds is 5-7 days.
-Lead time for curtains and sheers is 4-6 weeks.
-
-Please let us know if you would like to proceed with the order.
-
-Kind regards,
-Eastern Home Service`;
-
-  els.messageDraft.value = `Hi ${summary.customerName}, ${summary.quoteNumber} is ready. Order summary: ${summary.productSummary}. Total incl. GST: ${summary.totalText}. A 50% deposit is required once you decide to place the order. Roller blinds lead time is 5-7 days. Curtains and sheers lead time is 4-6 weeks. Please let us know if you would like to proceed. Eastern Home Service`;
+  els.emailDraft.value = emailLines.join("\n");
+  els.messageDraft.value = messageParts.join(" ");
 }
 
 async function copyText(text, label) {
