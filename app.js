@@ -126,7 +126,6 @@ let initRecoveryAttempted = false;
 
 function cacheElements() {
   els = {
-    itemsBody: document.querySelector("#items-body"),
     addLine: document.querySelector("#add-line"),
     addCurtainLine: document.querySelector("#add-curtain-line"),
     clearItems: document.querySelector("#clear-items"),
@@ -171,8 +170,10 @@ function cacheElements() {
     copyEmail: document.querySelector("#copy-email"),
     copyMessage: document.querySelector("#copy-message"),
     copyFeedback: document.querySelector("#copy-feedback"),
-    itemSummaryList: document.querySelector("#item-summary-list"),
-    itemSummaryEmpty: document.querySelector("#item-summary-empty"),
+    summaryBlindsBody: document.querySelector("#summary-blinds-body"),
+    summaryBlindsEmpty: document.querySelector("#summary-blinds-empty"),
+    summaryCurtainsBody: document.querySelector("#summary-curtains-body"),
+    summaryCurtainsEmpty: document.querySelector("#summary-curtains-empty"),
     recordsList: document.querySelector("#records-list"),
     recordEmpty: document.querySelector("#record-empty")
   };
@@ -180,7 +181,8 @@ function cacheElements() {
 
 function hasRequiredElements() {
   return Boolean(
-    els.itemsBody &&
+    els.summaryBlindsBody &&
+    els.summaryCurtainsBody &&
     els.addLine &&
     els.addCurtainLine &&
     els.clearItems &&
@@ -197,7 +199,8 @@ function createLine() {
     group: "G2",
     width: 1200,
     height: 2100,
-    serviceType: "supply-install"
+    serviceType: "supply-install",
+    isEditing: true
   };
 }
 
@@ -214,7 +217,8 @@ function createCurtainLine() {
     style: "S-Fold Metal Hook",
     stacking: "Side Open",
     sheerBottomStyle: "With Base Weight",
-    blockoutLining: "No"
+    blockoutLining: "No",
+    isEditing: true
   };
 }
 
@@ -345,138 +349,137 @@ function curtainColorOptions(materialName, selectedColor) {
     .join("");
 }
 
-function renderItemsTable() {
-  els.itemsBody.innerHTML = "";
-  const items = [
-    ...state.lines.map((line) => ({ kind: "blind", line })),
-    ...state.curtainLines.map((line) => ({ kind: "curtain", line }))
-  ];
+function renderBlindSummaryTable() {
+  els.summaryBlindsBody.innerHTML = "";
 
-  items.forEach(({ kind, line }, index) => {
-    const row = document.createElement("tr");
-
-    if (kind === "blind") {
-      const computed = calculateBlindLine(line);
-      row.innerHTML = `
-        <td data-label="No."><span class="table-badge">${index + 1}</span></td>
-        <td data-label="Type"><span class="table-badge">Roller Blind</span></td>
-        <td data-label="Location"><input data-id="${line.id}" data-field="location" type="text" value="${line.location}" placeholder="Living room"></td>
-        <td data-label="Setup">
-          <select data-id="${line.id}" data-field="group">
-            ${Object.entries(PRICING_TABLE.groups).map(([value, group]) => `<option value="${value}" ${line.group === value ? "selected" : ""}>${group.label}</option>`).join("")}
-          </select>
-        </td>
-        <td data-label="Finish">
-          <select data-id="${line.id}" data-field="serviceType">
-            ${SERVICE_TYPES.map((type) => `<option value="${type.value}" ${line.serviceType === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
-          </select>
-        </td>
-        <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="1200+50"></td>
-        <td data-label="Height / Drop (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="text" inputmode="numeric" value="${line.height}" placeholder="2100-20"></td>
-        <td data-label="Details">
-          ${computed.matchedWidth && computed.matchedDrop
-            ? `<span class="table-badge">${computed.matchedWidth} x ${computed.matchedDrop}</span>`
-            : `<span class="error-text">${computed.error || "Enter width and height."}</span>`}
-        </td>
-        <td data-label="Cost"><span class="table-value">${formatCurrency(computed.blindCostTotal)}</span></td>
-        <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-      `;
-    } else {
-      const computed = calculateCurtainLine(line);
-      row.innerHTML = `
-        <td data-label="No."><span class="table-badge">${index + 1}</span></td>
-        <td data-label="Type">
-          <select data-curtain-id="${line.id}" data-curtain-field="product">
-            ${CURTAIN_PRODUCTS.map((type) => `<option value="${type.value}" ${line.product === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
-          </select>
-        </td>
-        <td data-label="Location"><input data-curtain-id="${line.id}" data-curtain-field="location" type="text" value="${line.location}" placeholder="Master bedroom"></td>
-        <td data-label="Setup">
-          <div class="cell-stack">
-            <select data-curtain-id="${line.id}" data-curtain-field="material">
-              ${Object.keys(CURTAIN_MATERIALS).map((material) => `<option value="${material}" ${line.material === material ? "selected" : ""}>${material}</option>`).join("")}
-            </select>
-            <select data-curtain-id="${line.id}" data-curtain-field="foldRate">
-              ${FOLD_RATES.map((rate) => `<option value="${rate}" ${Number(line.foldRate) === rate ? "selected" : ""}>x${rate}</option>`).join("")}
-            </select>
-          </div>
-        </td>
-        <td data-label="Finish">
-          <div class="cell-stack">
-            <select data-curtain-id="${line.id}" data-curtain-field="color">
-              ${curtainColorOptions(line.material, line.color)}
-            </select>
-            <select data-curtain-id="${line.id}" data-curtain-field="stacking">
-              ${STACKING_OPTIONS.map((stack) => `<option value="${stack}" ${line.stacking === stack ? "selected" : ""}>${stack}</option>`).join("")}
-            </select>
-          </div>
-        </td>
-        <td data-label="Width (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="3000+200"></td>
-        <td data-label="Height / Drop (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="text" inputmode="numeric" value="${line.drop}" placeholder="2400-100"></td>
-        <td data-label="Details">
-          <div class="cell-stack">
-            <select data-curtain-id="${line.id}" data-curtain-field="style">
-              ${CURTAIN_STYLES.map((style) => `<option value="${style}" ${line.style === style ? "selected" : ""}>${style}</option>`).join("")}
-            </select>
-            <select data-curtain-id="${line.id}" data-curtain-field="sheerBottomStyle">
-              ${SHEER_BOTTOM_STYLES.map((style) => `<option value="${style}" ${line.sheerBottomStyle === style ? "selected" : ""}>${style}</option>`).join("")}
-            </select>
-            <select data-curtain-id="${line.id}" data-curtain-field="blockoutLining">
-              ${BLOCKOUT_OPTIONS.map((value) => `<option value="${value}" ${line.blockoutLining === value ? "selected" : ""}>${value}</option>`).join("")}
-            </select>
-          </div>
-        </td>
-        <td data-label="Cost"><span class="table-value">${formatCurrency(computed.costExGst)}</span></td>
-        <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-      `;
-    }
-
-    els.itemsBody.appendChild(row);
-  });
-}
-
-function renderItemSummary() {
-  els.itemSummaryList.innerHTML = "";
-  const items = [
-    ...state.lines.map((line) => ({ kind: "blind", line })),
-    ...state.curtainLines.map((line) => ({ kind: "curtain", line }))
-  ];
-
-  if (!items.length) {
-    els.itemSummaryList.appendChild(els.itemSummaryEmpty);
+  if (!state.lines.length) {
+    els.summaryBlindsEmpty.style.display = "grid";
     return;
   }
 
-  items.forEach(({ kind, line }, index) => {
-    const card = document.createElement("article");
-    card.className = "item-summary-card";
+  els.summaryBlindsEmpty.style.display = "none";
 
-    if (kind === "blind") {
-      const computed = calculateBlindLine(line);
-      card.innerHTML = `
-        <h3>${index + 1}. Roller Blind - ${line.location || "Untitled Location"}</h3>
-        <p>Entered size: ${line.width}w x ${line.height}h mm</p>
-        <p>Matched bracket: ${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop} mm` : "-"}</p>
-        <p>Group: ${PRICING_TABLE.groups[line.group]?.label || line.group}</p>
-        <p>Service: ${SERVICE_TYPES.find((item) => item.value === line.serviceType)?.label || line.serviceType}</p>
-        <p>Blind cost: ${formatCurrency(computed.blindCostTotal)} | Install cost baseline: ${formatCurrency(computed.installUnitCost)}</p>
-        <p>Retail ex GST: ${formatCurrency(computed.lineSubtotalExGst)} | GST: ${formatCurrency(computed.lineGst)} | Total incl GST: ${formatCurrency(computed.lineTotal)}</p>
-      `;
-    } else {
-      const computed = calculateCurtainLine(line);
-      card.innerHTML = `
-        <h3>${index + 1}. ${CURTAIN_PRODUCTS.find((item) => item.value === line.product)?.label || line.product} - ${line.location || "Untitled Location"}</h3>
-        <p>Entered size: ${line.width}w x ${line.drop}d mm</p>
-        <p>Material: ${line.material} | Color: ${line.color}</p>
-        <p>Fold rate: x${line.foldRate} | Calculated fabric: ${computed.fabricMeters.toFixed(2)} m</p>
-        <p>Style: ${line.style} | Stacking: ${line.stacking}</p>
-        <p>Sheer bottom: ${line.sheerBottomStyle} | Blockout lining: ${line.blockoutLining}</p>
-        <p>Fabric cost: ${formatCurrency(computed.fabricCost)} | Track cost: ${formatCurrency(computed.trackCost)} | Cost ex GST: ${formatCurrency(computed.costExGst)}</p>
-        <p>Retail ex GST: ${formatCurrency(computed.retailExGst)} | GST: ${formatCurrency(computed.gst)} | Total incl GST: ${formatCurrency(computed.lineTotal)}</p>
-      `;
-    }
+  state.lines.forEach((line, index) => {
+    const computed = calculateBlindLine(line);
+    const row = document.createElement("tr");
 
-    els.itemSummaryList.appendChild(card);
+    row.innerHTML = line.isEditing ? `
+      <td data-label="No."><span class="table-badge">${index + 1}</span></td>
+      <td data-label="Location"><input data-id="${line.id}" data-field="location" type="text" value="${line.location}" placeholder="Living room"></td>
+      <td data-label="Group">
+        <select data-id="${line.id}" data-field="group">
+          ${Object.entries(PRICING_TABLE.groups).map(([value, group]) => `<option value="${value}" ${line.group === value ? "selected" : ""}>${group.label}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Service">
+        <select data-id="${line.id}" data-field="serviceType">
+          ${SERVICE_TYPES.map((type) => `<option value="${type.value}" ${line.serviceType === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="1200+50"></td>
+      <td data-label="Height (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="text" inputmode="numeric" value="${line.height}" placeholder="2100-20"></td>
+      <td data-label="Matched">${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop}` : "-"}</td>
+      <td data-label="Cost">${formatCurrency(computed.blindCostTotal)}</td>
+      <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
+      <td data-label="Action"><button class="ghost-button table-action-button" data-save-blind="${line.id}" type="button">Save</button></td>
+    ` : `
+      <td data-label="No."><span class="table-badge">${index + 1}</span></td>
+      <td data-label="Location">${line.location || "-"}</td>
+      <td data-label="Group">${PRICING_TABLE.groups[line.group]?.label || line.group}</td>
+      <td data-label="Service">${SERVICE_TYPES.find((item) => item.value === line.serviceType)?.label || line.serviceType}</td>
+      <td data-label="Width (mm)">${evaluateCalculatorValue(line.width) || line.width}</td>
+      <td data-label="Height (mm)">${evaluateCalculatorValue(line.height) || line.height}</td>
+      <td data-label="Matched">${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop}` : "-"}</td>
+      <td data-label="Cost">${formatCurrency(computed.blindCostTotal)}</td>
+      <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
+      <td data-label="Action"><button class="secondary-button table-action-button" data-edit-blind="${line.id}" type="button">Edit</button></td>
+    `;
+
+    els.summaryBlindsBody.appendChild(row);
+  });
+}
+
+function renderCurtainSummaryTable() {
+  els.summaryCurtainsBody.innerHTML = "";
+
+  if (!state.curtainLines.length) {
+    els.summaryCurtainsEmpty.style.display = "grid";
+    return;
+  }
+
+  els.summaryCurtainsEmpty.style.display = "none";
+
+  state.curtainLines.forEach((line, index) => {
+    const computed = calculateCurtainLine(line);
+    const row = document.createElement("tr");
+
+    row.innerHTML = line.isEditing ? `
+      <td data-label="No."><span class="table-badge">${index + 1}</span></td>
+      <td data-label="Type">
+        <select data-curtain-id="${line.id}" data-curtain-field="product">
+          ${CURTAIN_PRODUCTS.map((type) => `<option value="${type.value}" ${line.product === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Location"><input data-curtain-id="${line.id}" data-curtain-field="location" type="text" value="${line.location}" placeholder="Master bedroom"></td>
+      <td data-label="Material">
+        <select data-curtain-id="${line.id}" data-curtain-field="material">
+          ${Object.keys(CURTAIN_MATERIALS).map((material) => `<option value="${material}" ${line.material === material ? "selected" : ""}>${material}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Color">
+        <select data-curtain-id="${line.id}" data-curtain-field="color">
+          ${curtainColorOptions(line.material, line.color)}
+        </select>
+      </td>
+      <td data-label="Width (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="3000+200"></td>
+      <td data-label="Drop (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="text" inputmode="numeric" value="${line.drop}" placeholder="2400-100"></td>
+      <td data-label="Fold">
+        <select data-curtain-id="${line.id}" data-curtain-field="foldRate">
+          ${FOLD_RATES.map((rate) => `<option value="${rate}" ${Number(line.foldRate) === rate ? "selected" : ""}>x${rate}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Style">
+        <select data-curtain-id="${line.id}" data-curtain-field="style">
+          ${CURTAIN_STYLES.map((style) => `<option value="${style}" ${line.style === style ? "selected" : ""}>${style}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Stacking">
+        <select data-curtain-id="${line.id}" data-curtain-field="stacking">
+          ${STACKING_OPTIONS.map((stack) => `<option value="${stack}" ${line.stacking === stack ? "selected" : ""}>${stack}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Bottom">
+        <select data-curtain-id="${line.id}" data-curtain-field="sheerBottomStyle">
+          ${SHEER_BOTTOM_STYLES.map((style) => `<option value="${style}" ${line.sheerBottomStyle === style ? "selected" : ""}>${style}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Lining">
+        <select data-curtain-id="${line.id}" data-curtain-field="blockoutLining">
+          ${BLOCKOUT_OPTIONS.map((value) => `<option value="${value}" ${line.blockoutLining === value ? "selected" : ""}>${value}</option>`).join("")}
+        </select>
+      </td>
+      <td data-label="Cost">${formatCurrency(computed.costExGst)}</td>
+      <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
+      <td data-label="Action"><button class="ghost-button table-action-button" data-save-curtain="${line.id}" type="button">Save</button></td>
+    ` : `
+      <td data-label="No."><span class="table-badge">${index + 1}</span></td>
+      <td data-label="Type">${CURTAIN_PRODUCTS.find((item) => item.value === line.product)?.label || line.product}</td>
+      <td data-label="Location">${line.location || "-"}</td>
+      <td data-label="Material">${line.material}</td>
+      <td data-label="Color">${line.color}</td>
+      <td data-label="Width (mm)">${evaluateCalculatorValue(line.width) || line.width}</td>
+      <td data-label="Drop (mm)">${evaluateCalculatorValue(line.drop) || line.drop}</td>
+      <td data-label="Fold">x${line.foldRate}</td>
+      <td data-label="Style">${line.style}</td>
+      <td data-label="Stacking">${line.stacking}</td>
+      <td data-label="Bottom">${line.sheerBottomStyle}</td>
+      <td data-label="Lining">${line.blockoutLining}</td>
+      <td data-label="Cost">${formatCurrency(computed.costExGst)}</td>
+      <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
+      <td data-label="Action"><button class="secondary-button table-action-button" data-edit-curtain="${line.id}" type="button">Edit</button></td>
+    `;
+
+    els.summaryCurtainsBody.appendChild(row);
   });
 }
 
@@ -709,6 +712,12 @@ function setBlindValue(id, field, value) {
   });
 }
 
+function setBlindEditing(id, isEditing) {
+  state.lines = state.lines.map((line) => (
+    line.id === id ? { ...line, isEditing } : line
+  ));
+}
+
 function setCurtainValue(id, field, value) {
   state.curtainLines = state.curtainLines.map((line) => {
     if (line.id !== id) {
@@ -728,6 +737,12 @@ function setCurtainValue(id, field, value) {
 
     return next;
   });
+}
+
+function setCurtainEditing(id, isEditing) {
+  state.curtainLines = state.curtainLines.map((line) => (
+    line.id === id ? { ...line, isEditing } : line
+  ));
 }
 
 function updateSummary() {
@@ -937,8 +952,8 @@ async function copyText(text, label) {
 }
 
 function renderAll() {
-  renderItemsTable();
-  renderItemSummary();
+  renderBlindSummaryTable();
+  renderCurtainSummaryTable();
   updateSummary();
 }
 
@@ -953,19 +968,15 @@ function bindEvents() {
     renderAll();
   });
 
-  els.itemsBody.addEventListener("input", (event) => {
+  els.summaryBlindsBody.addEventListener("input", (event) => {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
       updateSummary();
     }
-    if (target.dataset.curtainId && target.dataset.curtainField) {
-      setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
-      updateSummary();
-    }
   });
 
-  els.itemsBody.addEventListener("change", (event) => {
+  els.summaryBlindsBody.addEventListener("change", (event) => {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
@@ -974,11 +985,59 @@ function bindEvents() {
       }
       renderAll();
     }
+  });
+
+  els.summaryBlindsBody.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.editBlind) {
+      setBlindEditing(target.dataset.editBlind, true);
+      renderAll();
+    }
+    if (target.dataset.saveBlind) {
+      const id = target.dataset.saveBlind;
+      const line = state.lines.find((item) => item.id === id);
+      if (line) {
+        setBlindValue(id, "width", normalizeCalculatorField(line.width));
+        setBlindValue(id, "height", normalizeCalculatorField(line.height));
+      }
+      setBlindEditing(id, false);
+      renderAll();
+    }
+  });
+
+  els.summaryCurtainsBody.addEventListener("input", (event) => {
+    const target = event.target;
+    if (target.dataset.curtainId && target.dataset.curtainField) {
+      setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
+      updateSummary();
+    }
+  });
+
+  els.summaryCurtainsBody.addEventListener("change", (event) => {
+    const target = event.target;
     if (target.dataset.curtainId && target.dataset.curtainField) {
       setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
       if (target.dataset.curtainField === "width" || target.dataset.curtainField === "drop") {
         setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, normalizeCalculatorField(target.value));
       }
+      renderAll();
+    }
+  });
+
+  els.summaryCurtainsBody.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.editCurtain) {
+      setCurtainEditing(target.dataset.editCurtain, true);
+      renderAll();
+    }
+    if (target.dataset.saveCurtain) {
+      const id = target.dataset.saveCurtain;
+      const line = state.curtainLines.find((item) => item.id === id);
+      if (line) {
+        setCurtainValue(id, "width", normalizeCalculatorField(line.width));
+        setCurtainValue(id, "drop", normalizeCalculatorField(line.drop));
+      }
+      setCurtainEditing(id, false);
       renderAll();
     }
   });
@@ -1058,8 +1117,8 @@ function bindEvents() {
     };
     state.photos = [];
     persistPhotos();
-    state.lines = [createLine()];
-    state.curtainLines = [createCurtainLine()];
+    state.lines = [];
+    state.curtainLines = [];
     hydrateInputs();
     renderPhotos();
     renderAll();
@@ -1103,8 +1162,8 @@ function init() {
 
     loadPhotos();
     loadRecords();
-    state.lines = [createLine()];
-    state.curtainLines = [createCurtainLine()];
+    state.lines = [];
+    state.curtainLines = [];
     hydrateInputs();
     bindEvents();
     renderPhotos();

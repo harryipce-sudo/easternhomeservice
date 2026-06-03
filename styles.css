@@ -167,6 +167,11 @@ h1 {
   flex-wrap: wrap;
 }
 
+.items-helper-copy {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .primary-button,
 .secondary-button,
 .ghost-button,
@@ -440,25 +445,33 @@ select {
   font-size: 1rem;
 }
 
-.item-summary-list {
+.summary-table-block {
   display: grid;
   gap: 16px;
 }
 
-.item-summary-card {
-  padding: 18px;
-  border-radius: 24px;
-  background: linear-gradient(180deg, rgba(20, 29, 38, 0.98), rgba(13, 20, 27, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.07);
+.summary-table-block + .summary-table-block {
+  margin-top: 24px;
 }
 
-.item-summary-card h3 {
-  margin: 0 0 10px;
+.summary-table-head h3,
+.summary-table-head p {
+  margin: 0;
 }
 
-.item-summary-card p {
+.summary-table-head {
+  display: grid;
+  gap: 6px;
+}
+
+.summary-table-head p {
   color: var(--muted);
   line-height: 1.55;
+}
+
+.summary-table .table-action-button {
+  min-width: 82px;
+  padding: 10px 14px;
 }
 
 .summary-metrics span,

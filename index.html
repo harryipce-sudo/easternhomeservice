@@ -74,7 +74,7 @@
             <div class="panel-heading">
               <div>
                 <h2>Items</h2>
-                <p>Use one shared table for roller blinds, curtains, and sheers.</p>
+                <p>Use the add buttons below to create item rows directly in the summary tables.</p>
               </div>
               <div class="table-actions">
                 <button class="secondary-button" id="add-line" type="button">Add Blind</button>
@@ -82,37 +82,72 @@
                 <button class="ghost-button" id="clear-items" type="button">Clear Table</button>
               </div>
             </div>
-
-            <div class="table-wrap">
-              <table class="quote-table">
-                <thead>
-                  <tr>
-                    <th>No.</th>
-                    <th>Type</th>
-                    <th>Location</th>
-                    <th>Setup</th>
-                    <th>Finish</th>
-                    <th>Width (mm)</th>
-                    <th>Height / Drop (mm)</th>
-                    <th>Details</th>
-                    <th>Cost</th>
-                    <th>Retail</th>
-                  </tr>
-                </thead>
-                <tbody id="items-body"></tbody>
-              </table>
-            </div>
+            <p class="items-helper-copy">New items will appear in the summary tables below, where you can review or edit them.</p>
           </section>
 
           <section class="panel item-summary-panel">
             <div class="panel-heading">
               <div>
                 <h2>Item Summary</h2>
-                <p>Internal summary with full measurement and setup detail for every item.</p>
+                <p>Separate blind and curtain tables with full detail and edit controls.</p>
               </div>
             </div>
-            <div class="item-summary-list" id="item-summary-list">
-              <div class="record-empty" id="item-summary-empty">No items added yet.</div>
+            <div class="summary-table-block">
+              <div class="summary-table-head">
+                <h3>Roller Blinds</h3>
+                <p>All blind measurements, service setup, matched pricing bracket, and totals.</p>
+              </div>
+              <div class="table-wrap">
+                <table class="quote-table summary-table">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Location</th>
+                      <th>Group</th>
+                      <th>Service</th>
+                      <th>Width (mm)</th>
+                      <th>Height (mm)</th>
+                      <th>Matched</th>
+                      <th>Cost</th>
+                      <th>Retail</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="summary-blinds-body"></tbody>
+                </table>
+              </div>
+              <div class="record-empty" id="summary-blinds-empty">No blind items added yet.</div>
+            </div>
+            <div class="summary-table-block">
+              <div class="summary-table-head">
+                <h3>Curtains & Sheers</h3>
+                <p>All material, fold, stacking, lining, and pricing detail in one table.</p>
+              </div>
+              <div class="table-wrap">
+                <table class="quote-table summary-table">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Type</th>
+                      <th>Location</th>
+                      <th>Material</th>
+                      <th>Color</th>
+                      <th>Width (mm)</th>
+                      <th>Drop (mm)</th>
+                      <th>Fold</th>
+                      <th>Style</th>
+                      <th>Stacking</th>
+                      <th>Bottom</th>
+                      <th>Lining</th>
+                      <th>Cost</th>
+                      <th>Retail</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="summary-curtains-body"></tbody>
+                </table>
+              </div>
+              <div class="record-empty" id="summary-curtains-empty">No curtain or sheer items added yet.</div>
             </div>
           </section>
 
