@@ -116,56 +116,81 @@ const state = {
     quoteNumber: ""
   },
   photos: [],
+  records: [],
   lines: [],
   curtainLines: []
 };
 
-const els = {
-  lines: document.querySelector("#quote-lines"),
-  curtainLines: document.querySelector("#curtain-lines"),
-  addLine: document.querySelector("#add-line"),
-  addCurtainLine: document.querySelector("#add-curtain-line"),
-  resetQuote: document.querySelector("#reset-quote"),
-  printQuote: document.querySelector("#print-quote"),
-  supplyMarkup: document.querySelector("#supply-markup"),
-  curtainMarkup: document.querySelector("#curtain-markup"),
-  installCost: document.querySelector("#install-cost"),
-  installRetail: document.querySelector("#install-retail"),
-  customerName: document.querySelector("#customer-name"),
-  customerPhone: document.querySelector("#customer-phone"),
-  customerAddress: document.querySelector("#customer-address"),
-  quoteNumber: document.querySelector("#quote-number"),
-  cameraPhotos: document.querySelector("#camera-photos"),
-  housePhotos: document.querySelector("#house-photos"),
-  photoGrid: document.querySelector("#photo-grid"),
-  photoEmpty: document.querySelector("#photo-empty"),
-  photoCount: document.querySelector("#photo-count"),
-  materialsCostTotal: document.querySelector("#materials-cost-total"),
-  materialsCostGstTotal: document.querySelector("#materials-cost-gst-total"),
-  curtainCostTotal: document.querySelector("#curtain-cost-total"),
-  curtainCostGstTotal: document.querySelector("#curtain-cost-gst-total"),
-  supplyRetailTotal: document.querySelector("#supply-retail-total"),
-  installCostTotal: document.querySelector("#install-cost-total"),
-  installRetailTotal: document.querySelector("#install-retail-total"),
-  subtotalExGst: document.querySelector("#subtotal-ex-gst"),
-  gstTotal: document.querySelector("#gst-total"),
-  grandTotal: document.querySelector("#grand-total"),
-  grossProfit: document.querySelector("#gross-profit"),
-  profitPercent: document.querySelector("#profit-percent"),
-  profitExplainer: document.querySelector("#profit-explainer"),
-  previewCustomer: document.querySelector("#preview-customer"),
-  previewPhone: document.querySelector("#preview-phone"),
-  previewAddress: document.querySelector("#preview-address"),
-  previewLines: document.querySelector("#preview-lines"),
-  previewSubtotal: document.querySelector("#preview-subtotal"),
-  previewGst: document.querySelector("#preview-gst"),
-  previewTotal: document.querySelector("#preview-total"),
-  emailDraft: document.querySelector("#email-draft"),
-  messageDraft: document.querySelector("#message-draft"),
-  copyEmail: document.querySelector("#copy-email"),
-  copyMessage: document.querySelector("#copy-message"),
-  copyFeedback: document.querySelector("#copy-feedback")
-};
+let els = {};
+let initRecoveryAttempted = false;
+
+function cacheElements() {
+  els = {
+    blindsBody: document.querySelector("#blinds-body"),
+    curtainsBody: document.querySelector("#curtains-body"),
+    addLine: document.querySelector("#add-line"),
+    addCurtainLine: document.querySelector("#add-curtain-line"),
+    clearItems: document.querySelector("#clear-items"),
+    resetQuote: document.querySelector("#reset-quote"),
+    submitQuote: document.querySelector("#submit-quote"),
+    printQuote: document.querySelector("#print-quote"),
+    supplyMarkup: document.querySelector("#supply-markup"),
+    curtainMarkup: document.querySelector("#curtain-markup"),
+    installCost: document.querySelector("#install-cost"),
+    installRetail: document.querySelector("#install-retail"),
+    customerName: document.querySelector("#customer-name"),
+    customerPhone: document.querySelector("#customer-phone"),
+    customerAddress: document.querySelector("#customer-address"),
+    quoteNumber: document.querySelector("#quote-number"),
+    cameraPhotos: document.querySelector("#camera-photos"),
+    housePhotos: document.querySelector("#house-photos"),
+    photoGrid: document.querySelector("#photo-grid"),
+    photoEmpty: document.querySelector("#photo-empty"),
+    photoCount: document.querySelector("#photo-count"),
+    materialsCostTotal: document.querySelector("#materials-cost-total"),
+    curtainCostTotal: document.querySelector("#curtain-cost-total"),
+    blindRetailTotal: document.querySelector("#blind-retail-total"),
+    curtainRetailTotal: document.querySelector("#curtain-retail-total"),
+    installCostTotal: document.querySelector("#install-cost-total"),
+    installRetailTotal: document.querySelector("#install-retail-total"),
+    costExGstTotal: document.querySelector("#cost-ex-gst-total"),
+    subtotalExGst: document.querySelector("#subtotal-ex-gst"),
+    gstTotal: document.querySelector("#gst-total"),
+    grandTotal: document.querySelector("#grand-total"),
+    grossProfit: document.querySelector("#gross-profit"),
+    profitPercent: document.querySelector("#profit-percent"),
+    profitExplainer: document.querySelector("#profit-explainer"),
+    previewCustomer: document.querySelector("#preview-customer"),
+    previewPhone: document.querySelector("#preview-phone"),
+    previewAddress: document.querySelector("#preview-address"),
+    previewLines: document.querySelector("#preview-lines"),
+    previewSubtotal: document.querySelector("#preview-subtotal"),
+    previewGst: document.querySelector("#preview-gst"),
+    previewTotal: document.querySelector("#preview-total"),
+    emailDraft: document.querySelector("#email-draft"),
+    messageDraft: document.querySelector("#message-draft"),
+    copyEmail: document.querySelector("#copy-email"),
+    copyMessage: document.querySelector("#copy-message"),
+    copyFeedback: document.querySelector("#copy-feedback"),
+    itemSummaryList: document.querySelector("#item-summary-list"),
+    itemSummaryEmpty: document.querySelector("#item-summary-empty"),
+    recordsList: document.querySelector("#records-list"),
+    recordEmpty: document.querySelector("#record-empty")
+  };
+}
+
+function hasRequiredElements() {
+  return Boolean(
+    els.blindsBody &&
+    els.curtainsBody &&
+    els.addLine &&
+    els.addCurtainLine &&
+    els.clearItems &&
+    els.resetQuote &&
+    els.submitQuote &&
+    els.printQuote
+  );
+}
 
 function createLine() {
   return {
@@ -185,8 +210,8 @@ function createCurtainLine() {
     product: "sheer",
     material: "Begonia",
     color: "Sand",
-    width: 3,
-    drop: 2.4,
+    width: 3000,
+    drop: 2400,
     foldRate: 2.3,
     style: "S-Fold Metal Hook",
     stacking: "Side Open",
@@ -292,7 +317,8 @@ function calculateBlindLine(line) {
 
 function calculateCurtainLine(line) {
   const material = CURTAIN_MATERIALS[line.material];
-  const widthM = Math.max(0, evaluateCalculatorValue(line.width) || 0);
+  const widthMm = Math.max(0, evaluateCalculatorValue(line.width) || 0);
+  const widthM = widthMm / 1000;
   const foldRate = Math.max(0, Number(line.foldRate) || 0);
   const fabricMeters = widthM * foldRate;
   const fabricCost = fabricMeters * material.price;
@@ -321,103 +347,134 @@ function curtainColorOptions(materialName, selectedColor) {
     .join("");
 }
 
-function renderBlindTable() {
-  els.lines.innerHTML = "";
+function renderBlindsTable() {
+  els.blindsBody.innerHTML = "";
 
   state.lines.forEach((line, index) => {
-    const computed = calculateBlindLine(line);
     const row = document.createElement("tr");
-
+    const computed = calculateBlindLine(line);
     row.innerHTML = `
       <td data-label="No."><span class="table-badge">${index + 1}</span></td>
       <td data-label="Location"><input data-id="${line.id}" data-field="location" type="text" value="${line.location}" placeholder="Living room"></td>
-      <td data-label="Group">
+      <td data-label="Setup">
         <select data-id="${line.id}" data-field="group">
-          ${Object.entries(PRICING_TABLE.groups)
-            .map(([value, group]) => `<option value="${value}" ${line.group === value ? "selected" : ""}>${group.label}</option>`)
-            .join("")}
+          ${Object.entries(PRICING_TABLE.groups).map(([value, group]) => `<option value="${value}" ${line.group === value ? "selected" : ""}>${group.label}</option>`).join("")}
         </select>
       </td>
-      <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="1200+50"></td>
-      <td data-label="Height (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="text" inputmode="numeric" value="${line.height}" placeholder="2100-20"></td>
-      <td data-label="Service">
+      <td data-label="Finish">
         <select data-id="${line.id}" data-field="serviceType">
           ${SERVICE_TYPES.map((type) => `<option value="${type.value}" ${line.serviceType === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
         </select>
       </td>
-      <td data-label="Matched Table Size">
+      <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="1200+50"></td>
+      <td data-label="Height (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="text" inputmode="numeric" value="${line.height}" placeholder="2100-20"></td>
+      <td data-label="Details">
         ${computed.matchedWidth && computed.matchedDrop
           ? `<span class="table-badge">${computed.matchedWidth} x ${computed.matchedDrop}</span>`
           : `<span class="error-text">${computed.error || "Enter width and height."}</span>`}
       </td>
-      <td data-label="Blind Cost"><span class="table-value">${formatCurrency(computed.blindCostTotal)}</span></td>
-      <td data-label="Line Total"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-      <td data-label="Remove"><button class="danger-button" data-delete="${line.id}" type="button">Remove</button></td>
+      <td data-label="Cost"><span class="table-value">${formatCurrency(computed.blindCostTotal)}</span></td>
+      <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
     `;
-
-    els.lines.appendChild(row);
+    els.blindsBody.appendChild(row);
   });
 }
 
-function renderCurtainTable() {
-  els.curtainLines.innerHTML = "";
+function renderCurtainsTable() {
+  els.curtainsBody.innerHTML = "";
 
   state.curtainLines.forEach((line, index) => {
     const computed = calculateCurtainLine(line);
     const row = document.createElement("tr");
-
     row.innerHTML = `
       <td data-label="No."><span class="table-badge">${index + 1}</span></td>
-      <td data-label="Location"><input data-curtain-id="${line.id}" data-curtain-field="location" type="text" value="${line.location}" placeholder="Master bedroom"></td>
-      <td data-label="Product">
+      <td data-label="Type">
         <select data-curtain-id="${line.id}" data-curtain-field="product">
           ${CURTAIN_PRODUCTS.map((type) => `<option value="${type.value}" ${line.product === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
         </select>
       </td>
-      <td data-label="Material">
-        <select data-curtain-id="${line.id}" data-curtain-field="material">
-          ${Object.keys(CURTAIN_MATERIALS).map((material) => `<option value="${material}" ${line.material === material ? "selected" : ""}>${material}</option>`).join("")}
-        </select>
+      <td data-label="Location"><input data-curtain-id="${line.id}" data-curtain-field="location" type="text" value="${line.location}" placeholder="Master bedroom"></td>
+      <td data-label="Material / Fold">
+        <div class="cell-stack">
+          <select data-curtain-id="${line.id}" data-curtain-field="material">
+            ${Object.keys(CURTAIN_MATERIALS).map((material) => `<option value="${material}" ${line.material === material ? "selected" : ""}>${material}</option>`).join("")}
+          </select>
+          <select data-curtain-id="${line.id}" data-curtain-field="foldRate">
+            ${FOLD_RATES.map((rate) => `<option value="${rate}" ${Number(line.foldRate) === rate ? "selected" : ""}>x${rate}</option>`).join("")}
+          </select>
+        </div>
       </td>
-      <td data-label="Color">
-        <select data-curtain-id="${line.id}" data-curtain-field="color">
-          ${curtainColorOptions(line.material, line.color)}
-        </select>
+      <td data-label="Color / Stacking">
+        <div class="cell-stack">
+          <select data-curtain-id="${line.id}" data-curtain-field="color">
+            ${curtainColorOptions(line.material, line.color)}
+          </select>
+          <select data-curtain-id="${line.id}" data-curtain-field="stacking">
+            ${STACKING_OPTIONS.map((stack) => `<option value="${stack}" ${line.stacking === stack ? "selected" : ""}>${stack}</option>`).join("")}
+          </select>
+        </div>
       </td>
-      <td data-label="Width (m)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="text" inputmode="decimal" value="${line.width}" placeholder="3+0.2"></td>
-      <td data-label="Drop (m)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="text" inputmode="decimal" value="${line.drop}" placeholder="2.4-0.1"></td>
-      <td data-label="Fold Rate">
-        <select data-curtain-id="${line.id}" data-curtain-field="foldRate">
-          ${FOLD_RATES.map((rate) => `<option value="${rate}" ${Number(line.foldRate) === rate ? "selected" : ""}>x${rate}</option>`).join("")}
-        </select>
+      <td data-label="Width (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="3000+200"></td>
+      <td data-label="Drop (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="text" inputmode="numeric" value="${line.drop}" placeholder="2400-100"></td>
+      <td data-label="Details">
+        <div class="cell-stack">
+          <select data-curtain-id="${line.id}" data-curtain-field="style">
+            ${CURTAIN_STYLES.map((style) => `<option value="${style}" ${line.style === style ? "selected" : ""}>${style}</option>`).join("")}
+          </select>
+          <select data-curtain-id="${line.id}" data-curtain-field="sheerBottomStyle">
+            ${SHEER_BOTTOM_STYLES.map((style) => `<option value="${style}" ${line.sheerBottomStyle === style ? "selected" : ""}>${style}</option>`).join("")}
+          </select>
+          <select data-curtain-id="${line.id}" data-curtain-field="blockoutLining">
+            ${BLOCKOUT_OPTIONS.map((value) => `<option value="${value}" ${line.blockoutLining === value ? "selected" : ""}>${value}</option>`).join("")}
+          </select>
+        </div>
       </td>
-      <td data-label="Style">
-        <select data-curtain-id="${line.id}" data-curtain-field="style">
-          ${CURTAIN_STYLES.map((style) => `<option value="${style}" ${line.style === style ? "selected" : ""}>${style}</option>`).join("")}
-        </select>
-      </td>
-      <td data-label="Stacking">
-        <select data-curtain-id="${line.id}" data-curtain-field="stacking">
-          ${STACKING_OPTIONS.map((stack) => `<option value="${stack}" ${line.stacking === stack ? "selected" : ""}>${stack}</option>`).join("")}
-        </select>
-      </td>
-      <td data-label="Sheer Bottom">
-        <select data-curtain-id="${line.id}" data-curtain-field="sheerBottomStyle">
-          ${SHEER_BOTTOM_STYLES.map((style) => `<option value="${style}" ${line.sheerBottomStyle === style ? "selected" : ""}>${style}</option>`).join("")}
-        </select>
-      </td>
-      <td data-label="Blockout Lining">
-        <select data-curtain-id="${line.id}" data-curtain-field="blockoutLining">
-          ${BLOCKOUT_OPTIONS.map((value) => `<option value="${value}" ${line.blockoutLining === value ? "selected" : ""}>${value}</option>`).join("")}
-        </select>
-      </td>
-      <td data-label="Fabric Cost"><span class="table-value">${formatCurrency(computed.fabricCost)}</span></td>
-      <td data-label="Track Cost"><span class="table-value">${formatCurrency(computed.trackCost)}</span></td>
-      <td data-label="Line Total"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-      <td data-label="Remove"><button class="danger-button" data-delete-curtain="${line.id}" type="button">Remove</button></td>
+      <td data-label="Cost"><span class="table-value">${formatCurrency(computed.costExGst)}</span></td>
+      <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
     `;
+    els.curtainsBody.appendChild(row);
+  });
+}
 
-    els.curtainLines.appendChild(row);
+function renderItemSummary() {
+  els.itemSummaryList.innerHTML = "";
+  const items = [
+    ...state.lines.map((line) => ({ kind: "blind", line })),
+    ...state.curtainLines.map((line) => ({ kind: "curtain", line }))
+  ];
+
+  if (!items.length) {
+    els.itemSummaryList.appendChild(els.itemSummaryEmpty);
+    return;
+  }
+
+  items.forEach(({ kind, line }, index) => {
+    const card = document.createElement("article");
+    card.className = "item-summary-card";
+
+    if (kind === "blind") {
+      const computed = calculateBlindLine(line);
+      card.innerHTML = `
+        <h3>${index + 1}. Roller Blind - ${line.location || "Untitled Location"}</h3>
+        <p>Group: ${PRICING_TABLE.groups[line.group]?.label || line.group}</p>
+        <p>Size: ${evaluateCalculatorValue(line.width) || line.width}w x ${evaluateCalculatorValue(line.height) || line.height}h mm</p>
+        <p>Service: ${SERVICE_TYPES.find((item) => item.value === line.serviceType)?.label || line.serviceType}</p>
+        <p>Matched table: ${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop}` : "-"}</p>
+        <p>Cost: ${formatCurrency(computed.blindCostTotal)} | Retail: ${formatCurrency(computed.lineTotal)}</p>
+      `;
+    } else {
+      const computed = calculateCurtainLine(line);
+      card.innerHTML = `
+        <h3>${index + 1}. ${CURTAIN_PRODUCTS.find((item) => item.value === line.product)?.label || line.product} - ${line.location || "Untitled Location"}</h3>
+        <p>Material: ${line.material} | Color: ${line.color}</p>
+        <p>Size: ${evaluateCalculatorValue(line.width) || line.width}w x ${evaluateCalculatorValue(line.drop) || line.drop}d mm</p>
+        <p>Fold rate: x${line.foldRate} | Style: ${line.style}</p>
+        <p>Stacking: ${line.stacking} | Sheer Bottom: ${line.sheerBottomStyle} | Blockout Lining: ${line.blockoutLining}</p>
+        <p>Cost: ${formatCurrency(computed.costExGst)} | Retail: ${formatCurrency(computed.lineTotal)}</p>
+      `;
+    }
+
+    els.itemSummaryList.appendChild(card);
   });
 }
 
@@ -457,7 +514,10 @@ function persistPhotos() {
 function loadPhotos() {
   try {
     const saved = localStorage.getItem("ehs-house-photos");
-    state.photos = saved ? JSON.parse(saved) : [];
+    const parsed = saved ? JSON.parse(saved) : [];
+    state.photos = Array.isArray(parsed)
+      ? parsed.filter((photo) => photo && typeof photo === "object" && typeof photo.dataUrl === "string")
+      : [];
   } catch (error) {
     state.photos = [];
   }
@@ -485,6 +545,151 @@ function removePhoto(id) {
   state.photos = state.photos.filter((photo) => photo.id !== id);
   persistPhotos();
   renderPhotos();
+}
+
+function persistRecords() {
+  try {
+    localStorage.setItem("ehs-dimension-records", JSON.stringify(state.records));
+  } catch (error) {
+    console.warn("Unable to persist records", error);
+  }
+}
+
+function loadRecords() {
+  try {
+    const saved = localStorage.getItem("ehs-dimension-records");
+    const parsed = saved ? JSON.parse(saved) : [];
+    state.records = Array.isArray(parsed)
+      ? parsed.filter((record) => record && typeof record === "object").map((record) => ({
+          id: record.id || crypto.randomUUID(),
+          submittedAt: record.submittedAt || new Date().toISOString(),
+          customerName: record.customerName || "-",
+          phone: record.phone || "-",
+          address: record.address || "-",
+          quoteNumber: record.quoteNumber || "-",
+          totalQuote: record.totalQuote || formatCurrency(0),
+          blindItems: Array.isArray(record.blindItems) ? record.blindItems : [],
+          curtainItems: Array.isArray(record.curtainItems) ? record.curtainItems : []
+        }))
+      : [];
+  } catch (error) {
+    state.records = [];
+  }
+}
+
+function createRecordSnapshot() {
+  const blindItems = state.lines.map((line) => {
+    const computed = calculateBlindLine(line);
+    return {
+      location: line.location || "Untitled Location",
+      group: PRICING_TABLE.groups[line.group]?.label || line.group,
+      width: evaluateCalculatorValue(line.width) || line.width,
+      height: evaluateCalculatorValue(line.height) || line.height,
+      matchedSize: computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop}` : "-",
+      serviceType: SERVICE_TYPES.find((item) => item.value === line.serviceType)?.label || line.serviceType
+    };
+  });
+
+  const curtainItems = state.curtainLines.map((line) => ({
+    location: line.location || "Untitled Location",
+    product: CURTAIN_PRODUCTS.find((item) => item.value === line.product)?.label || line.product,
+    width: evaluateCalculatorValue(line.width) || line.width,
+    drop: evaluateCalculatorValue(line.drop) || line.drop,
+    style: line.style,
+    stacking: line.stacking
+  }));
+
+  return {
+    id: crypto.randomUUID(),
+    submittedAt: new Date().toISOString(),
+    customerName: state.customer.name || "-",
+    phone: state.customer.phone || "-",
+    address: state.customer.address || "-",
+    quoteNumber: state.customer.quoteNumber || "-",
+    totalQuote: els.grandTotal.textContent,
+    blindItems,
+    curtainItems
+  };
+}
+
+function submitQuoteRecord() {
+  const record = createRecordSnapshot();
+  state.records = [record, ...state.records];
+  persistRecords();
+  renderRecords();
+  els.copyFeedback.textContent = "Quote submitted to Dimension Records.";
+  document.querySelector("#dimension-records")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function deleteRecord(id) {
+  state.records = state.records.filter((record) => record.id !== id);
+  persistRecords();
+  renderRecords();
+}
+
+function renderRecords() {
+  els.recordsList.innerHTML = "";
+
+  if (!state.records.length) {
+    els.recordsList.appendChild(els.recordEmpty);
+    return;
+  }
+
+  state.records.forEach((record) => {
+    const blindItems = Array.isArray(record.blindItems) ? record.blindItems : [];
+    const curtainItems = Array.isArray(record.curtainItems) ? record.curtainItems : [];
+    const card = document.createElement("article");
+    card.className = "record-card";
+    card.innerHTML = `
+      <div class="record-top">
+        <div>
+          <h3>${record.customerName}</h3>
+          <p>${record.quoteNumber !== "-" ? `Quote ${record.quoteNumber}` : "Submitted quote"}</p>
+        </div>
+        <strong>${record.totalQuote}</strong>
+      </div>
+      <div class="record-meta">
+        <span>${new Date(record.submittedAt).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" })}</span>
+        <span>${record.phone}</span>
+        <span>${record.address}</span>
+      </div>
+      <div class="record-grid">
+        <section class="record-section">
+          <h4>Roller Blinds</h4>
+          ${blindItems.length ? `
+            <div class="record-lines">
+              ${blindItems.map((item) => `
+                <div class="record-line">
+                  <strong>${item.location}</strong>
+                  <p>${item.group} | ${item.width}w x ${item.height}h | ${item.serviceType}</p>
+                  <p>Matched table: ${item.matchedSize}</p>
+                </div>
+              `).join("")}
+            </div>
+          ` : `<p>No roller blinds saved in this quote.</p>`}
+        </section>
+        <section class="record-section">
+          <h4>Curtains & Sheers</h4>
+          ${curtainItems.length ? `
+            <div class="record-lines">
+              ${curtainItems.map((item) => `
+                <div class="record-line">
+                  <strong>${item.location}</strong>
+                  <p>${item.product} | ${item.width}w x ${item.drop}d mm</p>
+                  <p>${item.style} | ${item.stacking}</p>
+                </div>
+              `).join("")}
+            </div>
+          ` : `<p>No curtains or sheers saved in this quote.</p>`}
+        </section>
+      </div>
+      <div class="record-actions">
+        <button class="danger-button" data-delete-record="${record.id}" type="button">Delete Record</button>
+      </div>
+    `;
+
+    els.recordsList.appendChild(card);
+  });
 }
 
 function setBlindValue(id, field, value) {
@@ -567,14 +772,15 @@ function updateSummary() {
   const grossProfit = (blindTotals.supplyRetailTotal + blindTotals.installRetailTotal + curtainTotals.supplyRetailTotal) - (blindTotals.materialsCostTotal + blindTotals.installCostTotal + curtainTotals.curtainCostTotal);
   const grandTotal = blindTotals.grandTotal + curtainTotals.grandTotal;
   const profitPercent = grandTotal > 0 ? (grossProfit / grandTotal) * 100 : 0;
+  const costExGstTotal = blindTotals.materialsCostTotal + blindTotals.installCostTotal + curtainTotals.curtainCostTotal;
 
   els.materialsCostTotal.textContent = formatCurrency(blindTotals.materialsCostTotal);
-  els.materialsCostGstTotal.textContent = formatCurrency(blindTotals.materialsCostGstTotal);
   els.curtainCostTotal.textContent = formatCurrency(curtainTotals.curtainCostTotal);
-  els.curtainCostGstTotal.textContent = formatCurrency(curtainTotals.curtainCostGstTotal);
-  els.supplyRetailTotal.textContent = formatCurrency(blindTotals.supplyRetailTotal + curtainTotals.supplyRetailTotal);
+  els.blindRetailTotal.textContent = formatCurrency(blindTotals.supplyRetailTotal + blindTotals.installRetailTotal + blindTotals.gstTotal);
+  els.curtainRetailTotal.textContent = formatCurrency(curtainTotals.grandTotal);
   els.installCostTotal.textContent = formatCurrency(blindTotals.installCostTotal);
   els.installRetailTotal.textContent = formatCurrency(blindTotals.installRetailTotal);
+  els.costExGstTotal.textContent = formatCurrency(costExGstTotal);
   els.subtotalExGst.textContent = formatCurrency(blindTotals.subtotalExGst + curtainTotals.subtotalExGst);
   els.gstTotal.textContent = formatCurrency(blindTotals.gstTotal + curtainTotals.gstTotal);
   els.grandTotal.textContent = formatCurrency(grandTotal);
@@ -729,8 +935,9 @@ async function copyText(text, label) {
 }
 
 function renderAll() {
-  renderBlindTable();
-  renderCurtainTable();
+  renderBlindsTable();
+  renderCurtainsTable();
+  renderItemSummary();
   updateSummary();
 }
 
@@ -745,7 +952,7 @@ function bindEvents() {
     renderAll();
   });
 
-  els.lines.addEventListener("input", (event) => {
+  els.blindsBody.addEventListener("input", (event) => {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
@@ -753,7 +960,7 @@ function bindEvents() {
     }
   });
 
-  els.lines.addEventListener("change", (event) => {
+  els.blindsBody.addEventListener("change", (event) => {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
@@ -764,15 +971,7 @@ function bindEvents() {
     }
   });
 
-  els.lines.addEventListener("click", (event) => {
-    const target = event.target;
-    if (target.dataset.delete) {
-      state.lines = state.lines.filter((line) => line.id !== target.dataset.delete);
-      renderAll();
-    }
-  });
-
-  els.curtainLines.addEventListener("input", (event) => {
+  els.curtainsBody.addEventListener("input", (event) => {
     const target = event.target;
     if (target.dataset.curtainId && target.dataset.curtainField) {
       setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
@@ -780,21 +979,13 @@ function bindEvents() {
     }
   });
 
-  els.curtainLines.addEventListener("change", (event) => {
+  els.curtainsBody.addEventListener("change", (event) => {
     const target = event.target;
     if (target.dataset.curtainId && target.dataset.curtainField) {
       setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
       if (target.dataset.curtainField === "width" || target.dataset.curtainField === "drop") {
         setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, normalizeCalculatorField(target.value));
       }
-      renderAll();
-    }
-  });
-
-  els.curtainLines.addEventListener("click", (event) => {
-    const target = event.target;
-    if (target.dataset.deleteCurtain) {
-      state.curtainLines = state.curtainLines.filter((line) => line.id !== target.dataset.deleteCurtain);
       renderAll();
     }
   });
@@ -811,6 +1002,19 @@ function bindEvents() {
     if (files && files.length) {
       addPhotos(files);
       event.target.value = "";
+    }
+  });
+
+  els.clearItems.addEventListener("click", () => {
+    state.lines = [];
+    state.curtainLines = [];
+    renderAll();
+  });
+
+  els.recordsList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.deleteRecord) {
+      deleteRecord(target.dataset.deleteRecord);
     }
   });
 
@@ -872,6 +1076,10 @@ function bindEvents() {
     window.print();
   });
 
+  els.submitQuote.addEventListener("click", () => {
+    submitQuoteRecord();
+  });
+
   els.copyEmail.addEventListener("click", () => {
     copyText(els.emailDraft.value, "Email draft");
   });
@@ -893,13 +1101,51 @@ function hydrateInputs() {
 }
 
 function init() {
-  loadPhotos();
-  state.lines = [createLine()];
-  state.curtainLines = [createCurtainLine()];
-  hydrateInputs();
-  bindEvents();
-  renderPhotos();
-  renderAll();
+  try {
+    cacheElements();
+    if (!hasRequiredElements()) {
+      console.error("Quote builder failed to initialize because required controls were not found.");
+      return;
+    }
+
+    loadPhotos();
+    loadRecords();
+    state.lines = [createLine()];
+    state.curtainLines = [createCurtainLine()];
+    hydrateInputs();
+    bindEvents();
+    renderPhotos();
+    renderRecords();
+    renderAll();
+  } catch (error) {
+    console.error("Quote builder failed to initialize.", error);
+    if (!initRecoveryAttempted) {
+      initRecoveryAttempted = true;
+      try {
+        localStorage.removeItem("ehs-house-photos");
+        localStorage.removeItem("ehs-dimension-records");
+      } catch (storageError) {
+        console.warn("Unable to clear saved quote builder data during recovery.", storageError);
+      }
+      state.photos = [];
+      state.records = [];
+      init();
+      return;
+    }
+    const fallback = document.createElement("div");
+    fallback.style.padding = "16px";
+    fallback.style.margin = "16px";
+    fallback.style.borderRadius = "12px";
+    fallback.style.background = "rgba(182, 59, 59, 0.14)";
+    fallback.style.border = "1px solid rgba(182, 59, 59, 0.35)";
+    fallback.style.color = "#ffd9d9";
+    fallback.textContent = "The quote builder hit a startup error. Reload the page to retry. If it still fails, saved browser data may need to be cleared.";
+    document.body.prepend(fallback);
+  }
 }
 
-init();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once: true });
+} else {
+  init();
+}

@@ -1,23 +1,35 @@
 # Eastern Home Service Quote Builder
 
-A browser-based blind quoting app for Eastern Home Service.
+A browser-based quoting app for Eastern Home Service that handles roller blinds, curtains, and sheers in one workflow.
 
-## What It Does
+## Current Features
 
-- Calculates blind costs from Wintex Group 2, 3, and 4 tables
-- Matches entered width and height to the correct pricing bracket
-- Supports supply-only and supply-plus-install quotes
-- Adds GST and shows ex-GST, GST, and total incl. GST
-- Shows gross profit in dollars and percentage
-- Lets you attach house measurement photos in the browser while quoting
-- Generates a printable quote preview
+- Uses Wintex Group 2, 3, and 4 pricing tables for roller blinds
+- Supports roller blind, curtain, and sheer quoting in one shared `Items` table
+- Accepts calculator-style size entry such as `1200+50` or `2400-20`
+- Rounds blind sizes up to the next matching pricing bracket
+- Calculates cost, retail, GST, total quote, and gross profit
+- Supports supply-only and supply-plus-install blind quotes
+- Calculates curtain and sheer pricing from material, fold rate, and track cost
+- Shows a detailed internal `Item Summary` for measurements and setup details
+- Generates a cleaner customer quote preview and printable PDF layout
+- Creates copy-ready email and message drafts for customer follow-up
+- Lets you attach house photos during measurement
+- Saves submitted quotes into local `Dimension Records` for later lookup
 
-## Files
+## Local Preview
 
-- `index.html` - app layout
-- `styles.css` - app styling
-- `app.js` - quote logic and interactions
+- Local app: `http://127.0.0.1:4173/index.html`
+- Live app: `https://easternhomeservice.vercel.app`
 
-## Notes
+## Main Files
 
-This is currently a front-end draft app intended to run locally or be hosted as a static site.
+- `index.html` - structure, sections, quote preview, records, and message UI
+- `styles.css` - dark theme, responsive layout, print styling, and component styling
+- `app.js` - pricing logic, item rendering, records, photo handling, and customer message generation
+
+## Storage Notes
+
+- Quotes, records, and photos are currently stored in browser local storage
+- Data does not sync between devices yet
+- The app can run locally or as a static hosted site

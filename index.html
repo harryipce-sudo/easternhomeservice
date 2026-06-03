@@ -23,6 +23,7 @@
       <nav class="nav">
         <a class="nav-item active" href="#quote-builder">Quote Builder</a>
         <a class="nav-item" href="#quote-preview">Quote Preview</a>
+        <a class="nav-item" href="#dimension-records">Dimension Records</a>
       </nav>
     </aside>
 
@@ -35,6 +36,7 @@
         </div>
         <div class="header-actions">
           <button class="ghost-button" id="reset-quote" type="button">Reset</button>
+          <button class="secondary-button" id="submit-quote" type="button">Submit Quote</button>
           <button class="primary-button" id="print-quote" type="button">Generate PDF</button>
         </div>
       </header>
@@ -71,10 +73,13 @@
           <section class="panel">
             <div class="panel-heading">
               <div>
-                <h2>Blind Line Items</h2>
-                <p>Add each blind location as a separate line.</p>
+                <h2>Roller Blinds</h2>
+                <p>Add each blind location as a separate line item.</p>
               </div>
-              <button class="secondary-button" id="add-line" type="button">Add Blind</button>
+              <div class="table-actions">
+                <button class="secondary-button" id="add-line" type="button">Add Blind</button>
+                <button class="ghost-button" id="clear-items" type="button">Clear Items</button>
+              </div>
             </div>
 
             <div class="table-wrap">
@@ -83,54 +88,61 @@
                   <tr>
                     <th>No.</th>
                     <th>Location</th>
-                    <th>Group</th>
+                    <th>Setup</th>
+                    <th>Finish</th>
                     <th>Width (mm)</th>
                     <th>Height (mm)</th>
-                    <th>Service</th>
-                    <th>Matched Table Size</th>
-                    <th>Blind Cost</th>
-                    <th>Line Total</th>
-                    <th></th>
+                    <th>Details</th>
+                    <th>Cost</th>
+                    <th>Retail</th>
                   </tr>
                 </thead>
-                <tbody id="quote-lines"></tbody>
+                <tbody id="blinds-body"></tbody>
               </table>
             </div>
           </section>
 
-          <section class="panel curtain-panel">
+          <section class="panel">
             <div class="panel-heading">
               <div>
-                <h2>Curtain & Sheer Items</h2>
-                <p>Current formula uses width x fold rate x material price, plus track at $60 per metre, then markup and GST.</p>
+                <h2>Curtains & Sheers</h2>
+                <p>Keep curtain and sheer measurements in their own working table.</p>
               </div>
-              <button class="secondary-button" id="add-curtain-line" type="button">Add Curtain / Sheer</button>
+              <div class="table-actions">
+                <button class="secondary-button" id="add-curtain-line" type="button">Add Curtain / Sheer</button>
+              </div>
             </div>
 
             <div class="table-wrap">
-              <table class="quote-table curtain-table">
+              <table class="quote-table">
                 <thead>
                   <tr>
                     <th>No.</th>
+                    <th>Type</th>
                     <th>Location</th>
-                    <th>Product</th>
-                    <th>Material</th>
-                    <th>Color</th>
-                    <th>Width (m)</th>
-                    <th>Drop (m)</th>
-                    <th>Fold Rate</th>
-                    <th>Style</th>
-                    <th>Stacking</th>
-                    <th>Sheer Bottom</th>
-                    <th>Blockout Lining</th>
-                    <th>Fabric Cost</th>
-                    <th>Track Cost</th>
-                    <th>Line Total</th>
-                    <th></th>
+                    <th>Material / Fold</th>
+                    <th>Color / Stacking</th>
+                    <th>Width (mm)</th>
+                    <th>Drop (mm)</th>
+                    <th>Details</th>
+                    <th>Cost</th>
+                    <th>Retail</th>
                   </tr>
                 </thead>
-                <tbody id="curtain-lines"></tbody>
+                <tbody id="curtains-body"></tbody>
               </table>
+            </div>
+          </section>
+
+          <section class="panel item-summary-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Item Summary</h2>
+                <p>Internal summary with full measurement and setup detail for every item.</p>
+              </div>
+            </div>
+            <div class="item-summary-list" id="item-summary-list">
+              <div class="record-empty" id="item-summary-empty">No items added yet.</div>
             </div>
           </section>
 
@@ -209,7 +221,7 @@
                   </div>
                   <button class="secondary-button copy-button" id="copy-email" type="button">Copy Email</button>
                 </div>
-                <textarea id="email-draft" class="message-output" readonly></textarea>
+                <textarea id="email-draft" class="message-output" rows="12" readonly></textarea>
               </div>
               <div class="message-card">
                 <div class="message-card-top">
@@ -219,10 +231,23 @@
                   </div>
                   <button class="secondary-button copy-button" id="copy-message" type="button">Copy Message</button>
                 </div>
-                <textarea id="message-draft" class="message-output" readonly></textarea>
+                <textarea id="message-draft" class="message-output" rows="12" readonly></textarea>
               </div>
             </div>
             <p class="copy-feedback" id="copy-feedback"></p>
+          </section>
+
+          <section class="panel records-panel" id="dimension-records">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Saved Records</p>
+                <h2>Dimension Records</h2>
+                <p>Submitted quotes are saved locally here so you can look back at dimensions later.</p>
+              </div>
+            </div>
+            <div class="records-list" id="records-list">
+              <div class="record-empty" id="record-empty">No submitted dimension records yet.</div>
+            </div>
           </section>
         </div>
 
@@ -233,45 +258,40 @@
               <h2>Quote Summary</h2>
             </div>
 
-            <div class="summary-metrics">
-              <div>
-                <span>Blind Cost Total</span>
+            <div class="summary-metrics summary-matrix">
+              <div class="summary-matrix-head">
+                <span>Item</span>
+                <span>Cost</span>
+                <span>Retail Price</span>
+              </div>
+              <div class="summary-matrix-row">
+                <span>Roller Blinds</span>
                 <strong id="materials-cost-total">$0.00</strong>
+                <strong id="blind-retail-total">$0.00</strong>
               </div>
-              <div>
-                <span>Blind Cost + GST</span>
-                <strong id="materials-cost-gst-total">$0.00</strong>
-              </div>
-              <div>
-                <span>Curtain / Sheer Cost Total</span>
+              <div class="summary-matrix-row">
+                <span>Curtains & Sheers</span>
                 <strong id="curtain-cost-total">$0.00</strong>
+                <strong id="curtain-retail-total">$0.00</strong>
               </div>
-              <div>
-                <span>Curtain / Sheer Cost + GST</span>
-                <strong id="curtain-cost-gst-total">$0.00</strong>
-              </div>
-              <div>
-                <span>Retail Total Ex GST</span>
-                <strong id="supply-retail-total">$0.00</strong>
-              </div>
-              <div>
-                <span>Install Cost Total</span>
+              <div class="summary-matrix-row">
+                <span>Installation</span>
                 <strong id="install-cost-total">$0.00</strong>
-              </div>
-              <div>
-                <span>Install Retail Total</span>
                 <strong id="install-retail-total">$0.00</strong>
               </div>
-              <div>
-                <span>Subtotal Ex GST</span>
+              <div class="summary-matrix-row">
+                <span>Total Ex GST</span>
+                <strong id="cost-ex-gst-total">$0.00</strong>
                 <strong id="subtotal-ex-gst">$0.00</strong>
               </div>
-              <div>
+              <div class="summary-matrix-row">
                 <span>GST (10%)</span>
+                <strong>-</strong>
                 <strong id="gst-total">$0.00</strong>
               </div>
-              <div class="grand-total">
-                <span>Total Quote Incl GST</span>
+              <div class="summary-matrix-row grand-total">
+                <span>Total Incl GST</span>
+                <strong>-</strong>
                 <strong id="grand-total">$0.00</strong>
               </div>
             </div>
