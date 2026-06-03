@@ -73,43 +73,13 @@
           <section class="panel">
             <div class="panel-heading">
               <div>
-                <h2>Roller Blinds</h2>
-                <p>Add each blind location as a separate line item.</p>
+                <h2>Items</h2>
+                <p>Use one shared table for roller blinds, curtains, and sheers.</p>
               </div>
               <div class="table-actions">
                 <button class="secondary-button" id="add-line" type="button">Add Blind</button>
-                <button class="ghost-button" id="clear-items" type="button">Clear Items</button>
-              </div>
-            </div>
-
-            <div class="table-wrap">
-              <table class="quote-table">
-                <thead>
-                  <tr>
-                    <th>No.</th>
-                    <th>Location</th>
-                    <th>Setup</th>
-                    <th>Finish</th>
-                    <th>Width (mm)</th>
-                    <th>Height (mm)</th>
-                    <th>Details</th>
-                    <th>Cost</th>
-                    <th>Retail</th>
-                  </tr>
-                </thead>
-                <tbody id="blinds-body"></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-heading">
-              <div>
-                <h2>Curtains & Sheers</h2>
-                <p>Keep curtain and sheer measurements in their own working table.</p>
-              </div>
-              <div class="table-actions">
                 <button class="secondary-button" id="add-curtain-line" type="button">Add Curtain / Sheer</button>
+                <button class="ghost-button" id="clear-items" type="button">Clear Table</button>
               </div>
             </div>
 
@@ -120,16 +90,16 @@
                     <th>No.</th>
                     <th>Type</th>
                     <th>Location</th>
-                    <th>Material / Fold</th>
-                    <th>Color / Stacking</th>
+                    <th>Setup</th>
+                    <th>Finish</th>
                     <th>Width (mm)</th>
-                    <th>Drop (mm)</th>
+                    <th>Height / Drop (mm)</th>
                     <th>Details</th>
                     <th>Cost</th>
                     <th>Retail</th>
                   </tr>
                 </thead>
-                <tbody id="curtains-body"></tbody>
+                <tbody id="items-body"></tbody>
               </table>
             </div>
           </section>
@@ -221,7 +191,7 @@
                   </div>
                   <button class="secondary-button copy-button" id="copy-email" type="button">Copy Email</button>
                 </div>
-                <textarea id="email-draft" class="message-output" rows="12" readonly></textarea>
+                <textarea id="email-draft" class="message-output" rows="18" readonly></textarea>
               </div>
               <div class="message-card">
                 <div class="message-card-top">
@@ -231,7 +201,7 @@
                   </div>
                   <button class="secondary-button copy-button" id="copy-message" type="button">Copy Message</button>
                 </div>
-                <textarea id="message-draft" class="message-output" rows="12" readonly></textarea>
+                <textarea id="message-draft" class="message-output" rows="18" readonly></textarea>
               </div>
             </div>
             <p class="copy-feedback" id="copy-feedback"></p>

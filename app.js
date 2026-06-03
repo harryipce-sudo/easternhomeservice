@@ -126,8 +126,7 @@ let initRecoveryAttempted = false;
 
 function cacheElements() {
   els = {
-    blindsBody: document.querySelector("#blinds-body"),
-    curtainsBody: document.querySelector("#curtains-body"),
+    itemsBody: document.querySelector("#items-body"),
     addLine: document.querySelector("#add-line"),
     addCurtainLine: document.querySelector("#add-curtain-line"),
     clearItems: document.querySelector("#clear-items"),
@@ -181,8 +180,7 @@ function cacheElements() {
 
 function hasRequiredElements() {
   return Boolean(
-    els.blindsBody &&
-    els.curtainsBody &&
+    els.itemsBody &&
     els.addLine &&
     els.addCurtainLine &&
     els.clearItems &&
@@ -347,92 +345,93 @@ function curtainColorOptions(materialName, selectedColor) {
     .join("");
 }
 
-function renderBlindsTable() {
-  els.blindsBody.innerHTML = "";
+function renderItemsTable() {
+  els.itemsBody.innerHTML = "";
+  const items = [
+    ...state.lines.map((line) => ({ kind: "blind", line })),
+    ...state.curtainLines.map((line) => ({ kind: "curtain", line }))
+  ];
 
-  state.lines.forEach((line, index) => {
+  items.forEach(({ kind, line }, index) => {
     const row = document.createElement("tr");
-    const computed = calculateBlindLine(line);
-    row.innerHTML = `
-      <td data-label="No."><span class="table-badge">${index + 1}</span></td>
-      <td data-label="Location"><input data-id="${line.id}" data-field="location" type="text" value="${line.location}" placeholder="Living room"></td>
-      <td data-label="Setup">
-        <select data-id="${line.id}" data-field="group">
-          ${Object.entries(PRICING_TABLE.groups).map(([value, group]) => `<option value="${value}" ${line.group === value ? "selected" : ""}>${group.label}</option>`).join("")}
-        </select>
-      </td>
-      <td data-label="Finish">
-        <select data-id="${line.id}" data-field="serviceType">
-          ${SERVICE_TYPES.map((type) => `<option value="${type.value}" ${line.serviceType === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
-        </select>
-      </td>
-      <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="1200+50"></td>
-      <td data-label="Height (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="text" inputmode="numeric" value="${line.height}" placeholder="2100-20"></td>
-      <td data-label="Details">
-        ${computed.matchedWidth && computed.matchedDrop
-          ? `<span class="table-badge">${computed.matchedWidth} x ${computed.matchedDrop}</span>`
-          : `<span class="error-text">${computed.error || "Enter width and height."}</span>`}
-      </td>
-      <td data-label="Cost"><span class="table-value">${formatCurrency(computed.blindCostTotal)}</span></td>
-      <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-    `;
-    els.blindsBody.appendChild(row);
-  });
-}
 
-function renderCurtainsTable() {
-  els.curtainsBody.innerHTML = "";
+    if (kind === "blind") {
+      const computed = calculateBlindLine(line);
+      row.innerHTML = `
+        <td data-label="No."><span class="table-badge">${index + 1}</span></td>
+        <td data-label="Type"><span class="table-badge">Roller Blind</span></td>
+        <td data-label="Location"><input data-id="${line.id}" data-field="location" type="text" value="${line.location}" placeholder="Living room"></td>
+        <td data-label="Setup">
+          <select data-id="${line.id}" data-field="group">
+            ${Object.entries(PRICING_TABLE.groups).map(([value, group]) => `<option value="${value}" ${line.group === value ? "selected" : ""}>${group.label}</option>`).join("")}
+          </select>
+        </td>
+        <td data-label="Finish">
+          <select data-id="${line.id}" data-field="serviceType">
+            ${SERVICE_TYPES.map((type) => `<option value="${type.value}" ${line.serviceType === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
+          </select>
+        </td>
+        <td data-label="Width (mm)"><input class="compact-input" data-id="${line.id}" data-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="1200+50"></td>
+        <td data-label="Height / Drop (mm)"><input class="compact-input" data-id="${line.id}" data-field="height" type="text" inputmode="numeric" value="${line.height}" placeholder="2100-20"></td>
+        <td data-label="Details">
+          ${computed.matchedWidth && computed.matchedDrop
+            ? `<span class="table-badge">${computed.matchedWidth} x ${computed.matchedDrop}</span>`
+            : `<span class="error-text">${computed.error || "Enter width and height."}</span>`}
+        </td>
+        <td data-label="Cost"><span class="table-value">${formatCurrency(computed.blindCostTotal)}</span></td>
+        <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
+      `;
+    } else {
+      const computed = calculateCurtainLine(line);
+      row.innerHTML = `
+        <td data-label="No."><span class="table-badge">${index + 1}</span></td>
+        <td data-label="Type">
+          <select data-curtain-id="${line.id}" data-curtain-field="product">
+            ${CURTAIN_PRODUCTS.map((type) => `<option value="${type.value}" ${line.product === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
+          </select>
+        </td>
+        <td data-label="Location"><input data-curtain-id="${line.id}" data-curtain-field="location" type="text" value="${line.location}" placeholder="Master bedroom"></td>
+        <td data-label="Setup">
+          <div class="cell-stack">
+            <select data-curtain-id="${line.id}" data-curtain-field="material">
+              ${Object.keys(CURTAIN_MATERIALS).map((material) => `<option value="${material}" ${line.material === material ? "selected" : ""}>${material}</option>`).join("")}
+            </select>
+            <select data-curtain-id="${line.id}" data-curtain-field="foldRate">
+              ${FOLD_RATES.map((rate) => `<option value="${rate}" ${Number(line.foldRate) === rate ? "selected" : ""}>x${rate}</option>`).join("")}
+            </select>
+          </div>
+        </td>
+        <td data-label="Finish">
+          <div class="cell-stack">
+            <select data-curtain-id="${line.id}" data-curtain-field="color">
+              ${curtainColorOptions(line.material, line.color)}
+            </select>
+            <select data-curtain-id="${line.id}" data-curtain-field="stacking">
+              ${STACKING_OPTIONS.map((stack) => `<option value="${stack}" ${line.stacking === stack ? "selected" : ""}>${stack}</option>`).join("")}
+            </select>
+          </div>
+        </td>
+        <td data-label="Width (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="3000+200"></td>
+        <td data-label="Height / Drop (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="text" inputmode="numeric" value="${line.drop}" placeholder="2400-100"></td>
+        <td data-label="Details">
+          <div class="cell-stack">
+            <select data-curtain-id="${line.id}" data-curtain-field="style">
+              ${CURTAIN_STYLES.map((style) => `<option value="${style}" ${line.style === style ? "selected" : ""}>${style}</option>`).join("")}
+            </select>
+            <select data-curtain-id="${line.id}" data-curtain-field="sheerBottomStyle">
+              ${SHEER_BOTTOM_STYLES.map((style) => `<option value="${style}" ${line.sheerBottomStyle === style ? "selected" : ""}>${style}</option>`).join("")}
+            </select>
+            <select data-curtain-id="${line.id}" data-curtain-field="blockoutLining">
+              ${BLOCKOUT_OPTIONS.map((value) => `<option value="${value}" ${line.blockoutLining === value ? "selected" : ""}>${value}</option>`).join("")}
+            </select>
+          </div>
+        </td>
+        <td data-label="Cost"><span class="table-value">${formatCurrency(computed.costExGst)}</span></td>
+        <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
+      `;
+    }
 
-  state.curtainLines.forEach((line, index) => {
-    const computed = calculateCurtainLine(line);
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td data-label="No."><span class="table-badge">${index + 1}</span></td>
-      <td data-label="Type">
-        <select data-curtain-id="${line.id}" data-curtain-field="product">
-          ${CURTAIN_PRODUCTS.map((type) => `<option value="${type.value}" ${line.product === type.value ? "selected" : ""}>${type.label}</option>`).join("")}
-        </select>
-      </td>
-      <td data-label="Location"><input data-curtain-id="${line.id}" data-curtain-field="location" type="text" value="${line.location}" placeholder="Master bedroom"></td>
-      <td data-label="Material / Fold">
-        <div class="cell-stack">
-          <select data-curtain-id="${line.id}" data-curtain-field="material">
-            ${Object.keys(CURTAIN_MATERIALS).map((material) => `<option value="${material}" ${line.material === material ? "selected" : ""}>${material}</option>`).join("")}
-          </select>
-          <select data-curtain-id="${line.id}" data-curtain-field="foldRate">
-            ${FOLD_RATES.map((rate) => `<option value="${rate}" ${Number(line.foldRate) === rate ? "selected" : ""}>x${rate}</option>`).join("")}
-          </select>
-        </div>
-      </td>
-      <td data-label="Color / Stacking">
-        <div class="cell-stack">
-          <select data-curtain-id="${line.id}" data-curtain-field="color">
-            ${curtainColorOptions(line.material, line.color)}
-          </select>
-          <select data-curtain-id="${line.id}" data-curtain-field="stacking">
-            ${STACKING_OPTIONS.map((stack) => `<option value="${stack}" ${line.stacking === stack ? "selected" : ""}>${stack}</option>`).join("")}
-          </select>
-        </div>
-      </td>
-      <td data-label="Width (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="width" type="text" inputmode="numeric" value="${line.width}" placeholder="3000+200"></td>
-      <td data-label="Drop (mm)"><input class="compact-input" data-curtain-id="${line.id}" data-curtain-field="drop" type="text" inputmode="numeric" value="${line.drop}" placeholder="2400-100"></td>
-      <td data-label="Details">
-        <div class="cell-stack">
-          <select data-curtain-id="${line.id}" data-curtain-field="style">
-            ${CURTAIN_STYLES.map((style) => `<option value="${style}" ${line.style === style ? "selected" : ""}>${style}</option>`).join("")}
-          </select>
-          <select data-curtain-id="${line.id}" data-curtain-field="sheerBottomStyle">
-            ${SHEER_BOTTOM_STYLES.map((style) => `<option value="${style}" ${line.sheerBottomStyle === style ? "selected" : ""}>${style}</option>`).join("")}
-          </select>
-          <select data-curtain-id="${line.id}" data-curtain-field="blockoutLining">
-            ${BLOCKOUT_OPTIONS.map((value) => `<option value="${value}" ${line.blockoutLining === value ? "selected" : ""}>${value}</option>`).join("")}
-          </select>
-        </div>
-      </td>
-      <td data-label="Cost"><span class="table-value">${formatCurrency(computed.costExGst)}</span></td>
-      <td data-label="Retail"><span class="table-value">${formatCurrency(computed.lineTotal)}</span></td>
-    `;
-    els.curtainsBody.appendChild(row);
+    els.itemsBody.appendChild(row);
   });
 }
 
@@ -456,21 +455,24 @@ function renderItemSummary() {
       const computed = calculateBlindLine(line);
       card.innerHTML = `
         <h3>${index + 1}. Roller Blind - ${line.location || "Untitled Location"}</h3>
+        <p>Entered size: ${line.width}w x ${line.height}h mm</p>
+        <p>Matched bracket: ${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop} mm` : "-"}</p>
         <p>Group: ${PRICING_TABLE.groups[line.group]?.label || line.group}</p>
-        <p>Size: ${evaluateCalculatorValue(line.width) || line.width}w x ${evaluateCalculatorValue(line.height) || line.height}h mm</p>
         <p>Service: ${SERVICE_TYPES.find((item) => item.value === line.serviceType)?.label || line.serviceType}</p>
-        <p>Matched table: ${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop}` : "-"}</p>
-        <p>Cost: ${formatCurrency(computed.blindCostTotal)} | Retail: ${formatCurrency(computed.lineTotal)}</p>
+        <p>Blind cost: ${formatCurrency(computed.blindCostTotal)} | Install cost baseline: ${formatCurrency(computed.installUnitCost)}</p>
+        <p>Retail ex GST: ${formatCurrency(computed.lineSubtotalExGst)} | GST: ${formatCurrency(computed.lineGst)} | Total incl GST: ${formatCurrency(computed.lineTotal)}</p>
       `;
     } else {
       const computed = calculateCurtainLine(line);
       card.innerHTML = `
         <h3>${index + 1}. ${CURTAIN_PRODUCTS.find((item) => item.value === line.product)?.label || line.product} - ${line.location || "Untitled Location"}</h3>
+        <p>Entered size: ${line.width}w x ${line.drop}d mm</p>
         <p>Material: ${line.material} | Color: ${line.color}</p>
-        <p>Size: ${evaluateCalculatorValue(line.width) || line.width}w x ${evaluateCalculatorValue(line.drop) || line.drop}d mm</p>
-        <p>Fold rate: x${line.foldRate} | Style: ${line.style}</p>
-        <p>Stacking: ${line.stacking} | Sheer Bottom: ${line.sheerBottomStyle} | Blockout Lining: ${line.blockoutLining}</p>
-        <p>Cost: ${formatCurrency(computed.costExGst)} | Retail: ${formatCurrency(computed.lineTotal)}</p>
+        <p>Fold rate: x${line.foldRate} | Calculated fabric: ${computed.fabricMeters.toFixed(2)} m</p>
+        <p>Style: ${line.style} | Stacking: ${line.stacking}</p>
+        <p>Sheer bottom: ${line.sheerBottomStyle} | Blockout lining: ${line.blockoutLining}</p>
+        <p>Fabric cost: ${formatCurrency(computed.fabricCost)} | Track cost: ${formatCurrency(computed.trackCost)} | Cost ex GST: ${formatCurrency(computed.costExGst)}</p>
+        <p>Retail ex GST: ${formatCurrency(computed.retailExGst)} | GST: ${formatCurrency(computed.gst)} | Total incl GST: ${formatCurrency(computed.lineTotal)}</p>
       `;
     }
 
@@ -935,8 +937,7 @@ async function copyText(text, label) {
 }
 
 function renderAll() {
-  renderBlindsTable();
-  renderCurtainsTable();
+  renderItemsTable();
   renderItemSummary();
   updateSummary();
 }
@@ -952,15 +953,19 @@ function bindEvents() {
     renderAll();
   });
 
-  els.blindsBody.addEventListener("input", (event) => {
+  els.itemsBody.addEventListener("input", (event) => {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
       updateSummary();
     }
+    if (target.dataset.curtainId && target.dataset.curtainField) {
+      setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
+      updateSummary();
+    }
   });
 
-  els.blindsBody.addEventListener("change", (event) => {
+  els.itemsBody.addEventListener("change", (event) => {
     const target = event.target;
     if (target.dataset.id && target.dataset.field) {
       setBlindValue(target.dataset.id, target.dataset.field, target.value);
@@ -969,18 +974,6 @@ function bindEvents() {
       }
       renderAll();
     }
-  });
-
-  els.curtainsBody.addEventListener("input", (event) => {
-    const target = event.target;
-    if (target.dataset.curtainId && target.dataset.curtainField) {
-      setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
-      updateSummary();
-    }
-  });
-
-  els.curtainsBody.addEventListener("change", (event) => {
-    const target = event.target;
     if (target.dataset.curtainId && target.dataset.curtainField) {
       setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, target.value);
       if (target.dataset.curtainField === "width" || target.dataset.curtainField === "drop") {

@@ -682,7 +682,7 @@ select {
 }
 
 .message-output {
-  min-height: 340px;
+  min-height: 460px;
   resize: vertical;
   line-height: 1.6;
   background: rgba(8, 13, 18, 0.9);
@@ -1050,7 +1050,7 @@ select {
   }
 
   .message-output {
-    min-height: 260px;
+    min-height: 340px;
     font-size: 16px;
   }
 
