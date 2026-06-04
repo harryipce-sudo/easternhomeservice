@@ -707,6 +707,8 @@ select {
 }
 
 .message-output {
+  width: 100%;
+  display: block;
   min-height: 460px;
   resize: vertical;
   line-height: 1.6;
