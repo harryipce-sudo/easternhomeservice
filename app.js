@@ -121,8 +121,18 @@ const state = {
   curtainLines: []
 };
 
+const LOCAL_RECORDS_KEY = "ehs-dimension-records";
+const LOCAL_PHOTOS_KEY = "ehs-house-photos";
+
 let els = {};
 let initRecoveryAttempted = false;
+
+function getQuoteRecordsEndpoint() {
+  const { hostname } = window.location;
+  const isLocalHost = hostname === "127.0.0.1" || hostname === "localhost";
+  const baseUrl = isLocalHost ? "https://easternhomeservice.vercel.app" : "";
+  return `${baseUrl}/api/quote-records`;
+}
 
 function cacheElements() {
   els = {
@@ -510,7 +520,7 @@ function renderPhotos() {
 
 function persistPhotos() {
   try {
-    localStorage.setItem("ehs-house-photos", JSON.stringify(state.photos));
+    localStorage.setItem(LOCAL_PHOTOS_KEY, JSON.stringify(state.photos));
   } catch (error) {
     console.warn("Unable to persist photos", error);
   }
@@ -518,7 +528,7 @@ function persistPhotos() {
 
 function loadPhotos() {
   try {
-    const saved = localStorage.getItem("ehs-house-photos");
+    const saved = localStorage.getItem(LOCAL_PHOTOS_KEY);
     const parsed = saved ? JSON.parse(saved) : [];
     state.photos = Array.isArray(parsed)
       ? parsed.filter((photo) => photo && typeof photo === "object" && typeof photo.dataUrl === "string")
@@ -552,33 +562,74 @@ function removePhoto(id) {
   renderPhotos();
 }
 
+function parseStoredRecords(value) {
+  const parsed = value ? JSON.parse(value) : [];
+  return Array.isArray(parsed)
+    ? parsed.filter((record) => record && typeof record === "object").map((record) => ({
+        id: record.id || crypto.randomUUID(),
+        submittedAt: record.submittedAt || new Date().toISOString(),
+        customerName: record.customerName || "-",
+        phone: record.phone || "-",
+        address: record.address || "-",
+        quoteNumber: record.quoteNumber || "-",
+        totalQuote: record.totalQuote || formatCurrency(0),
+        blindItems: Array.isArray(record.blindItems) ? record.blindItems : [],
+        curtainItems: Array.isArray(record.curtainItems) ? record.curtainItems : []
+      }))
+    : [];
+}
+
+function hydrateRecordCache(records) {
+  state.records = records;
+  persistRecords();
+}
+
 function persistRecords() {
   try {
-    localStorage.setItem("ehs-dimension-records", JSON.stringify(state.records));
+    localStorage.setItem(LOCAL_RECORDS_KEY, JSON.stringify(state.records));
   } catch (error) {
     console.warn("Unable to persist records", error);
   }
 }
 
-function loadRecords() {
+function loadRecordsFromLocalStorage() {
   try {
-    const saved = localStorage.getItem("ehs-dimension-records");
-    const parsed = saved ? JSON.parse(saved) : [];
-    state.records = Array.isArray(parsed)
-      ? parsed.filter((record) => record && typeof record === "object").map((record) => ({
-          id: record.id || crypto.randomUUID(),
-          submittedAt: record.submittedAt || new Date().toISOString(),
-          customerName: record.customerName || "-",
-          phone: record.phone || "-",
-          address: record.address || "-",
-          quoteNumber: record.quoteNumber || "-",
-          totalQuote: record.totalQuote || formatCurrency(0),
-          blindItems: Array.isArray(record.blindItems) ? record.blindItems : [],
-          curtainItems: Array.isArray(record.curtainItems) ? record.curtainItems : []
-        }))
-      : [];
+    return parseStoredRecords(localStorage.getItem(LOCAL_RECORDS_KEY));
   } catch (error) {
-    state.records = [];
+    return [];
+  }
+}
+
+async function requestQuoteRecords(path = "", options = {}) {
+  const response = await fetch(`${getQuoteRecordsEndpoint()}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    ...options
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Request failed with status ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
+async function loadRecords() {
+  const fallbackRecords = loadRecordsFromLocalStorage();
+  state.records = fallbackRecords;
+
+  try {
+    const remoteRecords = await requestQuoteRecords();
+    hydrateRecordCache(Array.isArray(remoteRecords) ? remoteRecords : []);
+  } catch (error) {
+    console.warn("Unable to load cloud records, using local records instead.", error);
   }
 }
 
@@ -612,24 +663,56 @@ function createRecordSnapshot() {
     address: state.customer.address || "-",
     quoteNumber: state.customer.quoteNumber || "-",
     totalQuote: els.grandTotal.textContent,
+    subtotalExGst: els.subtotalExGst.textContent,
+    gstTotal: els.gstTotal.textContent,
+    blindCount: blindItems.length,
+    curtainCount: state.curtainLines.filter((line) => line.product === "curtain").length,
+    sheerCount: state.curtainLines.filter((line) => line.product === "sheer").length,
     blindItems,
     curtainItems
   };
 }
 
-function submitQuoteRecord() {
+async function submitQuoteRecord() {
   const record = createRecordSnapshot();
   state.records = [record, ...state.records];
   persistRecords();
   renderRecords();
-  els.copyFeedback.textContent = "Quote submitted to Dimension Records.";
+
+  try {
+    const savedRecord = await requestQuoteRecords("", {
+      method: "POST",
+      body: JSON.stringify(record)
+    });
+    state.records = state.records.map((item) => (item.id === record.id ? savedRecord : item));
+    persistRecords();
+    renderRecords();
+    els.copyFeedback.textContent = "Quote submitted to cloud Dimension Records.";
+  } catch (error) {
+    console.warn("Unable to sync quote record to cloud storage.", error);
+    els.copyFeedback.textContent = "Quote saved locally. Cloud sync is unavailable right now.";
+  }
+
   document.querySelector("#dimension-records")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function deleteRecord(id) {
+async function deleteRecord(id) {
+  const previousRecords = [...state.records];
   state.records = state.records.filter((record) => record.id !== id);
   persistRecords();
   renderRecords();
+
+  try {
+    await requestQuoteRecords(`?id=${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+  } catch (error) {
+    console.warn("Unable to delete cloud quote record.", error);
+    state.records = previousRecords;
+    persistRecords();
+    renderRecords();
+    els.copyFeedback.textContent = "Unable to delete the cloud record right now.";
+  }
 }
 
 function renderRecords() {
@@ -1152,7 +1235,7 @@ function hydrateInputs() {
   els.quoteNumber.value = state.customer.quoteNumber;
 }
 
-function init() {
+async function init() {
   try {
     cacheElements();
     if (!hasRequiredElements()) {
@@ -1161,7 +1244,7 @@ function init() {
     }
 
     loadPhotos();
-    loadRecords();
+    await loadRecords();
     state.lines = [];
     state.curtainLines = [];
     hydrateInputs();
@@ -1174,8 +1257,8 @@ function init() {
     if (!initRecoveryAttempted) {
       initRecoveryAttempted = true;
       try {
-        localStorage.removeItem("ehs-house-photos");
-        localStorage.removeItem("ehs-dimension-records");
+        localStorage.removeItem(LOCAL_PHOTOS_KEY);
+        localStorage.removeItem(LOCAL_RECORDS_KEY);
       } catch (storageError) {
         console.warn("Unable to clear saved quote builder data during recovery.", storageError);
       }

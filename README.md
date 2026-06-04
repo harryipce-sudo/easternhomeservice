@@ -27,9 +27,10 @@ A browser-based quoting app for Eastern Home Service that handles roller blinds,
 - `index.html` - structure, sections, quote preview, records, and message UI
 - `styles.css` - dark theme, responsive layout, print styling, and component styling
 - `app.js` - pricing logic, item rendering, records, photo handling, and customer message generation
+- `api/quote-records.js` - protected Vercel serverless API for loading, saving, and deleting quote records in Supabase
 
 ## Storage Notes
 
-- Quotes, records, and photos are currently stored in browser local storage
-- Data does not sync between devices yet
-- The app can run locally or as a static hosted site
+- House photos stay in browser local storage
+- Quote records now prefer a protected server-side Supabase API and fall back to local storage if cloud sync is unavailable
+- To enable live cloud sync on Vercel, add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the project environment variables
