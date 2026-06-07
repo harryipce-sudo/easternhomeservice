@@ -126,6 +126,7 @@ const LOCAL_PHOTOS_KEY = "ehs-house-photos";
 
 let els = {};
 let initRecoveryAttempted = false;
+let pendingFocus = null;
 
 function getQuoteRecordsEndpoint() {
   const { hostname } = window.location;
@@ -238,6 +239,33 @@ function createCurtainLine() {
     blockoutLining: "No",
     isEditing: true
   };
+}
+
+function queueFocus(selector, cursorToEnd = false) {
+  pendingFocus = { selector, cursorToEnd };
+}
+
+function applyPendingFocus() {
+  if (!pendingFocus) {
+    return;
+  }
+
+  const target = document.querySelector(pendingFocus.selector);
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+    pendingFocus = null;
+    return;
+  }
+
+  target.focus();
+
+  if (pendingFocus.cursorToEnd && target instanceof HTMLInputElement) {
+    const valueLength = target.value.length;
+    target.setSelectionRange(valueLength, valueLength);
+  } else if (typeof target.select === "function" && target instanceof HTMLInputElement) {
+    target.select();
+  }
+
+  pendingFocus = null;
 }
 
 function getActivePageFromHash(hash = window.location.hash) {
@@ -898,6 +926,20 @@ function deleteCurtainLine(id) {
   state.curtainLines = state.curtainLines.filter((line) => line.id !== id);
 }
 
+function addBlindLineAndFocus() {
+  const line = createLine();
+  state.lines.push(line);
+  queueFocus(`input[data-id="${line.id}"][data-field="width"]`, true);
+  renderAll();
+}
+
+function addCurtainLineAndFocus() {
+  const line = createCurtainLine();
+  state.curtainLines.push(line);
+  queueFocus(`input[data-curtain-id="${line.id}"][data-curtain-field="width"]`, true);
+  renderAll();
+}
+
 function updateSummary() {
   const blindTotals = state.lines.reduce((acc, line) => {
     const computed = calculateBlindLine(line);
@@ -1108,6 +1150,51 @@ function renderAll() {
   renderBlindSummaryTable();
   renderCurtainSummaryTable();
   updateSummary();
+  applyPendingFocus();
+}
+
+function focusNextBlindField(id, field) {
+  const currentIndex = state.lines.findIndex((line) => line.id === id);
+  if (currentIndex === -1) {
+    return;
+  }
+
+  if (field === "width") {
+    queueFocus(`input[data-id="${id}"][data-field="height"]`, true);
+    renderAll();
+    return;
+  }
+
+  const nextLine = state.lines[currentIndex + 1];
+  if (nextLine) {
+    queueFocus(`input[data-id="${nextLine.id}"][data-field="width"]`, true);
+    renderAll();
+    return;
+  }
+
+  addBlindLineAndFocus();
+}
+
+function focusNextCurtainField(id, field) {
+  const currentIndex = state.curtainLines.findIndex((line) => line.id === id);
+  if (currentIndex === -1) {
+    return;
+  }
+
+  if (field === "width") {
+    queueFocus(`input[data-curtain-id="${id}"][data-curtain-field="drop"]`, true);
+    renderAll();
+    return;
+  }
+
+  const nextLine = state.curtainLines[currentIndex + 1];
+  if (nextLine) {
+    queueFocus(`input[data-curtain-id="${nextLine.id}"][data-curtain-field="width"]`, true);
+    renderAll();
+    return;
+  }
+
+  addCurtainLineAndFocus();
 }
 
 function bindEvents() {
@@ -1116,13 +1203,11 @@ function bindEvents() {
   });
 
   els.addLine.addEventListener("click", () => {
-    state.lines.push(createLine());
-    renderAll();
+    addBlindLineAndFocus();
   });
 
   els.addCurtainLine.addEventListener("click", () => {
-    state.curtainLines.push(createCurtainLine());
-    renderAll();
+    addCurtainLineAndFocus();
   });
 
   els.summaryBlindsBody.addEventListener("input", (event) => {
@@ -1144,9 +1229,25 @@ function bindEvents() {
     }
   });
 
+  els.summaryBlindsBody.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (event.key !== "Enter" || !target.dataset.id || !target.dataset.field) {
+      return;
+    }
+
+    if (!["width", "height"].includes(target.dataset.field)) {
+      return;
+    }
+
+    event.preventDefault();
+    setBlindValue(target.dataset.id, target.dataset.field, normalizeCalculatorField(target.value));
+    focusNextBlindField(target.dataset.id, target.dataset.field);
+  });
+
   els.summaryBlindsBody.addEventListener("click", (event) => {
     const target = event.target;
     if (target.dataset.editBlind) {
+      queueFocus(`input[data-id="${target.dataset.editBlind}"][data-field="width"]`, true);
       setBlindEditing(target.dataset.editBlind, true);
       renderAll();
     }
@@ -1185,9 +1286,25 @@ function bindEvents() {
     }
   });
 
+  els.summaryCurtainsBody.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (event.key !== "Enter" || !target.dataset.curtainId || !target.dataset.curtainField) {
+      return;
+    }
+
+    if (!["width", "drop"].includes(target.dataset.curtainField)) {
+      return;
+    }
+
+    event.preventDefault();
+    setCurtainValue(target.dataset.curtainId, target.dataset.curtainField, normalizeCalculatorField(target.value));
+    focusNextCurtainField(target.dataset.curtainId, target.dataset.curtainField);
+  });
+
   els.summaryCurtainsBody.addEventListener("click", (event) => {
     const target = event.target;
     if (target.dataset.editCurtain) {
+      queueFocus(`input[data-curtain-id="${target.dataset.editCurtain}"][data-curtain-field="width"]`, true);
       setCurtainEditing(target.dataset.editCurtain, true);
       renderAll();
     }
