@@ -141,6 +141,8 @@ function cacheElements() {
   els = {
     addLine: document.querySelector("#add-line"),
     addCurtainLine: document.querySelector("#add-curtain-line"),
+    saveAllBlinds: document.querySelector("#save-all-blinds"),
+    saveAllCurtains: document.querySelector("#save-all-curtains"),
     clearBlinds: document.querySelector("#clear-blinds"),
     clearCurtains: document.querySelector("#clear-curtains"),
     resetQuote: document.querySelector("#reset-quote"),
@@ -203,6 +205,8 @@ function hasRequiredElements() {
     els.summaryCurtainsBody &&
     els.addLine &&
     els.addCurtainLine &&
+    els.saveAllBlinds &&
+    els.saveAllCurtains &&
     els.recordsTableBody &&
     els.recordDetail &&
     els.clearBlinds &&
@@ -1047,6 +1051,13 @@ function deleteBlindLine(id) {
   state.lines = state.lines.filter((line) => line.id !== id);
 }
 
+function saveAllBlindLines() {
+  state.lines = state.lines.map((line) => ({
+    ...line,
+    isEditing: false
+  }));
+}
+
 function setCurtainValue(id, field, value) {
   state.curtainLines = state.curtainLines.map((line) => {
     if (line.id !== id) {
@@ -1076,6 +1087,13 @@ function setCurtainEditing(id, isEditing) {
 
 function deleteCurtainLine(id) {
   state.curtainLines = state.curtainLines.filter((line) => line.id !== id);
+}
+
+function saveAllCurtainLines() {
+  state.curtainLines = state.curtainLines.map((line) => ({
+    ...line,
+    isEditing: false
+  }));
 }
 
 function addBlindLineAndFocus() {
@@ -1496,9 +1514,21 @@ function bindEvents() {
     renderAll();
   });
 
+  els.saveAllBlinds.addEventListener("click", () => {
+    saveAllBlindLines();
+    renderAll();
+    els.copyFeedback.textContent = "All blind rows saved.";
+  });
+
   els.clearCurtains.addEventListener("click", () => {
     state.curtainLines = [];
     renderAll();
+  });
+
+  els.saveAllCurtains.addEventListener("click", () => {
+    saveAllCurtainLines();
+    renderAll();
+    els.copyFeedback.textContent = "All curtain and sheer rows saved.";
   });
 
   els.recordsTableBody.addEventListener("click", (event) => {
