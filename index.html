@@ -23,7 +23,7 @@
       <nav class="nav">
         <a class="nav-item active" href="#quote-builder" data-page-link="builder">Quote Builder</a>
         <a class="nav-item" href="#quote-preview" data-page-link="builder">Quote Preview</a>
-        <a class="nav-item" href="#quote-history" data-page-link="history">Quote History</a>
+        <a class="nav-item" href="#quote-history" data-page-link="history">Search Quote</a>
       </nav>
     </aside>
 
@@ -37,7 +37,7 @@
         </div>
         <div class="header-actions">
           <button class="ghost-button" id="reset-quote" type="button">Reset</button>
-          <button class="secondary-button" id="submit-quote" type="button">Submit Quote</button>
+          <button class="secondary-button" id="submit-quote" type="button">Save Quote</button>
           <button class="primary-button" id="print-quote" type="button">Generate PDF</button>
         </div>
       </header>
@@ -335,45 +335,48 @@
       <section class="app-page" id="page-history" data-page="history">
         <header class="page-header page-header-single">
           <div>
-            <p class="section-kicker">Records</p>
-            <h1 id="quote-history">Quote History</h1>
-            <p class="page-copy">Review submitted quotes, customer details, and saved measurements from one clean page.</p>
+            <p class="section-kicker">Saved Quotes</p>
+            <h1 id="quote-history">Search Quote</h1>
+            <p class="page-copy">Search saved quotes by quote number or customer details, then open the full order summary.</p>
           </div>
         </header>
-
-        <section class="history-stats-grid">
-          <article class="panel history-stat-card">
-            <p class="section-kicker">Saved Quotes</p>
-            <strong id="history-total-records">0</strong>
-            <p>Quotes submitted and saved to your records.</p>
-          </article>
-          <article class="panel history-stat-card">
-            <p class="section-kicker">Quote Value</p>
-            <strong id="history-total-value">$0.00</strong>
-            <p>Total quoted value across all saved records.</p>
-          </article>
-          <article class="panel history-stat-card">
-            <p class="section-kicker">Window Items</p>
-            <strong id="history-total-items">0</strong>
-            <p>Total blind, curtain, and sheer line items saved.</p>
-          </article>
-          <article class="panel history-stat-card">
-            <p class="section-kicker">Customers</p>
-            <strong id="history-customer-count">0</strong>
-            <p>Unique customers with saved quote history.</p>
-          </article>
-        </section>
 
         <section class="panel records-panel" id="dimension-records">
           <div class="panel-heading">
             <div>
-              <p class="section-kicker">Saved Records</p>
-              <h2>Dimension Records</h2>
-              <p>Submitted quotes are stored here so you can look back at dimensions, products, and totals later.</p>
+              <p class="section-kicker">Quote Search</p>
+              <h2>Saved Quote List</h2>
+              <p>Click the customer detail to open the full order breakdown, dimensions, and totals.</p>
             </div>
           </div>
-          <div class="records-list" id="records-list">
-            <div class="record-empty" id="record-empty">No submitted dimension records yet.</div>
+          <div class="records-toolbar">
+            <label class="records-search-field">
+              <span>Search Quote</span>
+              <input id="history-search" type="search" placeholder="Search quote number, customer, phone, or address">
+            </label>
+          </div>
+          <div class="records-layout">
+            <div class="records-table-wrap">
+              <table class="quote-table records-table">
+                <thead>
+                  <tr>
+                    <th>Quote No.</th>
+                    <th>Customer Detail</th>
+                    <th>Address</th>
+                    <th>Saved</th>
+                    <th>Total</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="records-table-body"></tbody>
+              </table>
+              <div class="record-empty" id="record-empty">No saved quotes found yet.</div>
+            </div>
+            <div class="record-detail-card" id="record-detail">
+              <div class="record-detail-empty">
+                Select a customer detail to view the full quote and order summary.
+              </div>
+            </div>
           </div>
         </section>
       </section>

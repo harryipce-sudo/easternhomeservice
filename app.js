@@ -118,7 +118,9 @@ const state = {
   photos: [],
   records: [],
   lines: [],
-  curtainLines: []
+  curtainLines: [],
+  historySearch: "",
+  selectedRecordId: ""
 };
 
 const LOCAL_RECORDS_KEY = "ehs-dimension-records";
@@ -188,12 +190,10 @@ function cacheElements() {
     summaryBlindsEmpty: document.querySelector("#summary-blinds-empty"),
     summaryCurtainsBody: document.querySelector("#summary-curtains-body"),
     summaryCurtainsEmpty: document.querySelector("#summary-curtains-empty"),
-    recordsList: document.querySelector("#records-list"),
+    historySearch: document.querySelector("#history-search"),
+    recordsTableBody: document.querySelector("#records-table-body"),
+    recordDetail: document.querySelector("#record-detail"),
     recordEmpty: document.querySelector("#record-empty"),
-    historyTotalRecords: document.querySelector("#history-total-records"),
-    historyTotalValue: document.querySelector("#history-total-value"),
-    historyTotalItems: document.querySelector("#history-total-items"),
-    historyCustomerCount: document.querySelector("#history-customer-count")
   };
 }
 
@@ -203,6 +203,8 @@ function hasRequiredElements() {
     els.summaryCurtainsBody &&
     els.addLine &&
     els.addCurtainLine &&
+    els.recordsTableBody &&
+    els.recordDetail &&
     els.clearBlinds &&
     els.clearCurtains &&
     els.resetQuote &&
@@ -316,6 +318,33 @@ function formatCurrency(value) {
 
 function formatPercent(value) {
   return `${(Number.isFinite(value) ? value : 0).toFixed(1)}%`;
+}
+
+function parseCurrency(value) {
+  const numeric = Number(String(value ?? "").replace(/[^0-9.-]+/g, ""));
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatRecordDate(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "-";
+  }
+
+  return parsed.toLocaleDateString("en-AU", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
 }
 
 function evaluateCalculatorValue(value) {
@@ -711,10 +740,17 @@ async function requestQuoteRecords(path = "", options = {}) {
 async function loadRecords() {
   const fallbackRecords = loadRecordsFromLocalStorage();
   state.records = fallbackRecords;
+  if (!state.selectedRecordId && fallbackRecords.length) {
+    state.selectedRecordId = fallbackRecords[0].id;
+  }
 
   try {
     const remoteRecords = await requestQuoteRecords();
-    hydrateRecordCache(Array.isArray(remoteRecords) ? remoteRecords : []);
+    const normalizedRecords = Array.isArray(remoteRecords) ? remoteRecords : [];
+    hydrateRecordCache(normalizedRecords);
+    if (!state.selectedRecordId && normalizedRecords.length) {
+      state.selectedRecordId = normalizedRecords[0].id;
+    }
   } catch (error) {
     console.warn("Unable to load cloud records, using local records instead.", error);
   }
@@ -761,8 +797,14 @@ function createRecordSnapshot() {
 }
 
 async function submitQuoteRecord() {
+  if (!state.lines.length && !state.curtainLines.length) {
+    els.copyFeedback.textContent = "Add at least one blind, curtain, or sheer item before saving the quote.";
+    return;
+  }
+
   const record = createRecordSnapshot();
   state.records = [record, ...state.records];
+  state.selectedRecordId = record.id;
   persistRecords();
   renderRecords();
 
@@ -772,9 +814,10 @@ async function submitQuoteRecord() {
       body: JSON.stringify(record)
     });
     state.records = state.records.map((item) => (item.id === record.id ? savedRecord : item));
+    state.selectedRecordId = savedRecord.id;
     persistRecords();
     renderRecords();
-    els.copyFeedback.textContent = "Quote submitted to cloud Dimension Records.";
+    els.copyFeedback.textContent = "Quote saved to your cloud records.";
   } catch (error) {
     console.warn("Unable to sync quote record to cloud storage.", error);
     els.copyFeedback.textContent = "Quote saved locally. Cloud sync is unavailable right now.";
@@ -786,6 +829,9 @@ async function submitQuoteRecord() {
 async function deleteRecord(id) {
   const previousRecords = [...state.records];
   state.records = state.records.filter((record) => record.id !== id);
+  if (state.selectedRecordId === id) {
+    state.selectedRecordId = state.records[0]?.id || "";
+  }
   persistRecords();
   renderRecords();
 
@@ -796,96 +842,184 @@ async function deleteRecord(id) {
   } catch (error) {
     console.warn("Unable to delete cloud quote record.", error);
     state.records = previousRecords;
+    if (!state.selectedRecordId && previousRecords.length) {
+      state.selectedRecordId = previousRecords[0].id;
+    }
     persistRecords();
     renderRecords();
     els.copyFeedback.textContent = "Unable to delete the cloud record right now.";
   }
 }
 
-function renderHistoryStats() {
-  const totalRecords = state.records.length;
-  const totalValue = state.records.reduce((sum, record) => sum + parseCurrency(record.totalQuote), 0);
-  const totalItems = state.records.reduce((sum, record) => {
-    const blindItems = Array.isArray(record.blindItems) ? record.blindItems.length : 0;
-    const curtainItems = Array.isArray(record.curtainItems) ? record.curtainItems.length : 0;
-    return sum + blindItems + curtainItems;
-  }, 0);
-  const customerCount = new Set(
-    state.records
-      .map((record) => String(record.customerName || "").trim())
-      .filter((name) => name && name !== "-")
-  ).size;
+function getFilteredRecords() {
+  const searchTerm = state.historySearch.trim().toLowerCase();
+  if (!searchTerm) {
+    return state.records;
+  }
 
-  els.historyTotalRecords.textContent = String(totalRecords);
-  els.historyTotalValue.textContent = formatCurrency(totalValue);
-  els.historyTotalItems.textContent = String(totalItems);
-  els.historyCustomerCount.textContent = String(customerCount);
+  return state.records.filter((record) => {
+    const searchFields = [
+      record.quoteNumber,
+      record.customerName,
+      record.phone,
+      record.address,
+      record.totalQuote
+    ];
+
+    return searchFields.some((field) => String(field ?? "").toLowerCase().includes(searchTerm));
+  });
 }
 
-function renderRecords() {
-  els.recordsList.innerHTML = "";
-  renderHistoryStats();
-
-  if (!state.records.length) {
-    els.recordsList.appendChild(els.recordEmpty);
+function renderRecordDetail(record) {
+  if (!record) {
+    els.recordDetail.innerHTML = `
+      <div class="record-detail-empty">
+        Select a customer detail to view the full quote and order summary.
+      </div>
+    `;
     return;
   }
 
-  state.records.forEach((record) => {
-    const blindItems = Array.isArray(record.blindItems) ? record.blindItems : [];
-    const curtainItems = Array.isArray(record.curtainItems) ? record.curtainItems : [];
-    const card = document.createElement("article");
-    card.className = "record-card";
-    card.innerHTML = `
-      <div class="record-top">
-        <div>
-          <h3>${record.customerName}</h3>
-          <p>${record.quoteNumber !== "-" ? `Quote ${record.quoteNumber}` : "Submitted quote"}</p>
-        </div>
-        <strong>${record.totalQuote}</strong>
-      </div>
-      <div class="record-meta">
-        <span>${new Date(record.submittedAt).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" })}</span>
-        <span>${record.phone}</span>
-        <span>${record.address}</span>
-      </div>
-      <div class="record-grid">
-        <section class="record-section">
-          <h4>Roller Blinds</h4>
-          ${blindItems.length ? `
-            <div class="record-lines">
-              ${blindItems.map((item) => `
-                <div class="record-line">
-                  <strong>${item.location}</strong>
-                  <p>${item.group} | ${item.width}w x ${item.height}h | ${item.serviceType}</p>
-                  <p>Matched table: ${item.matchedSize}</p>
-                </div>
-              `).join("")}
-            </div>
-          ` : `<p>No roller blinds saved in this quote.</p>`}
-        </section>
-        <section class="record-section">
-          <h4>Curtains & Sheers</h4>
-          ${curtainItems.length ? `
-            <div class="record-lines">
-              ${curtainItems.map((item) => `
-                <div class="record-line">
-                  <strong>${item.location}</strong>
-                  <p>${item.product} | ${item.width}w x ${item.drop}d mm</p>
-                  <p>${item.style} | ${item.stacking}</p>
-                </div>
-              `).join("")}
-            </div>
-          ` : `<p>No curtains or sheers saved in this quote.</p>`}
-        </section>
-      </div>
-      <div class="record-actions">
-        <button class="danger-button" data-delete-record="${record.id}" type="button">Delete Record</button>
-      </div>
+  const blindItems = Array.isArray(record.blindItems) ? record.blindItems : [];
+  const curtainItems = Array.isArray(record.curtainItems) ? record.curtainItems : [];
+
+  const blindRows = blindItems.length
+    ? blindItems.map((item, index) => `
+      <tr>
+        <td data-label="No.">${index + 1}</td>
+        <td data-label="Location">${escapeHtml(item.location)}</td>
+        <td data-label="Group">${escapeHtml(item.group)}</td>
+        <td data-label="Service">${escapeHtml(item.serviceType)}</td>
+        <td data-label="Width">${escapeHtml(item.width)}</td>
+        <td data-label="Height">${escapeHtml(item.height)}</td>
+        <td data-label="Matched">${escapeHtml(item.matchedSize)}</td>
+      </tr>
+    `).join("")
+    : `
+      <tr>
+        <td colspan="7" class="detail-empty-cell">No roller blinds saved in this quote.</td>
+      </tr>
     `;
 
-    els.recordsList.appendChild(card);
+  const curtainRows = curtainItems.length
+    ? curtainItems.map((item, index) => `
+      <tr>
+        <td data-label="No.">${index + 1}</td>
+        <td data-label="Type">${escapeHtml(item.product)}</td>
+        <td data-label="Location">${escapeHtml(item.location)}</td>
+        <td data-label="Width">${escapeHtml(item.width)}</td>
+        <td data-label="Drop">${escapeHtml(item.drop)}</td>
+        <td data-label="Style">${escapeHtml(item.style)}</td>
+        <td data-label="Stacking">${escapeHtml(item.stacking)}</td>
+      </tr>
+    `).join("")
+    : `
+      <tr>
+        <td colspan="7" class="detail-empty-cell">No curtains or sheers saved in this quote.</td>
+      </tr>
+    `;
+
+  els.recordDetail.innerHTML = `
+    <div class="record-detail-top">
+      <div>
+        <p class="section-kicker">Selected Quote</p>
+        <h3>${escapeHtml(record.quoteNumber !== "-" ? record.quoteNumber : "Saved Quote")}</h3>
+        <p class="record-detail-subtitle">${escapeHtml(record.customerName)} | ${escapeHtml(record.phone)}</p>
+      </div>
+      <strong>${escapeHtml(record.totalQuote)}</strong>
+    </div>
+    <div class="record-detail-meta">
+      <span><strong>Address:</strong> ${escapeHtml(record.address)}</span>
+      <span><strong>Saved:</strong> ${formatRecordDate(record.submittedAt)}</span>
+      <span><strong>Subtotal:</strong> ${escapeHtml(record.subtotalExGst || formatCurrency(0))}</span>
+      <span><strong>GST:</strong> ${escapeHtml(record.gstTotal || formatCurrency(0))}</span>
+    </div>
+    <div class="record-detail-section">
+      <div class="summary-table-head">
+        <h3>Roller Blinds</h3>
+        <p>Saved blind measurements and matched pricing brackets.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="quote-table records-detail-table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Location</th>
+              <th>Group</th>
+              <th>Service</th>
+              <th>Width</th>
+              <th>Height</th>
+              <th>Matched</th>
+            </tr>
+          </thead>
+          <tbody>${blindRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="record-detail-section">
+      <div class="summary-table-head">
+        <h3>Curtains & Sheers</h3>
+        <p>Saved fabric setup and finished dimensions.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="quote-table records-detail-table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Type</th>
+              <th>Location</th>
+              <th>Width</th>
+              <th>Drop</th>
+              <th>Style</th>
+              <th>Stacking</th>
+            </tr>
+          </thead>
+          <tbody>${curtainRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderRecords() {
+  const filteredRecords = getFilteredRecords();
+  els.recordsTableBody.innerHTML = "";
+
+  if (!filteredRecords.length) {
+    els.recordEmpty.style.display = "grid";
+    renderRecordDetail(null);
+    return;
+  }
+
+  els.recordEmpty.style.display = "none";
+
+  if (!filteredRecords.some((record) => record.id === state.selectedRecordId)) {
+    state.selectedRecordId = filteredRecords[0].id;
+  }
+
+  filteredRecords.forEach((record) => {
+    const row = document.createElement("tr");
+    row.className = record.id === state.selectedRecordId ? "records-row is-selected" : "records-row";
+    row.innerHTML = `
+      <td data-label="Quote No.">${escapeHtml(record.quoteNumber)}</td>
+      <td data-label="Customer Detail">
+        <button class="record-link-button" data-select-record="${record.id}" type="button">
+          <strong>${escapeHtml(record.customerName)}</strong>
+          <span>${escapeHtml(record.phone)}</span>
+        </button>
+      </td>
+      <td data-label="Address">${escapeHtml(record.address)}</td>
+      <td data-label="Saved">${formatRecordDate(record.submittedAt)}</td>
+      <td data-label="Total">${escapeHtml(record.totalQuote)}</td>
+      <td data-label="Action">
+        <button class="danger-button table-action-button" data-delete-record="${record.id}" type="button">Delete</button>
+      </td>
+    `;
+    els.recordsTableBody.appendChild(row);
   });
+
+  const selectedRecord = filteredRecords.find((record) => record.id === state.selectedRecordId) || filteredRecords[0];
+  renderRecordDetail(selectedRecord);
 }
 
 function setBlindValue(id, field, value) {
@@ -1367,11 +1501,23 @@ function bindEvents() {
     renderAll();
   });
 
-  els.recordsList.addEventListener("click", (event) => {
+  els.recordsTableBody.addEventListener("click", (event) => {
     const target = event.target;
+    const selectButton = target.closest("[data-select-record]");
+    if (selectButton) {
+      state.selectedRecordId = selectButton.dataset.selectRecord;
+      renderRecords();
+      return;
+    }
+
     if (target.dataset.deleteRecord) {
       deleteRecord(target.dataset.deleteRecord);
     }
+  });
+
+  els.historySearch.addEventListener("input", () => {
+    state.historySearch = els.historySearch.value;
+    renderRecords();
   });
 
   els.housePhotos.addEventListener("change", (event) => {
@@ -1423,6 +1569,7 @@ function bindEvents() {
     persistPhotos();
     state.lines = [];
     state.curtainLines = [];
+    els.copyFeedback.textContent = "";
     hydrateInputs();
     renderPhotos();
     renderAll();
@@ -1454,6 +1601,9 @@ function hydrateInputs() {
   els.customerPhone.value = state.customer.phone;
   els.customerAddress.value = state.customer.address;
   els.quoteNumber.value = state.customer.quoteNumber;
+  if (els.historySearch) {
+    els.historySearch.value = state.historySearch;
+  }
 }
 
 async function init() {
