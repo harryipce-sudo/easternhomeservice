@@ -180,12 +180,18 @@ function cacheElements() {
     copyEmail: document.querySelector("#copy-email"),
     copyMessage: document.querySelector("#copy-message"),
     copyFeedback: document.querySelector("#copy-feedback"),
+    navItems: Array.from(document.querySelectorAll(".nav-item[data-page-link]")),
+    appPages: Array.from(document.querySelectorAll(".app-page[data-page]")),
     summaryBlindsBody: document.querySelector("#summary-blinds-body"),
     summaryBlindsEmpty: document.querySelector("#summary-blinds-empty"),
     summaryCurtainsBody: document.querySelector("#summary-curtains-body"),
     summaryCurtainsEmpty: document.querySelector("#summary-curtains-empty"),
     recordsList: document.querySelector("#records-list"),
-    recordEmpty: document.querySelector("#record-empty")
+    recordEmpty: document.querySelector("#record-empty"),
+    historyTotalRecords: document.querySelector("#history-total-records"),
+    historyTotalValue: document.querySelector("#history-total-value"),
+    historyTotalItems: document.querySelector("#history-total-items"),
+    historyCustomerCount: document.querySelector("#history-customer-count")
   };
 }
 
@@ -230,6 +236,27 @@ function createCurtainLine() {
     blockoutLining: "No",
     isEditing: true
   };
+}
+
+function getActivePageFromHash(hash = window.location.hash) {
+  return hash === "#quote-history" ? "history" : "builder";
+}
+
+function syncPageNavigation() {
+  const activePage = getActivePageFromHash();
+  const currentHash = window.location.hash || "#quote-builder";
+
+  els.appPages.forEach((page) => {
+    page.classList.toggle("app-page-active", page.dataset.page === activePage);
+  });
+
+  els.navItems.forEach((item) => {
+    const href = item.getAttribute("href");
+    const isBuilderDefault = activePage === "builder" && currentHash !== "#quote-preview" && href === "#quote-builder";
+    const isBuilderPreview = activePage === "builder" && currentHash === "#quote-preview" && href === "#quote-preview";
+    const isHistory = activePage === "history" && href === "#quote-history";
+    item.classList.toggle("active", isBuilderDefault || isBuilderPreview || isHistory);
+  });
 }
 
 function formatCurrency(value) {
@@ -715,8 +742,29 @@ async function deleteRecord(id) {
   }
 }
 
+function renderHistoryStats() {
+  const totalRecords = state.records.length;
+  const totalValue = state.records.reduce((sum, record) => sum + parseCurrency(record.totalQuote), 0);
+  const totalItems = state.records.reduce((sum, record) => {
+    const blindItems = Array.isArray(record.blindItems) ? record.blindItems.length : 0;
+    const curtainItems = Array.isArray(record.curtainItems) ? record.curtainItems.length : 0;
+    return sum + blindItems + curtainItems;
+  }, 0);
+  const customerCount = new Set(
+    state.records
+      .map((record) => String(record.customerName || "").trim())
+      .filter((name) => name && name !== "-")
+  ).size;
+
+  els.historyTotalRecords.textContent = String(totalRecords);
+  els.historyTotalValue.textContent = formatCurrency(totalValue);
+  els.historyTotalItems.textContent = String(totalItems);
+  els.historyCustomerCount.textContent = String(customerCount);
+}
+
 function renderRecords() {
   els.recordsList.innerHTML = "";
+  renderHistoryStats();
 
   if (!state.records.length) {
     els.recordsList.appendChild(els.recordEmpty);
@@ -1041,6 +1089,10 @@ function renderAll() {
 }
 
 function bindEvents() {
+  window.addEventListener("hashchange", () => {
+    syncPageNavigation();
+  });
+
   els.addLine.addEventListener("click", () => {
     state.lines.push(createLine());
     renderAll();
@@ -1252,6 +1304,7 @@ async function init() {
     renderPhotos();
     renderRecords();
     renderAll();
+    syncPageNavigation();
   } catch (error) {
     console.error("Quote builder failed to initialize.", error);
     if (!initRecoveryAttempted) {

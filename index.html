@@ -21,13 +21,14 @@
       </div>
 
       <nav class="nav">
-        <a class="nav-item active" href="#quote-builder">Quote Builder</a>
-        <a class="nav-item" href="#quote-preview">Quote Preview</a>
-        <a class="nav-item" href="#dimension-records">Dimension Records</a>
+        <a class="nav-item active" href="#quote-builder" data-page-link="builder">Quote Builder</a>
+        <a class="nav-item" href="#quote-preview" data-page-link="builder">Quote Preview</a>
+        <a class="nav-item" href="#quote-history" data-page-link="history">Quote History</a>
       </nav>
     </aside>
 
     <main class="main-content">
+      <section class="app-page app-page-active" id="page-builder" data-page="builder">
       <header class="page-header">
         <div>
           <p class="section-kicker">Estimator</p>
@@ -242,18 +243,6 @@
             <p class="copy-feedback" id="copy-feedback"></p>
           </section>
 
-          <section class="panel records-panel" id="dimension-records">
-            <div class="panel-heading">
-              <div>
-                <p class="section-kicker">Saved Records</p>
-                <h2>Dimension Records</h2>
-                <p>Submitted quotes are saved locally here so you can look back at dimensions later.</p>
-              </div>
-            </div>
-            <div class="records-list" id="records-list">
-              <div class="record-empty" id="record-empty">No submitted dimension records yet.</div>
-            </div>
-          </section>
         </div>
 
         <aside class="summary-column">
@@ -336,6 +325,54 @@
             </div>
           </section>
         </aside>
+      </section>
+
+      </section>
+
+      <section class="app-page" id="page-history" data-page="history">
+        <header class="page-header page-header-single">
+          <div>
+            <p class="section-kicker">Records</p>
+            <h1 id="quote-history">Quote History</h1>
+            <p class="page-copy">Review submitted quotes, customer details, and saved measurements from one clean page.</p>
+          </div>
+        </header>
+
+        <section class="history-stats-grid">
+          <article class="panel history-stat-card">
+            <p class="section-kicker">Saved Quotes</p>
+            <strong id="history-total-records">0</strong>
+            <p>Quotes submitted and saved to your records.</p>
+          </article>
+          <article class="panel history-stat-card">
+            <p class="section-kicker">Quote Value</p>
+            <strong id="history-total-value">$0.00</strong>
+            <p>Total quoted value across all saved records.</p>
+          </article>
+          <article class="panel history-stat-card">
+            <p class="section-kicker">Window Items</p>
+            <strong id="history-total-items">0</strong>
+            <p>Total blind, curtain, and sheer line items saved.</p>
+          </article>
+          <article class="panel history-stat-card">
+            <p class="section-kicker">Customers</p>
+            <strong id="history-customer-count">0</strong>
+            <p>Unique customers with saved quote history.</p>
+          </article>
+        </section>
+
+        <section class="panel records-panel" id="dimension-records">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Saved Records</p>
+              <h2>Dimension Records</h2>
+              <p>Submitted quotes are stored here so you can look back at dimensions, products, and totals later.</p>
+            </div>
+          </div>
+          <div class="records-list" id="records-list">
+            <div class="record-empty" id="record-empty">No submitted dimension records yet.</div>
+          </div>
+        </section>
       </section>
     </main>
   </div>
