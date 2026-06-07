@@ -250,22 +250,40 @@ function applyPendingFocus() {
     return;
   }
 
-  const target = document.querySelector(pendingFocus.selector);
-  if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+  const focusRequest = pendingFocus;
+
+  const focusTarget = () => {
+    if (pendingFocus !== focusRequest) {
+      return;
+    }
+
+    const target = document.querySelector(focusRequest.selector);
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
+    target.focus();
+    target.scrollIntoView({ block: "nearest", inline: "nearest" });
+
+    if (focusRequest.cursorToEnd && target instanceof HTMLInputElement) {
+      const valueLength = target.value.length;
+      target.setSelectionRange(valueLength, valueLength);
+    } else if (typeof target.select === "function" && target instanceof HTMLInputElement) {
+      target.select();
+    }
+
     pendingFocus = null;
-    return;
-  }
+  };
 
-  target.focus();
+  requestAnimationFrame(() => {
+    focusTarget();
 
-  if (pendingFocus.cursorToEnd && target instanceof HTMLInputElement) {
-    const valueLength = target.value.length;
-    target.setSelectionRange(valueLength, valueLength);
-  } else if (typeof target.select === "function" && target instanceof HTMLInputElement) {
-    target.select();
-  }
-
-  pendingFocus = null;
+    if (pendingFocus === focusRequest) {
+      requestAnimationFrame(() => {
+        focusTarget();
+      });
+    }
+  });
 }
 
 function getActivePageFromHash(hash = window.location.hash) {
