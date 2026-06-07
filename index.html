@@ -75,15 +75,10 @@
             <div class="panel-heading">
               <div>
                 <h2>Items</h2>
-                <p>Use the add buttons below to create item rows directly in the summary tables.</p>
-              </div>
-              <div class="table-actions">
-                <button class="secondary-button" id="add-line" type="button">Add Blind</button>
-                <button class="secondary-button" id="add-curtain-line" type="button">Add Curtain / Sheer</button>
-                <button class="ghost-button" id="clear-items" type="button">Clear Table</button>
+                <p>Use the controls under each table to add or clear blind and curtain item rows separately.</p>
               </div>
             </div>
-            <p class="items-helper-copy">New items will appear in the summary tables below, where you can review or edit them.</p>
+            <p class="items-helper-copy">New items will appear directly in the matching summary table below, where you can review or edit them.</p>
           </section>
 
           <section class="panel item-summary-panel">
@@ -117,6 +112,10 @@
                   <tbody id="summary-blinds-body"></tbody>
                 </table>
               </div>
+              <div class="summary-table-actions">
+                <button class="secondary-button" id="add-line" type="button">Add Blind</button>
+                <button class="ghost-button" id="clear-blinds" type="button">Clear Blinds</button>
+              </div>
               <div class="record-empty" id="summary-blinds-empty">No blind items added yet.</div>
             </div>
             <div class="summary-table-block">
@@ -147,6 +146,10 @@
                   </thead>
                   <tbody id="summary-curtains-body"></tbody>
                 </table>
+              </div>
+              <div class="summary-table-actions">
+                <button class="secondary-button" id="add-curtain-line" type="button">Add Curtain / Sheer</button>
+                <button class="ghost-button" id="clear-curtains" type="button">Clear Curtains</button>
               </div>
               <div class="record-empty" id="summary-curtains-empty">No curtain or sheer items added yet.</div>
             </div>

@@ -475,6 +475,12 @@ select {
   gap: 16px;
 }
 
+.summary-table-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .summary-table-block + .summary-table-block {
   margin-top: 24px;
 }
@@ -497,6 +503,12 @@ select {
 .summary-table .table-action-button {
   min-width: 82px;
   padding: 10px 14px;
+}
+
+.table-actions-cell {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .summary-metrics span,

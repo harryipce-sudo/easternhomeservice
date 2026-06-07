@@ -138,7 +138,8 @@ function cacheElements() {
   els = {
     addLine: document.querySelector("#add-line"),
     addCurtainLine: document.querySelector("#add-curtain-line"),
-    clearItems: document.querySelector("#clear-items"),
+    clearBlinds: document.querySelector("#clear-blinds"),
+    clearCurtains: document.querySelector("#clear-curtains"),
     resetQuote: document.querySelector("#reset-quote"),
     submitQuote: document.querySelector("#submit-quote"),
     printQuote: document.querySelector("#print-quote"),
@@ -201,7 +202,8 @@ function hasRequiredElements() {
     els.summaryCurtainsBody &&
     els.addLine &&
     els.addCurtainLine &&
-    els.clearItems &&
+    els.clearBlinds &&
+    els.clearCurtains &&
     els.resetQuote &&
     els.submitQuote &&
     els.printQuote
@@ -211,10 +213,10 @@ function hasRequiredElements() {
 function createLine() {
   return {
     id: crypto.randomUUID(),
-    location: "Living room",
+    location: "",
     group: "G2",
-    width: 1200,
-    height: 2100,
+    width: "",
+    height: "",
     serviceType: "supply-install",
     isEditing: true
   };
@@ -223,12 +225,12 @@ function createLine() {
 function createCurtainLine() {
   return {
     id: crypto.randomUUID(),
-    location: "Master bedroom",
+    location: "",
     product: "sheer",
     material: "Begonia",
     color: "Sand",
-    width: 3000,
-    drop: 2400,
+    width: "",
+    drop: "",
     foldRate: 2.3,
     style: "S-Fold Metal Hook",
     stacking: "Side Open",
@@ -418,7 +420,10 @@ function renderBlindSummaryTable() {
       <td data-label="Matched">${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop}` : "-"}</td>
       <td data-label="Cost">${formatCurrency(computed.blindCostTotal)}</td>
       <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
-      <td data-label="Action"><button class="ghost-button table-action-button" data-save-blind="${line.id}" type="button">Save</button></td>
+      <td data-label="Action" class="table-actions-cell">
+        <button class="ghost-button table-action-button" data-save-blind="${line.id}" type="button">Save</button>
+        <button class="danger-button table-action-button" data-delete-blind="${line.id}" type="button">Delete</button>
+      </td>
     ` : `
       <td data-label="No."><span class="table-badge">${index + 1}</span></td>
       <td data-label="Location">${line.location || "-"}</td>
@@ -429,7 +434,10 @@ function renderBlindSummaryTable() {
       <td data-label="Matched">${computed.matchedWidth && computed.matchedDrop ? `${computed.matchedWidth} x ${computed.matchedDrop}` : "-"}</td>
       <td data-label="Cost">${formatCurrency(computed.blindCostTotal)}</td>
       <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
-      <td data-label="Action"><button class="secondary-button table-action-button" data-edit-blind="${line.id}" type="button">Edit</button></td>
+      <td data-label="Action" class="table-actions-cell">
+        <button class="secondary-button table-action-button" data-edit-blind="${line.id}" type="button">Edit</button>
+        <button class="danger-button table-action-button" data-delete-blind="${line.id}" type="button">Delete</button>
+      </td>
     `;
 
     els.summaryBlindsBody.appendChild(row);
@@ -497,7 +505,10 @@ function renderCurtainSummaryTable() {
       </td>
       <td data-label="Cost">${formatCurrency(computed.costExGst)}</td>
       <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
-      <td data-label="Action"><button class="ghost-button table-action-button" data-save-curtain="${line.id}" type="button">Save</button></td>
+      <td data-label="Action" class="table-actions-cell">
+        <button class="ghost-button table-action-button" data-save-curtain="${line.id}" type="button">Save</button>
+        <button class="danger-button table-action-button" data-delete-curtain="${line.id}" type="button">Delete</button>
+      </td>
     ` : `
       <td data-label="No."><span class="table-badge">${index + 1}</span></td>
       <td data-label="Type">${CURTAIN_PRODUCTS.find((item) => item.value === line.product)?.label || line.product}</td>
@@ -513,7 +524,10 @@ function renderCurtainSummaryTable() {
       <td data-label="Lining">${line.blockoutLining}</td>
       <td data-label="Cost">${formatCurrency(computed.costExGst)}</td>
       <td data-label="Retail">${formatCurrency(computed.lineTotal)}</td>
-      <td data-label="Action"><button class="secondary-button table-action-button" data-edit-curtain="${line.id}" type="button">Edit</button></td>
+      <td data-label="Action" class="table-actions-cell">
+        <button class="secondary-button table-action-button" data-edit-curtain="${line.id}" type="button">Edit</button>
+        <button class="danger-button table-action-button" data-delete-curtain="${line.id}" type="button">Delete</button>
+      </td>
     `;
 
     els.summaryCurtainsBody.appendChild(row);
@@ -849,6 +863,10 @@ function setBlindEditing(id, isEditing) {
   ));
 }
 
+function deleteBlindLine(id) {
+  state.lines = state.lines.filter((line) => line.id !== id);
+}
+
 function setCurtainValue(id, field, value) {
   state.curtainLines = state.curtainLines.map((line) => {
     if (line.id !== id) {
@@ -874,6 +892,10 @@ function setCurtainEditing(id, isEditing) {
   state.curtainLines = state.curtainLines.map((line) => (
     line.id === id ? { ...line, isEditing } : line
   ));
+}
+
+function deleteCurtainLine(id) {
+  state.curtainLines = state.curtainLines.filter((line) => line.id !== id);
 }
 
 function updateSummary() {
@@ -1138,6 +1160,10 @@ function bindEvents() {
       setBlindEditing(id, false);
       renderAll();
     }
+    if (target.dataset.deleteBlind) {
+      deleteBlindLine(target.dataset.deleteBlind);
+      renderAll();
+    }
   });
 
   els.summaryCurtainsBody.addEventListener("input", (event) => {
@@ -1175,6 +1201,10 @@ function bindEvents() {
       setCurtainEditing(id, false);
       renderAll();
     }
+    if (target.dataset.deleteCurtain) {
+      deleteCurtainLine(target.dataset.deleteCurtain);
+      renderAll();
+    }
   });
 
   els.photoGrid.addEventListener("click", (event) => {
@@ -1192,8 +1222,12 @@ function bindEvents() {
     }
   });
 
-  els.clearItems.addEventListener("click", () => {
+  els.clearBlinds.addEventListener("click", () => {
     state.lines = [];
+    renderAll();
+  });
+
+  els.clearCurtains.addEventListener("click", () => {
     state.curtainLines = [];
     renderAll();
   });
