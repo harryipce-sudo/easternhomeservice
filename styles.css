@@ -776,12 +776,16 @@ select {
 
 .records-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 18px;
   align-items: start;
 }
 
 .records-table-wrap {
+  min-width: 0;
+}
+
+.records-detail-wrap {
   min-width: 0;
 }
 
@@ -814,7 +818,7 @@ select {
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(20, 29, 38, 0.98), rgba(13, 20, 27, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.07);
-  min-height: 100%;
+  width: 100%;
 }
 
 .record-detail-empty {
@@ -905,9 +909,6 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .records-layout {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 1100px) {
