@@ -120,11 +120,15 @@ const state = {
   lines: [],
   curtainLines: [],
   historySearch: "",
-  selectedRecordId: ""
+  selectedRecordId: "",
+  invoices: [],
+  invoiceSearch: "",
+  selectedInvoiceId: ""
 };
 
 const LOCAL_RECORDS_KEY = "ehs-dimension-records";
 const LOCAL_PHOTOS_KEY = "ehs-house-photos";
+const LOCAL_INVOICES_KEY = "ehs-invoices";
 
 let els = {};
 let initRecoveryAttempted = false;
@@ -196,6 +200,36 @@ function cacheElements() {
     recordsTableBody: document.querySelector("#records-table-body"),
     recordDetail: document.querySelector("#record-detail"),
     recordEmpty: document.querySelector("#record-empty"),
+    invoiceSearch: document.querySelector("#invoice-search"),
+    newInvoice: document.querySelector("#new-invoice"),
+    createInvoiceFromQuote: document.querySelector("#create-invoice-from-quote"),
+    saveInvoice: document.querySelector("#save-invoice"),
+    markInvoiceDraft: document.querySelector("#mark-invoice-draft"),
+    markInvoiceSent: document.querySelector("#mark-invoice-sent"),
+    markInvoicePaid: document.querySelector("#mark-invoice-paid"),
+    invoiceListBody: document.querySelector("#invoice-list-body"),
+    invoiceListEmpty: document.querySelector("#invoice-list-empty"),
+    invoiceDetailTitle: document.querySelector("#invoice-detail-title"),
+    invoiceNumberDisplay: document.querySelector("#invoice-number-display"),
+    invoiceStatusBadge: document.querySelector("#invoice-status-badge"),
+    invoiceCustomerName: document.querySelector("#invoice-customer-name"),
+    invoiceCustomerPhone: document.querySelector("#invoice-customer-phone"),
+    invoiceCustomerAddress: document.querySelector("#invoice-customer-address"),
+    invoiceReference: document.querySelector("#invoice-reference"),
+    invoiceDate: document.querySelector("#invoice-date"),
+    invoiceDueDate: document.querySelector("#invoice-due-date"),
+    invoicePaymentTerms: document.querySelector("#invoice-payment-terms"),
+    invoiceAmountPaidInput: document.querySelector("#invoice-amount-paid-input"),
+    invoiceLinesBody: document.querySelector("#invoice-lines-body"),
+    addInvoiceLine: document.querySelector("#add-invoice-line"),
+    invoiceNotes: document.querySelector("#invoice-notes"),
+    invoiceBankDetails: document.querySelector("#invoice-bank-details"),
+    invoiceSubtotal: document.querySelector("#invoice-subtotal"),
+    invoiceGst: document.querySelector("#invoice-gst"),
+    invoiceTotal: document.querySelector("#invoice-total"),
+    invoiceAmountPaid: document.querySelector("#invoice-amount-paid"),
+    invoiceAmountDue: document.querySelector("#invoice-amount-due"),
+    invoiceFeedback: document.querySelector("#invoice-feedback")
   };
 }
 
@@ -209,6 +243,9 @@ function hasRequiredElements() {
     els.saveAllCurtains &&
     els.recordsTableBody &&
     els.recordDetail &&
+    els.invoiceListBody &&
+    els.invoiceCustomerName &&
+    els.invoiceLinesBody &&
     els.clearBlinds &&
     els.clearCurtains &&
     els.resetQuote &&
@@ -244,6 +281,56 @@ function createCurtainLine() {
     sheerBottomStyle: "With Base Weight",
     blockoutLining: "No",
     isEditing: true
+  };
+}
+
+function createInvoiceLine(partial = {}) {
+  return {
+    id: crypto.randomUUID(),
+    description: partial.description || "",
+    quantity: Number(partial.quantity) || 1,
+    unitPrice: Number(partial.unitPrice) || 0,
+    taxRate: Number.isFinite(Number(partial.taxRate)) ? Number(partial.taxRate) : 0.1
+  };
+}
+
+function generateInvoiceNumber() {
+  const numericParts = state.invoices
+    .map((invoice) => Number(String(invoice.invoiceNumber || "").replace(/\D/g, "")))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const nextNumber = (numericParts.length ? Math.max(...numericParts) : 3000) + 1;
+  return `INV-${nextNumber}`;
+}
+
+function getTodayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysToIsoDate(dateString, days) {
+  const date = new Date(dateString || getTodayIsoDate());
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function createInvoice(partial = {}) {
+  const today = getTodayIsoDate();
+  return {
+    id: crypto.randomUUID(),
+    invoiceNumber: partial.invoiceNumber || generateInvoiceNumber(),
+    sourceQuoteNumber: partial.sourceQuoteNumber || "",
+    status: partial.status || "draft",
+    customerName: partial.customerName || "",
+    customerPhone: partial.customerPhone || "",
+    customerAddress: partial.customerAddress || "",
+    invoiceDate: partial.invoiceDate || today,
+    dueDate: partial.dueDate || addDaysToIsoDate(today, 7),
+    paymentTerms: partial.paymentTerms || "7 Days",
+    amountPaid: Number(partial.amountPaid) || 0,
+    notes: partial.notes || "Thank you for choosing Eastern Home Service.",
+    bankDetails: partial.bankDetails || "",
+    lines: Array.isArray(partial.lines) && partial.lines.length
+      ? partial.lines.map((line) => createInvoiceLine(line))
+      : [createInvoiceLine()]
   };
 }
 
@@ -293,7 +380,13 @@ function applyPendingFocus() {
 }
 
 function getActivePageFromHash(hash = window.location.hash) {
-  return hash === "#quote-history" ? "history" : "builder";
+  if (hash === "#quote-history") {
+    return "history";
+  }
+  if (hash === "#invoices") {
+    return "invoices";
+  }
+  return "builder";
 }
 
 function syncPageNavigation() {
@@ -309,7 +402,8 @@ function syncPageNavigation() {
     const isBuilderDefault = activePage === "builder" && currentHash !== "#quote-preview" && href === "#quote-builder";
     const isBuilderPreview = activePage === "builder" && currentHash === "#quote-preview" && href === "#quote-preview";
     const isHistory = activePage === "history" && href === "#quote-history";
-    item.classList.toggle("active", isBuilderDefault || isBuilderPreview || isHistory);
+    const isInvoices = activePage === "invoices" && href === "#invoices";
+    item.classList.toggle("active", isBuilderDefault || isBuilderPreview || isHistory || isInvoices);
   });
 }
 
@@ -760,6 +854,37 @@ async function loadRecords() {
   }
 }
 
+function parseStoredInvoices(rawValue) {
+  const parsed = JSON.parse(rawValue || "[]");
+  return Array.isArray(parsed)
+    ? parsed.map((invoice) => createInvoice({
+        ...invoice,
+        id: invoice.id || crypto.randomUUID(),
+        lines: Array.isArray(invoice.lines) ? invoice.lines : []
+      }))
+    : [];
+}
+
+function persistInvoices() {
+  try {
+    localStorage.setItem(LOCAL_INVOICES_KEY, JSON.stringify(state.invoices));
+  } catch (error) {
+    console.warn("Unable to persist invoices", error);
+  }
+}
+
+function loadInvoices() {
+  try {
+    state.invoices = parseStoredInvoices(localStorage.getItem(LOCAL_INVOICES_KEY));
+  } catch (error) {
+    state.invoices = [];
+  }
+
+  if (!state.selectedInvoiceId && state.invoices.length) {
+    state.selectedInvoiceId = state.invoices[0].id;
+  }
+}
+
 function createRecordSnapshot() {
   const blindItems = state.lines.map((line) => {
     const computed = calculateBlindLine(line);
@@ -855,6 +980,336 @@ async function deleteRecord(id) {
   }
 }
 
+function getSelectedRecord() {
+  return state.records.find((record) => record.id === state.selectedRecordId) || null;
+}
+
+function getSelectedInvoice() {
+  return state.invoices.find((invoice) => invoice.id === state.selectedInvoiceId) || null;
+}
+
+function calculateInvoiceLineAmount(line) {
+  const quantity = Number(line.quantity) || 0;
+  const unitPrice = Number(line.unitPrice) || 0;
+  return quantity * unitPrice;
+}
+
+function calculateInvoiceTotals(invoice) {
+  if (!invoice) {
+    return {
+      subtotal: 0,
+      gst: 0,
+      total: 0,
+      amountPaid: 0,
+      amountDue: 0
+    };
+  }
+
+  const subtotal = invoice.lines.reduce((sum, line) => sum + calculateInvoiceLineAmount(line), 0);
+  const gst = invoice.lines.reduce((sum, line) => sum + calculateInvoiceLineAmount(line) * (Number(line.taxRate) || 0), 0);
+  const total = subtotal + gst;
+  const amountPaid = Number(invoice.amountPaid) || 0;
+
+  return {
+    subtotal,
+    gst,
+    total,
+    amountPaid,
+    amountDue: Math.max(total - amountPaid, 0)
+  };
+}
+
+function formatInvoiceStatus(status) {
+  const labels = {
+    draft: "Draft",
+    sent: "Sent",
+    paid: "Paid"
+  };
+  return labels[status] || "Draft";
+}
+
+function buildInvoiceSummaryFromRecord(record) {
+  const parts = [];
+  if ((record.blindCount || 0) > 0) {
+    parts.push(`${record.blindCount} blind${record.blindCount === 1 ? "" : "s"}`);
+  }
+  if ((record.curtainCount || 0) > 0) {
+    parts.push(`${record.curtainCount} curtain${record.curtainCount === 1 ? "" : "s"}`);
+  }
+  if ((record.sheerCount || 0) > 0) {
+    parts.push(`${record.sheerCount} sheer${record.sheerCount === 1 ? "" : "s"}`);
+  }
+  return parts.join(", ") || "quoted works";
+}
+
+function createInvoiceFromRecord(record) {
+  if (!record) {
+    els.invoiceFeedback.textContent = "Select a saved quote first.";
+    return;
+  }
+
+  const invoice = createInvoice({
+    sourceQuoteNumber: record.quoteNumber !== "-" ? record.quoteNumber : "",
+    customerName: record.customerName !== "-" ? record.customerName : "",
+    customerPhone: record.phone !== "-" ? record.phone : "",
+    customerAddress: record.address !== "-" ? record.address : "",
+    invoiceDate: getTodayIsoDate(),
+    dueDate: addDaysToIsoDate(getTodayIsoDate(), 7),
+    paymentTerms: "7 Days",
+    notes: `Invoice created from saved quote ${record.quoteNumber !== "-" ? record.quoteNumber : ""}.`,
+    lines: [
+      createInvoiceLine({
+        description: `Quote ${record.quoteNumber !== "-" ? record.quoteNumber : ""} - ${buildInvoiceSummaryFromRecord(record)}`.trim().replace(/\s+-\s+$/, ""),
+        quantity: 1,
+        unitPrice: parseCurrency(record.subtotalExGst || record.totalQuote),
+        taxRate: 0.1
+      })
+    ]
+  });
+
+  state.invoices = [invoice, ...state.invoices];
+  state.selectedInvoiceId = invoice.id;
+  persistInvoices();
+  renderInvoices();
+  window.location.hash = "#invoices";
+  syncPageNavigation();
+  els.invoiceFeedback.textContent = "Invoice created from selected quote.";
+}
+
+function createInvoiceFromCurrentQuote() {
+  const totals = {
+    subtotalExGst: parseCurrency(els.subtotalExGst.textContent),
+    total: parseCurrency(els.grandTotal.textContent)
+  };
+  const invoice = createInvoice({
+    sourceQuoteNumber: state.customer.quoteNumber,
+    customerName: state.customer.name,
+    customerPhone: state.customer.phone,
+    customerAddress: state.customer.address,
+    notes: "Invoice created from the current quote builder.",
+    lines: [
+      createInvoiceLine({
+        description: `${state.customer.quoteNumber ? `Quote ${state.customer.quoteNumber} - ` : ""}${buildOrderSummaryText({ grandTotal: totals.total }).productSummary}`,
+        quantity: 1,
+        unitPrice: totals.subtotalExGst,
+        taxRate: 0.1
+      })
+    ]
+  });
+
+  state.invoices = [invoice, ...state.invoices];
+  state.selectedInvoiceId = invoice.id;
+  persistInvoices();
+  renderInvoices();
+  window.location.hash = "#invoices";
+  syncPageNavigation();
+  els.invoiceFeedback.textContent = "Invoice created from the current quote.";
+}
+
+function createNewInvoice() {
+  const invoice = createInvoice();
+  state.invoices = [invoice, ...state.invoices];
+  state.selectedInvoiceId = invoice.id;
+  persistInvoices();
+  renderInvoices();
+  els.invoiceFeedback.textContent = "New draft invoice created.";
+}
+
+function deleteInvoice(id) {
+  state.invoices = state.invoices.filter((invoice) => invoice.id !== id);
+  if (state.selectedInvoiceId === id) {
+    state.selectedInvoiceId = state.invoices[0]?.id || "";
+  }
+  persistInvoices();
+  renderInvoices();
+  els.invoiceFeedback.textContent = "Invoice deleted.";
+}
+
+function setInvoiceValue(field, value) {
+  state.invoices = state.invoices.map((invoice) => (
+    invoice.id === state.selectedInvoiceId
+      ? { ...invoice, [field]: field === "amountPaid" ? Number(value) || 0 : value }
+      : invoice
+  ));
+  persistInvoices();
+}
+
+function setInvoiceStatus(status) {
+  const selectedInvoice = getSelectedInvoice();
+  if (!selectedInvoice) {
+    els.invoiceFeedback.textContent = "Create or select an invoice first.";
+    return;
+  }
+
+  const totals = calculateInvoiceTotals(selectedInvoice);
+  state.invoices = state.invoices.map((invoice) => (
+    invoice.id === selectedInvoice.id
+      ? {
+          ...invoice,
+          status,
+          amountPaid: status === "paid" ? totals.total : invoice.amountPaid
+        }
+      : invoice
+  ));
+  persistInvoices();
+  renderInvoices();
+  els.invoiceFeedback.textContent = `Invoice marked as ${formatInvoiceStatus(status).toLowerCase()}.`;
+}
+
+function addInvoiceLineToSelected() {
+  const selectedInvoice = getSelectedInvoice();
+  if (!selectedInvoice) {
+    createNewInvoice();
+    return;
+  }
+
+  state.invoices = state.invoices.map((invoice) => (
+    invoice.id === selectedInvoice.id
+      ? { ...invoice, lines: [...invoice.lines, createInvoiceLine()] }
+      : invoice
+  ));
+  persistInvoices();
+  renderInvoices();
+}
+
+function setInvoiceLineValue(lineId, field, value) {
+  state.invoices = state.invoices.map((invoice) => {
+    if (invoice.id !== state.selectedInvoiceId) {
+      return invoice;
+    }
+
+    return {
+      ...invoice,
+      lines: invoice.lines.map((line) => (
+        line.id === lineId
+          ? {
+              ...line,
+              [field]: field === "description" ? value : Number(value) || 0
+            }
+          : line
+      ))
+    };
+  });
+  persistInvoices();
+}
+
+function removeInvoiceLine(lineId) {
+  state.invoices = state.invoices.map((invoice) => {
+    if (invoice.id !== state.selectedInvoiceId) {
+      return invoice;
+    }
+
+    const nextLines = invoice.lines.filter((line) => line.id !== lineId);
+    return {
+      ...invoice,
+      lines: nextLines.length ? nextLines : [createInvoiceLine()]
+    };
+  });
+  persistInvoices();
+  renderInvoices();
+}
+
+function getFilteredInvoices() {
+  const searchTerm = state.invoiceSearch.trim().toLowerCase();
+  if (!searchTerm) {
+    return state.invoices;
+  }
+
+  return state.invoices.filter((invoice) => (
+    [
+      invoice.invoiceNumber,
+      invoice.sourceQuoteNumber,
+      invoice.customerName,
+      invoice.customerAddress
+    ].some((field) => String(field ?? "").toLowerCase().includes(searchTerm))
+  ));
+}
+
+function renderInvoiceLines(invoice) {
+  els.invoiceLinesBody.innerHTML = "";
+  if (!invoice) {
+    return;
+  }
+
+  invoice.lines.forEach((line) => {
+    const amount = calculateInvoiceLineAmount(line);
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td data-label="Description"><input data-invoice-line-id="${line.id}" data-invoice-line-field="description" type="text" value="${escapeHtml(line.description)}" placeholder="Supply and install curtains"></td>
+      <td data-label="Qty"><input class="compact-input" data-invoice-line-id="${line.id}" data-invoice-line-field="quantity" type="number" min="0" step="1" value="${line.quantity}"></td>
+      <td data-label="Unit Price"><input class="compact-input" data-invoice-line-id="${line.id}" data-invoice-line-field="unitPrice" type="number" min="0" step="0.01" value="${line.unitPrice}"></td>
+      <td data-label="Tax">
+        <select data-invoice-line-id="${line.id}" data-invoice-line-field="taxRate">
+          <option value="0.1" ${Number(line.taxRate) === 0.1 ? "selected" : ""}>10% GST</option>
+          <option value="0" ${Number(line.taxRate) === 0 ? "selected" : ""}>No GST</option>
+        </select>
+      </td>
+      <td data-label="Amount">${formatCurrency(amount)}</td>
+      <td data-label="Action"><button class="danger-button table-action-button" data-delete-invoice-line="${line.id}" type="button">Delete</button></td>
+    `;
+    els.invoiceLinesBody.appendChild(row);
+  });
+}
+
+function renderInvoiceEditor(invoice) {
+  const fallbackInvoice = invoice || createInvoice({ invoiceNumber: "INV-0000", lines: [createInvoiceLine()] });
+  const totals = calculateInvoiceTotals(invoice);
+
+  els.invoiceDetailTitle.textContent = invoice ? `${formatInvoiceStatus(invoice.status)} Invoice` : "Draft Invoice";
+  els.invoiceNumberDisplay.textContent = fallbackInvoice.invoiceNumber;
+  els.invoiceStatusBadge.textContent = formatInvoiceStatus(fallbackInvoice.status);
+  els.invoiceStatusBadge.className = `invoice-status-pill status-${fallbackInvoice.status}`;
+  els.invoiceCustomerName.value = fallbackInvoice.customerName;
+  els.invoiceCustomerPhone.value = fallbackInvoice.customerPhone;
+  els.invoiceCustomerAddress.value = fallbackInvoice.customerAddress;
+  els.invoiceReference.value = fallbackInvoice.sourceQuoteNumber;
+  els.invoiceDate.value = fallbackInvoice.invoiceDate;
+  els.invoiceDueDate.value = fallbackInvoice.dueDate;
+  els.invoicePaymentTerms.value = fallbackInvoice.paymentTerms;
+  els.invoiceAmountPaidInput.value = fallbackInvoice.amountPaid || 0;
+  els.invoiceNotes.value = fallbackInvoice.notes || "";
+  els.invoiceBankDetails.value = fallbackInvoice.bankDetails || "";
+  els.invoiceSubtotal.textContent = formatCurrency(totals.subtotal);
+  els.invoiceGst.textContent = formatCurrency(totals.gst);
+  els.invoiceTotal.textContent = formatCurrency(totals.total);
+  els.invoiceAmountPaid.textContent = formatCurrency(totals.amountPaid);
+  els.invoiceAmountDue.textContent = formatCurrency(totals.amountDue);
+  renderInvoiceLines(fallbackInvoice);
+}
+
+function renderInvoices() {
+  const filteredInvoices = getFilteredInvoices();
+  els.invoiceListBody.innerHTML = "";
+
+  if (!filteredInvoices.length) {
+    els.invoiceListEmpty.style.display = "grid";
+  } else {
+    els.invoiceListEmpty.style.display = "none";
+  }
+
+  if (!filteredInvoices.some((invoice) => invoice.id === state.selectedInvoiceId)) {
+    state.selectedInvoiceId = filteredInvoices[0]?.id || "";
+  }
+
+  filteredInvoices.forEach((invoice) => {
+    const totals = calculateInvoiceTotals(invoice);
+    const row = document.createElement("tr");
+    row.className = invoice.id === state.selectedInvoiceId ? "records-row is-selected" : "records-row";
+    row.innerHTML = `
+      <td data-label="Invoice No."><button class="record-link-button" data-select-invoice="${invoice.id}" type="button"><strong>${escapeHtml(invoice.invoiceNumber)}</strong></button></td>
+      <td data-label="Customer">${escapeHtml(invoice.customerName || "-")}</td>
+      <td data-label="Quote Ref">${escapeHtml(invoice.sourceQuoteNumber || "-")}</td>
+      <td data-label="Status"><span class="invoice-status-pill status-${invoice.status}">${formatInvoiceStatus(invoice.status)}</span></td>
+      <td data-label="Due Date">${formatRecordDate(invoice.dueDate)}</td>
+      <td data-label="Total">${formatCurrency(totals.total)}</td>
+      <td data-label="Amount Due">${formatCurrency(totals.amountDue)}</td>
+    `;
+    els.invoiceListBody.appendChild(row);
+  });
+
+  renderInvoiceEditor(getSelectedInvoice());
+}
+
 function getFilteredRecords() {
   const searchTerm = state.historySearch.trim().toLowerCase();
   if (!searchTerm) {
@@ -930,7 +1385,10 @@ function renderRecordDetail(record) {
         <h3>${escapeHtml(record.quoteNumber !== "-" ? record.quoteNumber : "Saved Quote")}</h3>
         <p class="record-detail-subtitle">${escapeHtml(record.customerName)} | ${escapeHtml(record.phone)}</p>
       </div>
-      <strong>${escapeHtml(record.totalQuote)}</strong>
+      <div class="record-detail-top-actions">
+        <strong>${escapeHtml(record.totalQuote)}</strong>
+        <button class="secondary-button table-action-button" data-create-invoice-record="${record.id}" type="button">Create Invoice</button>
+      </div>
     </div>
     <div class="record-detail-meta">
       <span><strong>Address:</strong> ${escapeHtml(record.address)}</span>
@@ -1545,9 +2003,109 @@ function bindEvents() {
     }
   });
 
+  els.recordDetail.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.createInvoiceRecord) {
+      const record = state.records.find((item) => item.id === target.dataset.createInvoiceRecord);
+      createInvoiceFromRecord(record);
+    }
+  });
+
   els.historySearch.addEventListener("input", () => {
     state.historySearch = els.historySearch.value;
     renderRecords();
+  });
+
+  els.invoiceSearch.addEventListener("input", () => {
+    state.invoiceSearch = els.invoiceSearch.value;
+    renderInvoices();
+  });
+
+  els.newInvoice.addEventListener("click", () => {
+    createNewInvoice();
+  });
+
+  els.createInvoiceFromQuote.addEventListener("click", () => {
+    const selectedRecord = getSelectedRecord();
+    if (selectedRecord) {
+      createInvoiceFromRecord(selectedRecord);
+      return;
+    }
+
+    if (state.lines.length || state.curtainLines.length) {
+      createInvoiceFromCurrentQuote();
+      return;
+    }
+
+    els.invoiceFeedback.textContent = "Select a saved quote or build a current quote first.";
+  });
+
+  els.saveInvoice.addEventListener("click", () => {
+    if (!getSelectedInvoice()) {
+      createNewInvoice();
+      return;
+    }
+    persistInvoices();
+    renderInvoices();
+    els.invoiceFeedback.textContent = "Invoice saved.";
+  });
+
+  els.markInvoiceDraft.addEventListener("click", () => {
+    setInvoiceStatus("draft");
+  });
+
+  els.markInvoiceSent.addEventListener("click", () => {
+    setInvoiceStatus("sent");
+  });
+
+  els.markInvoicePaid.addEventListener("click", () => {
+    setInvoiceStatus("paid");
+  });
+
+  els.invoiceListBody.addEventListener("click", (event) => {
+    const target = event.target;
+    const selectButton = target.closest("[data-select-invoice]");
+    if (selectButton) {
+      state.selectedInvoiceId = selectButton.dataset.selectInvoice;
+      renderInvoices();
+    }
+  });
+
+  els.addInvoiceLine.addEventListener("click", () => {
+    addInvoiceLineToSelected();
+  });
+
+  [
+    ["customerName", els.invoiceCustomerName],
+    ["customerPhone", els.invoiceCustomerPhone],
+    ["customerAddress", els.invoiceCustomerAddress],
+    ["sourceQuoteNumber", els.invoiceReference],
+    ["invoiceDate", els.invoiceDate],
+    ["dueDate", els.invoiceDueDate],
+    ["paymentTerms", els.invoicePaymentTerms],
+    ["amountPaid", els.invoiceAmountPaidInput],
+    ["notes", els.invoiceNotes],
+    ["bankDetails", els.invoiceBankDetails]
+  ].forEach(([field, element]) => {
+    element.addEventListener("change", () => {
+      setInvoiceValue(field, element.value);
+      renderInvoices();
+    });
+  });
+
+  els.invoiceLinesBody.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target.dataset.invoiceLineId && target.dataset.invoiceLineField) {
+      setInvoiceLineValue(target.dataset.invoiceLineId, target.dataset.invoiceLineField, target.value);
+      renderInvoices();
+    }
+  });
+
+  els.invoiceLinesBody.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.deleteInvoiceLine) {
+      removeInvoiceLine(target.dataset.deleteInvoiceLine);
+    }
   });
 
   els.housePhotos.addEventListener("change", (event) => {
@@ -1634,6 +2192,9 @@ function hydrateInputs() {
   if (els.historySearch) {
     els.historySearch.value = state.historySearch;
   }
+  if (els.invoiceSearch) {
+    els.invoiceSearch.value = state.invoiceSearch;
+  }
 }
 
 async function init() {
@@ -1646,12 +2207,14 @@ async function init() {
 
     loadPhotos();
     await loadRecords();
+    loadInvoices();
     state.lines = [];
     state.curtainLines = [];
     hydrateInputs();
     bindEvents();
     renderPhotos();
     renderRecords();
+    renderInvoices();
     renderAll();
     syncPageNavigation();
   } catch (error) {
@@ -1661,11 +2224,13 @@ async function init() {
       try {
         localStorage.removeItem(LOCAL_PHOTOS_KEY);
         localStorage.removeItem(LOCAL_RECORDS_KEY);
+        localStorage.removeItem(LOCAL_INVOICES_KEY);
       } catch (storageError) {
         console.warn("Unable to clear saved quote builder data during recovery.", storageError);
       }
       state.photos = [];
       state.records = [];
+      state.invoices = [];
       init();
       return;
     }
