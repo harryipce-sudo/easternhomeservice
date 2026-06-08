@@ -21,11 +21,7 @@
       </div>
 
       <nav class="nav">
-        <a class="nav-item active" href="#quote-builder" data-page-link="builder">Quote Builder</a>
-        <a class="nav-item" href="#blinds-quote" data-page-link="builder" data-quote-view-link="blinds">Blinds Quote</a>
-        <a class="nav-item" href="#curtain-quote" data-page-link="builder" data-quote-view-link="curtains">Curtain Quote</a>
-        <a class="nav-item" href="#air-mode" data-page-link="airMode">Air Mode</a>
-        <a class="nav-item" href="#quote-preview" data-page-link="builder">Quote Preview</a>
+        <a class="nav-item active" href="#quote-builder" data-page-link="quotes">Blinds and Curtain</a>
         <a class="nav-item" href="#quote-history" data-page-link="history">Search Quote</a>
         <a class="nav-item" href="#invoices" data-page-link="invoices">Invoices</a>
         <a class="nav-item" href="#saved-invoices" data-page-link="savedInvoices">Saved Invoices</a>
@@ -38,7 +34,7 @@
         <div>
           <p class="section-kicker">Estimator</p>
           <h1 id="quote-builder">Blinds, Curtains & Sheers</h1>
-          <p class="page-copy" id="quote-builder-copy">Build customer quotes for blinds, curtains, and sheers from one screen, then print a clean quote.</p>
+          <p class="page-copy">Build customer quotes for blinds, curtains, and sheers from one screen, then print a clean quote.</p>
         </div>
         <div class="header-actions">
           <button class="ghost-button" id="reset-quote" type="button">Reset</button>
@@ -46,6 +42,12 @@
           <button class="primary-button" id="print-quote" type="button">Generate PDF</button>
         </div>
       </header>
+
+      <nav class="subnav">
+        <a class="subnav-link active" href="#quote-builder" data-quote-subnav="builder">Quote Builder</a>
+        <a class="subnav-link" href="#air-mode" data-quote-subnav="air">Air Mode</a>
+        <a class="subnav-link" href="#quote-preview" data-quote-subnav="preview">Quote Preview</a>
+      </nav>
 
       <section class="panel customer-panel">
         <div class="panel-heading">
@@ -79,21 +81,21 @@
           <section class="panel">
             <div class="panel-heading">
               <div>
-                <h2 id="quote-items-title">Items</h2>
-                <p id="quote-items-copy">Use the controls under each table to add or clear blind and curtain item rows separately.</p>
+                <h2>Items</h2>
+                <p>Use the controls under each table to add or clear blind and curtain item rows separately.</p>
               </div>
             </div>
-            <p class="items-helper-copy" id="quote-items-helper">New items will appear directly in the matching summary table below, where you can review or edit them.</p>
+            <p class="items-helper-copy">New items will appear directly in the matching summary table below, where you can review or edit them.</p>
           </section>
 
           <section class="panel item-summary-panel">
             <div class="panel-heading">
               <div>
                 <h2>Item Summary</h2>
-                <p id="item-summary-copy">Separate blind and curtain tables with full detail and edit controls.</p>
+                <p>Separate blind and curtain tables with full detail and edit controls.</p>
               </div>
             </div>
-            <div class="summary-table-block" id="summary-blinds-block">
+            <div class="summary-table-block">
               <div class="summary-table-head">
                 <h3>Roller Blinds</h3>
                 <p>All blind measurements, service setup, matched pricing bracket, and totals.</p>
@@ -124,7 +126,7 @@
               </div>
               <div class="record-empty" id="summary-blinds-empty">No blind items added yet.</div>
             </div>
-            <div class="summary-table-block" id="summary-curtains-block">
+            <div class="summary-table-block">
               <div class="summary-table-head">
                 <h3>Curtains & Sheers</h3>
                 <p>All material, fold, stacking, lining, and pricing detail in one table.</p>
@@ -170,14 +172,14 @@
               </div>
             </div>
             <div class="settings-grid settings-grid-wide">
-              <label id="blind-markup-setting">
+              <label>
                 <span>Blind Markup</span>
                 <div class="input-suffix">
                   <input id="supply-markup" type="number" min="0" step="1" value="40">
                   <strong>%</strong>
                 </div>
               </label>
-              <label id="curtain-markup-setting">
+              <label>
                 <span>Curtain / Sheer Markup</span>
                 <div class="input-suffix">
                   <input id="curtain-markup" type="number" min="0" step="1" value="40">
@@ -347,6 +349,12 @@
             <p class="page-copy">Fast on-site entry for mobile use with large controls, one item at a time, and quick save.</p>
           </div>
         </header>
+
+        <nav class="subnav">
+          <a class="subnav-link" href="#quote-builder" data-quote-subnav="builder">Quote Builder</a>
+          <a class="subnav-link active" href="#air-mode" data-quote-subnav="air">Air Mode</a>
+          <a class="subnav-link" href="#quote-preview" data-quote-subnav="preview">Quote Preview</a>
+        </nav>
 
         <section class="panel air-mode-panel">
           <div class="panel-heading">

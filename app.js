@@ -103,7 +103,6 @@ const TRACK_PRICE_PER_M = 60;
 
 const state = {
   gstRate: 0.1,
-  quoteView: "all",
   settings: {
     supplyMarkup: 40,
     curtainMarkup: 40,
@@ -212,7 +211,6 @@ function cacheElements() {
     previewCustomer: document.querySelector("#preview-customer"),
     previewPhone: document.querySelector("#preview-phone"),
     previewAddress: document.querySelector("#preview-address"),
-    quoteBuilder: document.querySelector("#quote-builder"),
     previewLines: document.querySelector("#preview-lines"),
     previewSubtotal: document.querySelector("#preview-subtotal"),
     previewGst: document.querySelector("#preview-gst"),
@@ -224,15 +222,7 @@ function cacheElements() {
     copyFeedback: document.querySelector("#copy-feedback"),
     navItems: Array.from(document.querySelectorAll(".nav-item[data-page-link]")),
     appPages: Array.from(document.querySelectorAll(".app-page[data-page]")),
-    quoteBuilderCopy: document.querySelector("#quote-builder-copy"),
-    quoteItemsTitle: document.querySelector("#quote-items-title"),
-    quoteItemsCopy: document.querySelector("#quote-items-copy"),
-    quoteItemsHelper: document.querySelector("#quote-items-helper"),
-    itemSummaryCopy: document.querySelector("#item-summary-copy"),
-    summaryBlindsBlock: document.querySelector("#summary-blinds-block"),
-    summaryCurtainsBlock: document.querySelector("#summary-curtains-block"),
-    blindMarkupSetting: document.querySelector("#blind-markup-setting"),
-    curtainMarkupSetting: document.querySelector("#curtain-markup-setting"),
+    quoteSubnavLinks: Array.from(document.querySelectorAll(".subnav-link[data-quote-subnav]")),
     summaryBlindsBody: document.querySelector("#summary-blinds-body"),
     summaryBlindsEmpty: document.querySelector("#summary-blinds-empty"),
     summaryCurtainsBody: document.querySelector("#summary-curtains-body"),
@@ -465,52 +455,17 @@ function getActivePageFromHash(hash = window.location.hash) {
   return "builder";
 }
 
-function getQuoteViewFromHash(hash = window.location.hash) {
-  if (hash === "#blinds-quote") {
-    return "blinds";
-  }
-  if (hash === "#curtain-quote") {
-    return "curtains";
-  }
-  return "all";
-}
+function syncQuoteSubnav() {
+  const currentHash = window.location.hash || "#quote-builder";
+  const subnavView = currentHash === "#air-mode"
+    ? "air"
+    : currentHash === "#quote-preview"
+      ? "preview"
+      : "builder";
 
-function syncQuoteView() {
-  state.quoteView = getQuoteViewFromHash();
-  const isBlindsView = state.quoteView === "blinds";
-  const isCurtainsView = state.quoteView === "curtains";
-
-  els.summaryBlindsBlock.style.display = isCurtainsView ? "none" : "grid";
-  els.summaryCurtainsBlock.style.display = isBlindsView ? "none" : "grid";
-  els.blindMarkupSetting.style.display = isCurtainsView ? "none" : "block";
-  els.curtainMarkupSetting.style.display = isBlindsView ? "none" : "block";
-
-  if (state.quoteView === "blinds") {
-    els.quoteBuilder.textContent = "Blinds Quote";
-    els.quoteBuilderCopy.textContent = "Build roller blind quotes for blind-only service work with the same customer, records, and invoice flow.";
-    els.quoteItemsTitle.textContent = "Blind Items";
-    els.quoteItemsCopy.textContent = "Use the blind table below to add, edit, and save roller blind quote items.";
-    els.quoteItemsHelper.textContent = "New blind items will appear directly in the roller blind summary table below.";
-    els.itemSummaryCopy.textContent = "Blind quote items with service setup, matched pricing bracket, and totals.";
-    return;
-  }
-
-  if (state.quoteView === "curtains") {
-    els.quoteBuilder.textContent = "Curtain Quote";
-    els.quoteBuilderCopy.textContent = "Build curtain and sheer quotes for fabric-based service work with the same customer, records, and invoice flow.";
-    els.quoteItemsTitle.textContent = "Curtain Items";
-    els.quoteItemsCopy.textContent = "Use the curtain and sheer table below to add, edit, and save fabric quote items.";
-    els.quoteItemsHelper.textContent = "New curtain and sheer items will appear directly in the curtain summary table below.";
-    els.itemSummaryCopy.textContent = "Curtain and sheer quote items with material, fold, stacking, and totals.";
-    return;
-  }
-
-  els.quoteBuilder.textContent = "Blinds, Curtains & Sheers";
-  els.quoteBuilderCopy.textContent = "Build customer quotes for blinds, curtains, and sheers from one screen, then print a clean quote.";
-  els.quoteItemsTitle.textContent = "Items";
-  els.quoteItemsCopy.textContent = "Use the controls under each table to add or clear blind and curtain item rows separately.";
-  els.quoteItemsHelper.textContent = "New items will appear directly in the matching summary table below, where you can review or edit them.";
-  els.itemSummaryCopy.textContent = "Separate blind and curtain tables with full detail and edit controls.";
+  els.quoteSubnavLinks.forEach((item) => {
+    item.classList.toggle("active", item.dataset.quoteSubnav === subnavView);
+  });
 }
 
 function syncPageNavigation() {
@@ -523,19 +478,14 @@ function syncPageNavigation() {
 
   els.navItems.forEach((item) => {
     const href = item.getAttribute("href");
-    const quoteView = getQuoteViewFromHash(currentHash);
-    const isBuilderDefault = activePage === "builder" && quoteView === "all" && currentHash !== "#quote-preview" && href === "#quote-builder";
-    const isBuilderBlinds = activePage === "builder" && quoteView === "blinds" && href === "#blinds-quote";
-    const isBuilderCurtains = activePage === "builder" && quoteView === "curtains" && href === "#curtain-quote";
-    const isBuilderPreview = activePage === "builder" && currentHash === "#quote-preview" && href === "#quote-preview";
-    const isAirMode = activePage === "airMode" && href === "#air-mode";
+    const isQuotesMain = (activePage === "builder" || activePage === "airMode") && href === "#quote-builder";
     const isHistory = activePage === "history" && href === "#quote-history";
     const isInvoices = activePage === "invoices" && href === "#invoices";
     const isSavedInvoices = activePage === "savedInvoices" && href === "#saved-invoices";
-    item.classList.toggle("active", isBuilderDefault || isBuilderBlinds || isBuilderCurtains || isBuilderPreview || isAirMode || isHistory || isInvoices || isSavedInvoices);
+    item.classList.toggle("active", isQuotesMain || isHistory || isInvoices || isSavedInvoices);
   });
 
-  syncQuoteView();
+  syncQuoteSubnav();
 }
 
 function formatCurrency(value) {
