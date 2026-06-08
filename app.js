@@ -294,7 +294,9 @@ function cacheElements() {
     cleaningExtrasRetail: document.querySelector("#cleaning-extras-retail"),
     cleaningSubtotalCost: document.querySelector("#cleaning-subtotal-cost"),
     cleaningSubtotalRetail: document.querySelector("#cleaning-subtotal-retail"),
+    cleaningCostGst: document.querySelector("#cleaning-cost-gst"),
     cleaningGst: document.querySelector("#cleaning-gst"),
+    cleaningTotalCost: document.querySelector("#cleaning-total-cost"),
     cleaningTotal: document.querySelector("#cleaning-total"),
     cleaningProfit: document.querySelector("#cleaning-profit"),
     cleaningProfitPercent: document.querySelector("#cleaning-profit-percent"),
@@ -1259,7 +1261,9 @@ function calculateCleaningTotals() {
   const extrasRetail = extras.reduce((sum, line) => sum + line.retailExGst, 0);
   const subtotalCost = base.rawCost + extrasCost;
   const subtotalRetail = base.retailExGst + extrasRetail;
+  const costGst = subtotalCost * state.gstRate;
   const gst = subtotalRetail * state.gstRate;
+  const totalCost = subtotalCost + costGst;
   const total = subtotalRetail + gst;
   const profit = subtotalRetail - subtotalCost;
   const profitPercent = subtotalRetail > 0 ? (profit / subtotalRetail) * 100 : 0;
@@ -1271,7 +1275,9 @@ function calculateCleaningTotals() {
     extrasRetail,
     subtotalCost,
     subtotalRetail,
+    costGst,
     gst,
+    totalCost,
     total,
     profit,
     profitPercent
@@ -1315,7 +1321,9 @@ function createCleaningRecordSnapshot() {
       extrasRetail: totals.extrasRetail,
       subtotalCost: totals.subtotalCost,
       subtotalRetail: totals.subtotalRetail,
+      costGst: totals.costGst,
       gst: totals.gst,
+      totalCost: totals.totalCost,
       total: totals.total,
       profit: totals.profit,
       profitPercent: totals.profitPercent
@@ -1560,7 +1568,9 @@ function renderCleaningQuote() {
   els.cleaningExtrasRetail.textContent = formatCurrency(totals.extrasRetail);
   els.cleaningSubtotalCost.textContent = formatCurrency(totals.subtotalCost);
   els.cleaningSubtotalRetail.textContent = formatCurrency(totals.subtotalRetail);
+  els.cleaningCostGst.textContent = formatCurrency(totals.costGst);
   els.cleaningGst.textContent = formatCurrency(totals.gst);
+  els.cleaningTotalCost.textContent = formatCurrency(totals.totalCost);
   els.cleaningTotal.textContent = formatCurrency(totals.total);
   els.cleaningProfit.textContent = formatCurrency(totals.profit);
   els.cleaningProfitPercent.textContent = `${formatPercent(totals.profitPercent)} profit margin`;
