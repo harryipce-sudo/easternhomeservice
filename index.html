@@ -25,6 +25,7 @@
         <a class="nav-item" href="#quote-preview" data-page-link="builder">Quote Preview</a>
         <a class="nav-item" href="#quote-history" data-page-link="history">Search Quote</a>
         <a class="nav-item" href="#invoices" data-page-link="invoices">Invoices</a>
+        <a class="nav-item" href="#saved-invoices" data-page-link="savedInvoices">Saved Invoices</a>
       </nav>
     </aside>
 
@@ -400,44 +401,6 @@
           </div>
         </header>
 
-        <section class="panel invoice-list-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="section-kicker">Invoice List</p>
-              <h2>Saved Invoices</h2>
-              <p>Search by invoice number, quote number, customer, or address.</p>
-            </div>
-            <div class="invoice-status-actions">
-              <button class="ghost-button" id="mark-invoice-draft" type="button">Mark Draft</button>
-              <button class="ghost-button" id="mark-invoice-sent" type="button">Mark Sent</button>
-              <button class="secondary-button" id="mark-invoice-paid" type="button">Mark Paid</button>
-            </div>
-          </div>
-          <div class="records-toolbar">
-            <label class="records-search-field">
-              <span>Search Invoices</span>
-              <input id="invoice-search" type="search" placeholder="Search invoice number, quote number, customer, or address">
-            </label>
-          </div>
-          <div class="table-wrap">
-            <table class="quote-table records-table invoice-table">
-              <thead>
-                <tr>
-                  <th>Invoice No.</th>
-                  <th>Customer</th>
-                  <th>Quote Ref</th>
-                  <th>Status</th>
-                  <th>Due Date</th>
-                  <th>Total</th>
-                  <th>Amount Due</th>
-                </tr>
-              </thead>
-              <tbody id="invoice-list-body"></tbody>
-            </table>
-          </div>
-          <div class="record-empty" id="invoice-list-empty">No invoices created yet.</div>
-        </section>
-
         <section class="panel invoice-editor-panel">
           <div class="panel-heading">
             <div>
@@ -465,7 +428,7 @@
               <input id="invoice-customer-address" type="text" placeholder="Service address">
             </label>
             <label>
-              <span>Quote Reference</span>
+              <span>Quote Number</span>
               <input id="invoice-reference" type="text" placeholder="EHS-001">
             </label>
             <label>
@@ -547,6 +510,54 @@
           </div>
 
           <p class="copy-feedback" id="invoice-feedback"></p>
+        </section>
+      </section>
+
+      <section class="app-page" id="page-saved-invoices" data-page="savedInvoices">
+        <header class="page-header page-header-single">
+          <div>
+            <p class="section-kicker">Accounts</p>
+            <h1 id="saved-invoices-page">Saved Invoices</h1>
+            <p class="page-copy">Search invoices, review totals due, and open any invoice back in the editor.</p>
+          </div>
+        </header>
+
+        <section class="panel invoice-list-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Invoice List</p>
+              <h2>Saved Invoices</h2>
+              <p>Search by invoice number, quote number, customer, or address.</p>
+            </div>
+            <div class="invoice-status-actions">
+              <button class="ghost-button" id="mark-invoice-draft" type="button">Mark Draft</button>
+              <button class="ghost-button" id="mark-invoice-sent" type="button">Mark Sent</button>
+              <button class="secondary-button" id="mark-invoice-paid" type="button">Mark Paid</button>
+            </div>
+          </div>
+          <div class="records-toolbar">
+            <label class="records-search-field">
+              <span>Search Invoices</span>
+              <input id="invoice-search" type="search" placeholder="Search invoice number, quote number, customer, or address">
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table class="quote-table records-table invoice-table">
+              <thead>
+                <tr>
+                  <th>Invoice No.</th>
+                  <th>Customer</th>
+                  <th>Quote No.</th>
+                  <th>Status</th>
+                  <th>Due Date</th>
+                  <th>Total</th>
+                  <th>Amount Due</th>
+                </tr>
+              </thead>
+              <tbody id="invoice-list-body"></tbody>
+            </table>
+          </div>
+          <div class="record-empty" id="invoice-list-empty">No invoices created yet.</div>
         </section>
       </section>
     </main>

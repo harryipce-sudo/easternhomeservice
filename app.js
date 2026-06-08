@@ -312,19 +312,44 @@ function addDaysToIsoDate(dateString, days) {
   return date.toISOString().slice(0, 10);
 }
 
+function parsePaymentTermsDays(value) {
+  const match = String(value ?? "").match(/(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function formatPaymentTerms(days) {
+  const normalizedDays = Math.max(0, Number(days) || 0);
+  return `${normalizedDays} Day${normalizedDays === 1 ? "" : "s"}`;
+}
+
+function calculateDayDifference(fromDateString, toDateString) {
+  const fromDate = new Date(fromDateString);
+  const toDate = new Date(toDateString);
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    return 0;
+  }
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  return Math.max(0, Math.round((toDate - fromDate) / msPerDay));
+}
+
 function createInvoice(partial = {}) {
   const today = getTodayIsoDate();
+  const invoiceNumber = partial.invoiceNumber || generateInvoiceNumber();
+  const invoiceDate = partial.invoiceDate || today;
+  const paymentTermsDays = parsePaymentTermsDays(partial.paymentTerms || "7 Days") || 7;
+  const dueDate = partial.dueDate || addDaysToIsoDate(invoiceDate, paymentTermsDays);
   return {
     id: crypto.randomUUID(),
-    invoiceNumber: partial.invoiceNumber || generateInvoiceNumber(),
-    sourceQuoteNumber: partial.sourceQuoteNumber || "",
+    invoiceNumber,
+    sourceQuoteNumber: partial.sourceQuoteNumber || invoiceNumber,
     status: partial.status || "draft",
     customerName: partial.customerName || "",
     customerPhone: partial.customerPhone || "",
     customerAddress: partial.customerAddress || "",
-    invoiceDate: partial.invoiceDate || today,
-    dueDate: partial.dueDate || addDaysToIsoDate(today, 7),
-    paymentTerms: partial.paymentTerms || "7 Days",
+    invoiceDate,
+    dueDate,
+    paymentTerms: partial.paymentTerms || formatPaymentTerms(paymentTermsDays),
     amountPaid: Number(partial.amountPaid) || 0,
     notes: partial.notes || "Thank you for choosing Eastern Home Service.",
     bankDetails: partial.bankDetails || "",
@@ -386,6 +411,9 @@ function getActivePageFromHash(hash = window.location.hash) {
   if (hash === "#invoices") {
     return "invoices";
   }
+  if (hash === "#saved-invoices") {
+    return "savedInvoices";
+  }
   return "builder";
 }
 
@@ -403,7 +431,8 @@ function syncPageNavigation() {
     const isBuilderPreview = activePage === "builder" && currentHash === "#quote-preview" && href === "#quote-preview";
     const isHistory = activePage === "history" && href === "#quote-history";
     const isInvoices = activePage === "invoices" && href === "#invoices";
-    item.classList.toggle("active", isBuilderDefault || isBuilderPreview || isHistory || isInvoices);
+    const isSavedInvoices = activePage === "savedInvoices" && href === "#saved-invoices";
+    item.classList.toggle("active", isBuilderDefault || isBuilderPreview || isHistory || isInvoices || isSavedInvoices);
   });
 }
 
@@ -1128,7 +1157,37 @@ function deleteInvoice(id) {
 function setInvoiceValue(field, value) {
   state.invoices = state.invoices.map((invoice) => (
     invoice.id === state.selectedInvoiceId
-      ? { ...invoice, [field]: field === "amountPaid" ? Number(value) || 0 : value }
+      ? (() => {
+          const nextInvoice = {
+            ...invoice,
+            [field]: field === "amountPaid" ? Number(value) || 0 : value
+          };
+
+          if (field === "invoiceDate") {
+            const currentDays = parsePaymentTermsDays(nextInvoice.paymentTerms) || calculateDayDifference(invoice.invoiceDate, invoice.dueDate) || 7;
+            nextInvoice.paymentTerms = formatPaymentTerms(currentDays);
+            nextInvoice.dueDate = addDaysToIsoDate(nextInvoice.invoiceDate, currentDays);
+          }
+
+          if (field === "dueDate") {
+            const nextDays = calculateDayDifference(nextInvoice.invoiceDate, nextInvoice.dueDate);
+            nextInvoice.paymentTerms = formatPaymentTerms(nextDays);
+          }
+
+          if (field === "paymentTerms") {
+            const termDays = parsePaymentTermsDays(value);
+            if (termDays > 0) {
+              nextInvoice.paymentTerms = formatPaymentTerms(termDays);
+              nextInvoice.dueDate = addDaysToIsoDate(nextInvoice.invoiceDate, termDays);
+            }
+          }
+
+          if (field === "sourceQuoteNumber" && !String(value).trim()) {
+            nextInvoice.sourceQuoteNumber = nextInvoice.invoiceNumber;
+          }
+
+          return nextInvoice;
+        })()
       : invoice
   ));
   persistInvoices();
@@ -2068,6 +2127,8 @@ function bindEvents() {
     if (selectButton) {
       state.selectedInvoiceId = selectButton.dataset.selectInvoice;
       renderInvoices();
+      window.location.hash = "#invoices";
+      syncPageNavigation();
     }
   });
 
