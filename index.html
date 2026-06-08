@@ -22,6 +22,7 @@
 
       <nav class="nav">
         <a class="nav-item active" href="#quote-builder" data-page-link="builder">Quote Builder</a>
+        <a class="nav-item" href="#air-mode" data-page-link="airMode">Air Mode</a>
         <a class="nav-item" href="#quote-preview" data-page-link="builder">Quote Preview</a>
         <a class="nav-item" href="#quote-history" data-page-link="history">Search Quote</a>
         <a class="nav-item" href="#invoices" data-page-link="invoices">Invoices</a>
@@ -334,6 +335,152 @@
         </aside>
       </section>
 
+      </section>
+
+      <section class="app-page" id="page-air-mode" data-page="airMode">
+        <header class="page-header page-header-single">
+          <div>
+            <p class="section-kicker">Field Mode</p>
+            <h1 id="air-mode">Air Mode</h1>
+            <p class="page-copy">Fast on-site entry for mobile use with large controls, one item at a time, and quick save.</p>
+          </div>
+        </header>
+
+        <section class="panel air-mode-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Customer Details</h2>
+              <p>These details sync with the full quote builder automatically.</p>
+            </div>
+          </div>
+          <div class="air-stack">
+            <label>
+              <span>Customer Name</span>
+              <input id="air-customer-name" type="text" placeholder="Client name">
+            </label>
+            <label>
+              <span>Phone</span>
+              <input id="air-customer-phone" type="text" placeholder="0400 000 000">
+            </label>
+            <label>
+              <span>Address</span>
+              <input id="air-customer-address" type="text" placeholder="Job address">
+            </label>
+            <label>
+              <span>Quote Number</span>
+              <input id="air-quote-number" type="text" placeholder="EHS-001">
+            </label>
+          </div>
+        </section>
+
+        <section class="panel air-mode-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Add Item</h2>
+              <p>Choose the product, fill the fields, then add it into the quote.</p>
+            </div>
+          </div>
+          <div class="air-stack">
+            <label>
+              <span>Product Type</span>
+              <select id="air-product-type">
+                <option value="blind">Roller Blind</option>
+                <option value="curtain">Curtain</option>
+                <option value="sheer">Sheer</option>
+              </select>
+            </label>
+            <label>
+              <span>Location</span>
+              <input id="air-location" type="text" placeholder="Living room">
+            </label>
+          </div>
+
+          <div class="air-section" id="air-blind-fields">
+            <div class="air-grid-two">
+              <label>
+                <span>Group</span>
+                <select id="air-blind-group">
+                  <option value="G2">Group 2</option>
+                  <option value="G3">Group 3</option>
+                  <option value="G4">Group 4</option>
+                </select>
+              </label>
+              <label>
+                <span>Service</span>
+                <select id="air-blind-service">
+                  <option value="supply-install">Supply + Install</option>
+                  <option value="supply-only">Supply Only</option>
+                </select>
+              </label>
+              <label>
+                <span>Width (mm)</span>
+                <input id="air-blind-width" type="text" inputmode="numeric" placeholder="1200+50">
+              </label>
+              <label>
+                <span>Height (mm)</span>
+                <input id="air-blind-height" type="text" inputmode="numeric" placeholder="2100-20">
+              </label>
+            </div>
+          </div>
+
+          <div class="air-section" id="air-curtain-fields">
+            <div class="air-grid-two">
+              <label>
+                <span>Material</span>
+                <select id="air-curtain-material"></select>
+              </label>
+              <label>
+                <span>Color</span>
+                <select id="air-curtain-color"></select>
+              </label>
+              <label>
+                <span>Width (mm)</span>
+                <input id="air-curtain-width" type="text" inputmode="numeric" placeholder="3000+200">
+              </label>
+              <label>
+                <span>Drop (mm)</span>
+                <input id="air-curtain-drop" type="text" inputmode="numeric" placeholder="2400-100">
+              </label>
+              <label>
+                <span>Fold Rate</span>
+                <select id="air-curtain-fold-rate">
+                  <option value="2">x2</option>
+                  <option value="2.3" selected>x2.3</option>
+                </select>
+              </label>
+              <label>
+                <span>Style</span>
+                <select id="air-curtain-style">
+                  <option value="S-Fold Metal Hook">S-Fold Metal Hook</option>
+                  <option value="S-Fold White Plastic Hook">S-Fold White Plastic Hook</option>
+                  <option value="Double Pinch Pleat">Double Pinch Pleat</option>
+                  <option value="Triple Pinch Pleat">Triple Pinch Pleat</option>
+                  <option value="Eyelet">Eyelet</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="summary-table-actions">
+            <button class="primary-button" id="air-add-item" type="button">Add Item</button>
+            <button class="ghost-button" id="air-clear-form" type="button">Clear Form</button>
+            <button class="secondary-button" id="air-save-quote" type="button">Save Quote</button>
+          </div>
+          <p class="copy-feedback" id="air-feedback"></p>
+        </section>
+
+        <section class="panel air-mode-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Current Items</h2>
+              <p>Everything added here also appears in the full quote builder.</p>
+            </div>
+            <strong id="air-total">$0.00</strong>
+          </div>
+          <div class="air-items-list" id="air-items-list">
+            <div class="record-empty" id="air-items-empty">No items added in Air Mode yet.</div>
+          </div>
+        </section>
       </section>
 
       <section class="app-page" id="page-history" data-page="history">

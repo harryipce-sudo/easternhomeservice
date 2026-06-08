@@ -160,6 +160,31 @@ function cacheElements() {
     customerPhone: document.querySelector("#customer-phone"),
     customerAddress: document.querySelector("#customer-address"),
     quoteNumber: document.querySelector("#quote-number"),
+    airCustomerName: document.querySelector("#air-customer-name"),
+    airCustomerPhone: document.querySelector("#air-customer-phone"),
+    airCustomerAddress: document.querySelector("#air-customer-address"),
+    airQuoteNumber: document.querySelector("#air-quote-number"),
+    airProductType: document.querySelector("#air-product-type"),
+    airLocation: document.querySelector("#air-location"),
+    airBlindFields: document.querySelector("#air-blind-fields"),
+    airBlindGroup: document.querySelector("#air-blind-group"),
+    airBlindService: document.querySelector("#air-blind-service"),
+    airBlindWidth: document.querySelector("#air-blind-width"),
+    airBlindHeight: document.querySelector("#air-blind-height"),
+    airCurtainFields: document.querySelector("#air-curtain-fields"),
+    airCurtainMaterial: document.querySelector("#air-curtain-material"),
+    airCurtainColor: document.querySelector("#air-curtain-color"),
+    airCurtainWidth: document.querySelector("#air-curtain-width"),
+    airCurtainDrop: document.querySelector("#air-curtain-drop"),
+    airCurtainFoldRate: document.querySelector("#air-curtain-fold-rate"),
+    airCurtainStyle: document.querySelector("#air-curtain-style"),
+    airAddItem: document.querySelector("#air-add-item"),
+    airClearForm: document.querySelector("#air-clear-form"),
+    airSaveQuote: document.querySelector("#air-save-quote"),
+    airFeedback: document.querySelector("#air-feedback"),
+    airItemsList: document.querySelector("#air-items-list"),
+    airItemsEmpty: document.querySelector("#air-items-empty"),
+    airTotal: document.querySelector("#air-total"),
     cameraPhotos: document.querySelector("#camera-photos"),
     housePhotos: document.querySelector("#house-photos"),
     photoGrid: document.querySelector("#photo-grid"),
@@ -239,6 +264,9 @@ function hasRequiredElements() {
     els.summaryCurtainsBody &&
     els.addLine &&
     els.addCurtainLine &&
+    els.airCustomerName &&
+    els.airProductType &&
+    els.airItemsList &&
     els.saveAllBlinds &&
     els.saveAllCurtains &&
     els.recordsTableBody &&
@@ -405,6 +433,9 @@ function applyPendingFocus() {
 }
 
 function getActivePageFromHash(hash = window.location.hash) {
+  if (hash === "#air-mode") {
+    return "airMode";
+  }
   if (hash === "#quote-history") {
     return "history";
   }
@@ -429,10 +460,11 @@ function syncPageNavigation() {
     const href = item.getAttribute("href");
     const isBuilderDefault = activePage === "builder" && currentHash !== "#quote-preview" && href === "#quote-builder";
     const isBuilderPreview = activePage === "builder" && currentHash === "#quote-preview" && href === "#quote-preview";
+    const isAirMode = activePage === "airMode" && href === "#air-mode";
     const isHistory = activePage === "history" && href === "#quote-history";
     const isInvoices = activePage === "invoices" && href === "#invoices";
     const isSavedInvoices = activePage === "savedInvoices" && href === "#saved-invoices";
-    item.classList.toggle("active", isBuilderDefault || isBuilderPreview || isHistory || isInvoices || isSavedInvoices);
+    item.classList.toggle("active", isBuilderDefault || isBuilderPreview || isAirMode || isHistory || isInvoices || isSavedInvoices);
   });
 }
 
@@ -952,6 +984,151 @@ function createRecordSnapshot() {
     blindItems,
     curtainItems
   };
+}
+
+function populateAirCurtainColors(selectedColor = "") {
+  const materialName = els.airCurtainMaterial.value || "Begonia";
+  const material = CURTAIN_MATERIALS[materialName];
+  if (!material) {
+    return;
+  }
+
+  els.airCurtainColor.innerHTML = material.colors
+    .map((color) => `<option value="${color}" ${color === selectedColor ? "selected" : ""}>${color}</option>`)
+    .join("");
+
+  if (!selectedColor || !material.colors.includes(selectedColor)) {
+    els.airCurtainColor.value = material.colors[0];
+  }
+}
+
+function updateAirModeFields() {
+  const isBlind = els.airProductType.value === "blind";
+  els.airBlindFields.style.display = isBlind ? "block" : "none";
+  els.airCurtainFields.style.display = isBlind ? "none" : "block";
+  if (!isBlind) {
+    populateAirCurtainColors(els.airCurtainColor.value);
+  }
+}
+
+function clearAirModeForm() {
+  els.airLocation.value = "";
+  els.airBlindGroup.value = "G2";
+  els.airBlindService.value = "supply-install";
+  els.airBlindWidth.value = "";
+  els.airBlindHeight.value = "";
+  els.airCurtainMaterial.value = "Begonia";
+  populateAirCurtainColors("Sand");
+  els.airCurtainWidth.value = "";
+  els.airCurtainDrop.value = "";
+  els.airCurtainFoldRate.value = "2.3";
+  els.airCurtainStyle.value = "S-Fold Metal Hook";
+}
+
+function renderAirMode() {
+  updateAirModeFields();
+  els.airItemsList.innerHTML = "";
+
+  const airCards = [];
+
+  state.lines.forEach((line) => {
+    const computed = calculateBlindLine(line);
+    airCards.push(`
+      <article class="air-item-card">
+        <div class="air-item-top">
+          <div>
+            <p class="section-kicker">Roller Blind</p>
+            <h3>${escapeHtml(line.location || "Untitled Location")}</h3>
+          </div>
+          <strong>${formatCurrency(computed.lineTotal)}</strong>
+        </div>
+        <p>${PRICING_TABLE.groups[line.group]?.label || line.group} | ${SERVICE_TYPES.find((item) => item.value === line.serviceType)?.label || line.serviceType}</p>
+        <p>${escapeHtml(String(evaluateCalculatorValue(line.width) || line.width || "-"))}w x ${escapeHtml(String(evaluateCalculatorValue(line.height) || line.height || "-"))}h mm</p>
+        <div class="summary-table-actions">
+          <button class="danger-button table-action-button" data-air-delete-blind="${line.id}" type="button">Delete</button>
+        </div>
+      </article>
+    `);
+  });
+
+  state.curtainLines.forEach((line) => {
+    const computed = calculateCurtainLine(line);
+    airCards.push(`
+      <article class="air-item-card">
+        <div class="air-item-top">
+          <div>
+            <p class="section-kicker">${line.product === "curtain" ? "Curtain" : "Sheer"}</p>
+            <h3>${escapeHtml(line.location || "Untitled Location")}</h3>
+          </div>
+          <strong>${formatCurrency(computed.lineTotal)}</strong>
+        </div>
+        <p>${escapeHtml(line.material)} | ${escapeHtml(line.color)} | x${escapeHtml(String(line.foldRate))}</p>
+        <p>${escapeHtml(String(evaluateCalculatorValue(line.width) || line.width || "-"))}w x ${escapeHtml(String(evaluateCalculatorValue(line.drop) || line.drop || "-"))}d mm</p>
+        <div class="summary-table-actions">
+          <button class="danger-button table-action-button" data-air-delete-curtain="${line.id}" type="button">Delete</button>
+        </div>
+      </article>
+    `);
+  });
+
+  if (!airCards.length) {
+    els.airItemsList.appendChild(els.airItemsEmpty);
+    els.airItemsEmpty.style.display = "grid";
+  } else {
+    els.airItemsEmpty.style.display = "none";
+    els.airItemsList.innerHTML = airCards.join("");
+  }
+
+  els.airTotal.textContent = els.grandTotal.textContent;
+}
+
+function addAirModeItem() {
+  const productType = els.airProductType.value;
+  const location = els.airLocation.value.trim();
+
+  if (productType === "blind") {
+    const width = els.airBlindWidth.value.trim();
+    const height = els.airBlindHeight.value.trim();
+    if (!width || !height) {
+      els.airFeedback.textContent = "Enter width and height before adding the blind.";
+      return;
+    }
+
+    const line = createLine();
+    line.location = location;
+    line.group = els.airBlindGroup.value;
+    line.serviceType = els.airBlindService.value;
+    line.width = width;
+    line.height = height;
+    line.isEditing = false;
+    state.lines.push(line);
+    clearAirModeForm();
+    renderAll();
+    els.airFeedback.textContent = "Blind item added.";
+    return;
+  }
+
+  const width = els.airCurtainWidth.value.trim();
+  const drop = els.airCurtainDrop.value.trim();
+  if (!width || !drop) {
+    els.airFeedback.textContent = "Enter width and drop before adding the item.";
+    return;
+  }
+
+  const line = createCurtainLine();
+  line.location = location;
+  line.product = productType;
+  line.material = els.airCurtainMaterial.value;
+  line.color = els.airCurtainColor.value;
+  line.width = width;
+  line.drop = drop;
+  line.foldRate = Number(els.airCurtainFoldRate.value) || 2.3;
+  line.style = els.airCurtainStyle.value;
+  line.isEditing = false;
+  state.curtainLines.push(line);
+  clearAirModeForm();
+  renderAll();
+  els.airFeedback.textContent = `${productType === "curtain" ? "Curtain" : "Sheer"} item added.`;
 }
 
 async function submitQuoteRecord() {
@@ -1837,6 +2014,7 @@ function renderAll() {
   renderBlindSummaryTable();
   renderCurtainSummaryTable();
   updateSummary();
+  renderAirMode();
   applyPendingFocus();
 }
 
@@ -1887,6 +2065,43 @@ function focusNextCurtainField(id, field) {
 function bindEvents() {
   window.addEventListener("hashchange", () => {
     syncPageNavigation();
+  });
+
+  els.airProductType.addEventListener("change", () => {
+    updateAirModeFields();
+  });
+
+  els.airCurtainMaterial.addEventListener("change", () => {
+    populateAirCurtainColors();
+  });
+
+  els.airAddItem.addEventListener("click", () => {
+    addAirModeItem();
+  });
+
+  els.airClearForm.addEventListener("click", () => {
+    clearAirModeForm();
+    renderAirMode();
+    els.airFeedback.textContent = "";
+  });
+
+  els.airSaveQuote.addEventListener("click", async () => {
+    await submitQuoteRecord();
+    els.airFeedback.textContent = els.copyFeedback.textContent;
+  });
+
+  els.airItemsList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.airDeleteBlind) {
+      deleteBlindLine(target.dataset.airDeleteBlind);
+      renderAll();
+      return;
+    }
+
+    if (target.dataset.airDeleteCurtain) {
+      deleteCurtainLine(target.dataset.airDeleteCurtain);
+      renderAll();
+    }
   });
 
   els.addLine.addEventListener("click", () => {
@@ -2193,10 +2408,15 @@ function bindEvents() {
     ["name", els.customerName],
     ["phone", els.customerPhone],
     ["address", els.customerAddress],
-    ["quoteNumber", els.quoteNumber]
+    ["quoteNumber", els.quoteNumber],
+    ["name", els.airCustomerName],
+    ["phone", els.airCustomerPhone],
+    ["address", els.airCustomerAddress],
+    ["quoteNumber", els.airQuoteNumber]
   ].forEach(([field, element]) => {
     element.addEventListener("input", () => {
       state.customer[field] = element.value;
+      hydrateInputs();
       updateSummary();
     });
   });
@@ -2219,6 +2439,8 @@ function bindEvents() {
     state.lines = [];
     state.curtainLines = [];
     els.copyFeedback.textContent = "";
+    els.airFeedback.textContent = "";
+    clearAirModeForm();
     hydrateInputs();
     renderPhotos();
     renderAll();
@@ -2250,6 +2472,10 @@ function hydrateInputs() {
   els.customerPhone.value = state.customer.phone;
   els.customerAddress.value = state.customer.address;
   els.quoteNumber.value = state.customer.quoteNumber;
+  els.airCustomerName.value = state.customer.name;
+  els.airCustomerPhone.value = state.customer.phone;
+  els.airCustomerAddress.value = state.customer.address;
+  els.airQuoteNumber.value = state.customer.quoteNumber;
   if (els.historySearch) {
     els.historySearch.value = state.historySearch;
   }
@@ -2269,6 +2495,10 @@ async function init() {
     loadPhotos();
     await loadRecords();
     loadInvoices();
+    els.airCurtainMaterial.innerHTML = Object.keys(CURTAIN_MATERIALS)
+      .map((material) => `<option value="${material}" ${material === "Begonia" ? "selected" : ""}>${material}</option>`)
+      .join("");
+    clearAirModeForm();
     state.lines = [];
     state.curtainLines = [];
     hydrateInputs();
