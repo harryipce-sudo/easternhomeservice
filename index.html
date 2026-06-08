@@ -26,7 +26,6 @@
         <a class="nav-item active" href="#quote-builder" data-page-link="quotes">Blinds and Curtain</a>
         <a class="nav-item" href="#cleaning-quote" data-page-link="cleaning">Cleaning Quote</a>
         <a class="nav-item" href="#quote-history" data-page-link="ops">Quote / Invoice</a>
-        <a class="nav-item" href="#settings" data-page-link="settings">Settings</a>
       </nav>
     </aside>
 
@@ -669,6 +668,7 @@
           <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
           <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+          <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
 
         <section class="panel records-panel" id="dimension-records">
@@ -691,6 +691,7 @@
                 <thead>
                   <tr>
                     <th>Quote No.</th>
+                    <th>Sector</th>
                     <th>Customer Detail</th>
                     <th>Address</th>
                     <th>Saved</th>
@@ -722,6 +723,7 @@
           </div>
           <div class="header-actions">
             <button class="ghost-button" id="new-invoice" type="button">New Invoice</button>
+            <button class="ghost-button" id="preview-invoice" type="button">Preview</button>
             <button class="ghost-button" id="share-invoice" type="button">Share</button>
             <button class="ghost-button" id="print-invoice" type="button">Print / PDF</button>
             <button class="primary-button" id="save-invoice" type="button">Confirm</button>
@@ -733,6 +735,7 @@
           <a class="subnav-link active" href="#invoices" data-ops-subnav="invoices">Invoices</a>
           <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+          <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
 
         <section class="panel invoice-editor-panel">
@@ -861,6 +864,7 @@
           <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
           <a class="subnav-link active" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+          <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
 
         <section class="panel invoice-list-panel">
@@ -871,6 +875,7 @@
               <p>Search by invoice number, quote number, customer, or address.</p>
             </div>
             <div class="invoice-status-actions">
+              <button class="ghost-button" id="saved-preview-invoice" type="button">Preview</button>
               <button class="ghost-button" id="saved-share-invoice" type="button">Share</button>
               <button class="ghost-button" id="saved-print-invoice" type="button">Print / PDF</button>
               <button class="secondary-button" id="saved-save-invoice" type="button">Confirm</button>
@@ -890,8 +895,8 @@
               <thead>
                 <tr>
                   <th>Invoice No.</th>
+                  <th>Sector</th>
                   <th>Customer</th>
-                  <th>Quote No.</th>
                   <th>Status</th>
                   <th>Due Date</th>
                   <th>Total</th>
@@ -921,6 +926,7 @@
           <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
           <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
           <a class="subnav-link active" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+          <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
 
         <section class="panel invoice-list-panel">
@@ -959,6 +965,14 @@
             <p class="page-copy">Manage saved data and set up the next parts of the app as your services grow.</p>
           </div>
         </header>
+
+        <nav class="subnav">
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+          <a class="subnav-link active" href="#settings" data-ops-subnav="settings">Settings</a>
+        </nav>
 
         <nav class="subnav">
           <button class="subnav-link active" type="button">Data</button>

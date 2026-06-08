@@ -61,6 +61,14 @@ function normalizeArray(value) {
 function mapRecordToRow(record) {
   const blindItems = normalizeArray(record.blindItems);
   const curtainItems = normalizeArray(record.curtainItems);
+  const payload = {
+    submittedAt: record.submittedAt,
+    recordType: record.recordType || "blinds-curtains",
+    sector: record.sector || (record.recordType === "cleaning" ? "Cleaning" : "Blinds / Curtain"),
+    blindItems,
+    curtainItems,
+    cleaningSummary: record.cleaningSummary && typeof record.cleaningSummary === "object" ? record.cleaningSummary : null
+  };
 
   return {
     id: record.id,
@@ -75,11 +83,7 @@ function mapRecordToRow(record) {
     blind_count: Number(record.blindCount) || blindItems.length,
     curtain_count: Number(record.curtainCount) || curtainItems.filter((item) => item.product?.toLowerCase?.() === "curtain").length,
     sheer_count: Number(record.sheerCount) || curtainItems.filter((item) => item.product?.toLowerCase?.() === "sheer").length,
-    payload: {
-      submittedAt: record.submittedAt,
-      blindItems,
-      curtainItems
-    }
+    payload
   };
 }
 
@@ -87,6 +91,8 @@ function mapRowToRecord(row) {
   const payload = row && typeof row.payload === "object" && row.payload ? row.payload : {};
   return {
     id: row.id,
+    recordType: payload.recordType || "blinds-curtains",
+    sector: payload.sector || (payload.recordType === "cleaning" ? "Cleaning" : "Blinds / Curtain"),
     submittedAt: row.created_at || payload.submittedAt || new Date().toISOString(),
     customerName: row.customer_name || "-",
     phone: row.phone || "-",
@@ -99,7 +105,8 @@ function mapRowToRecord(row) {
     curtainCount: Number(row.curtain_count) || 0,
     sheerCount: Number(row.sheer_count) || 0,
     blindItems: normalizeArray(payload.blindItems),
-    curtainItems: normalizeArray(payload.curtainItems)
+    curtainItems: normalizeArray(payload.curtainItems),
+    cleaningSummary: payload.cleaningSummary && typeof payload.cleaningSummary === "object" ? payload.cleaningSummary : null
   };
 }
 

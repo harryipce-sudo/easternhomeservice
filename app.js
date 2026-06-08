@@ -170,6 +170,13 @@ const state = {
   selectedInvoiceId: ""
 };
 
+const SECTOR_LABELS = {
+  "blinds-curtains": "Blinds / Curtain",
+  cleaning: "Cleaning",
+  mixed: "Multi Service",
+  general: "General"
+};
+
 const LOCAL_RECORDS_KEY = "ehs-dimension-records";
 const LOCAL_PHOTOS_KEY = "ehs-house-photos";
 const LOCAL_INVOICES_KEY = "ehs-invoices";
@@ -309,10 +316,12 @@ function cacheElements() {
     saveInvoice: document.querySelector("#save-invoice"),
     printInvoice: document.querySelector("#print-invoice"),
     shareInvoice: document.querySelector("#share-invoice"),
+    previewInvoice: document.querySelector("#preview-invoice"),
     markInvoiceDraft: document.querySelector("#mark-invoice-draft"),
     markInvoiceSent: document.querySelector("#mark-invoice-sent"),
     markInvoicePaid: document.querySelector("#mark-invoice-paid"),
     savedSaveInvoice: document.querySelector("#saved-save-invoice"),
+    savedPreviewInvoice: document.querySelector("#saved-preview-invoice"),
     savedPrintInvoice: document.querySelector("#saved-print-invoice"),
     savedShareInvoice: document.querySelector("#saved-share-invoice"),
     savedInvoiceFeedback: document.querySelector("#saved-invoice-feedback"),
@@ -484,6 +493,7 @@ function createInvoice(partial = {}) {
     id: partial.id || crypto.randomUUID(),
     invoiceNumber,
     sourceQuoteNumber: partial.sourceQuoteNumber || invoiceNumber,
+    sector: partial.sector || "General",
     status: partial.status || "draft",
     customerName: partial.customerName || "",
     customerPhone: partial.customerPhone || "",
@@ -609,6 +619,8 @@ function syncOpsSubnav() {
       ? "saved"
       : currentHash === "#recycle"
         ? "recycle"
+        : currentHash === "#settings"
+          ? "settings"
         : "history";
 
   els.opsSubnavLinks.forEach((item) => {
@@ -626,10 +638,9 @@ function syncPageNavigation() {
   els.navItems.forEach((item) => {
     const href = item.getAttribute("href");
     const isQuotesMain = (activePage === "builder" || activePage === "airMode") && href === "#quote-builder";
-    const isQuoteInvoiceMain = ["history", "invoices", "savedInvoices", "recycle"].includes(activePage) && href === "#quote-history";
+    const isQuoteInvoiceMain = ["history", "invoices", "savedInvoices", "recycle", "settings"].includes(activePage) && href === "#quote-history";
     const isCleaningMain = activePage === "cleaning" && href === "#cleaning-quote";
-    const isSettingsMain = activePage === "settings" && href === "#settings";
-    item.classList.toggle("active", isQuotesMain || isQuoteInvoiceMain || isCleaningMain || isSettingsMain);
+    item.classList.toggle("active", isQuotesMain || isQuoteInvoiceMain || isCleaningMain);
   });
 
   syncQuoteSubnav();
@@ -1060,6 +1071,7 @@ function parseStoredRecords(value) {
     ? parsed.filter((record) => record && typeof record === "object").map((record) => ({
         id: record.id || crypto.randomUUID(),
         recordType: record.recordType || "blinds-curtains",
+        sector: record.sector || SECTOR_LABELS[record.recordType || "blinds-curtains"] || "General",
         submittedAt: record.submittedAt || new Date().toISOString(),
         customerName: record.customerName || "-",
         phone: record.phone || "-",
@@ -1298,6 +1310,7 @@ function createCleaningRecordSnapshot() {
   return {
     id: crypto.randomUUID(),
     recordType: "cleaning",
+    sector: SECTOR_LABELS.cleaning,
     submittedAt: new Date().toISOString(),
     customerName: state.customer.name || "-",
     phone: state.customer.phone || "-",
@@ -1364,6 +1377,7 @@ function createRecordSnapshot() {
   return {
     id: crypto.randomUUID(),
     recordType: "blinds-curtains",
+    sector: SECTOR_LABELS["blinds-curtains"],
     submittedAt: new Date().toISOString(),
     customerName: state.customer.name || "-",
     phone: state.customer.phone || "-",
@@ -1861,6 +1875,7 @@ function createInvoiceFromRecord(record) {
   const invoice = createInvoice({
     invoiceNumber: record.quoteNumber !== "-" ? record.quoteNumber : generateDocumentNumber(),
     sourceQuoteNumber: record.quoteNumber !== "-" ? record.quoteNumber : "",
+    sector: record.sector || SECTOR_LABELS[record.recordType || "blinds-curtains"] || "General",
     customerName: record.customerName !== "-" ? record.customerName : "",
     customerPhone: record.phone !== "-" ? record.phone : "",
     customerAddress: record.address !== "-" ? record.address : "",
@@ -1896,6 +1911,7 @@ function createInvoiceFromCurrentQuote() {
   const invoice = createInvoice({
     invoiceNumber: state.customer.quoteNumber,
     sourceQuoteNumber: state.customer.quoteNumber,
+    sector: SECTOR_LABELS["blinds-curtains"],
     customerName: state.customer.name,
     customerPhone: state.customer.phone,
     customerAddress: state.customer.address,
@@ -1925,6 +1941,7 @@ function createInvoiceFromCurrentCleaningQuote() {
   const invoice = createInvoice({
     invoiceNumber: state.customer.quoteNumber,
     sourceQuoteNumber: state.customer.quoteNumber,
+    sector: SECTOR_LABELS.cleaning,
     customerName: state.customer.name,
     customerPhone: state.customer.phone,
     customerAddress: state.customer.address,
@@ -2195,8 +2212,12 @@ function openPrintDocument(title, bodyMarkup) {
 
 async function shareDocument(title, text) {
   if (navigator.share) {
-    await navigator.share({ title, text });
-    return true;
+    try {
+      await navigator.share({ title, text });
+      return true;
+    } catch (error) {
+      console.warn("Native share failed, falling back to copy.", error);
+    }
   }
 
   await copyText(text, title);
@@ -2327,6 +2348,7 @@ function getFilteredInvoices() {
     [
       invoice.invoiceNumber,
       invoice.sourceQuoteNumber,
+      invoice.sector,
       invoice.customerName,
       invoice.customerAddress
     ].some((field) => String(field ?? "").toLowerCase().includes(searchTerm))
@@ -2405,8 +2427,8 @@ function renderInvoices() {
     row.className = invoice.id === state.selectedInvoiceId ? "records-row is-selected" : "records-row";
     row.innerHTML = `
       <td data-label="Invoice No."><button class="record-link-button" data-select-invoice="${invoice.id}" type="button"><strong>${escapeHtml(invoice.invoiceNumber)}</strong></button></td>
+      <td data-label="Sector">${escapeHtml(invoice.sector || "General")}</td>
       <td data-label="Customer">${escapeHtml(invoice.customerName || "-")}</td>
-      <td data-label="Quote Ref">${escapeHtml(invoice.sourceQuoteNumber || "-")}</td>
       <td data-label="Status"><span class="invoice-status-pill status-${invoice.status}">${formatInvoiceStatus(invoice.status)}</span></td>
       <td data-label="Due Date">${formatRecordDate(invoice.dueDate)}</td>
       <td data-label="Total">${formatCurrency(totals.total)}</td>
@@ -2552,6 +2574,32 @@ function renderRecordDetail(record) {
     return;
   }
 
+  if ((record.recordType === "cleaning" || record.sector === SECTOR_LABELS.cleaning) && !record.cleaningSummary) {
+    els.recordDetail.innerHTML = `
+      <div class="record-detail-top">
+        <div>
+          <p class="section-kicker">Selected Cleaning Quote</p>
+          <h3>${escapeHtml(record.quoteNumber !== "-" ? record.quoteNumber : "Saved Quote")}</h3>
+          <p class="record-detail-subtitle">${escapeHtml(record.customerName)} | ${escapeHtml(record.phone)}</p>
+        </div>
+        <div class="record-detail-top-actions">
+          <strong>${escapeHtml(record.totalQuote)}</strong>
+          <button class="secondary-button table-action-button" data-create-invoice-record="${record.id}" type="button">Create Invoice</button>
+        </div>
+      </div>
+      <div class="record-detail-meta">
+        <span><strong>Address:</strong> ${escapeHtml(record.address)}</span>
+        <span><strong>Saved:</strong> ${formatRecordDate(record.submittedAt)}</span>
+        <span><strong>Subtotal:</strong> ${escapeHtml(record.subtotalExGst || formatCurrency(0))}</span>
+        <span><strong>GST:</strong> ${escapeHtml(record.gstTotal || formatCurrency(0))}</span>
+      </div>
+      <div class="record-detail-empty">
+        This cleaning quote was saved before the full cleaning breakdown was added, so only the total summary is available here.
+      </div>
+    `;
+    return;
+  }
+
   const blindItems = Array.isArray(record.blindItems) ? record.blindItems : [];
   const curtainItems = Array.isArray(record.curtainItems) ? record.curtainItems : [];
 
@@ -2677,6 +2725,7 @@ function renderRecords() {
     row.className = record.id === state.selectedRecordId ? "records-row is-selected" : "records-row";
     row.innerHTML = `
       <td data-label="Quote No.">${escapeHtml(record.quoteNumber)}</td>
+      <td data-label="Sector">${escapeHtml(record.sector || SECTOR_LABELS[record.recordType || "blinds-curtains"] || "General")}</td>
       <td data-label="Customer Detail">
         <button class="record-link-button" data-select-record="${record.id}" type="button">
           <strong>${escapeHtml(record.customerName)}</strong>
@@ -3403,6 +3452,19 @@ function bindEvents() {
     els.invoiceFeedback.textContent = "Invoice confirmed.";
   });
 
+  els.previewInvoice.addEventListener("click", () => {
+    const invoice = getSelectedInvoice();
+    if (!invoice) {
+      els.invoiceFeedback.textContent = "Select an invoice first.";
+      return;
+    }
+
+    const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+    els.invoiceFeedback.textContent = opened
+      ? "Invoice preview opened in a new tab."
+      : "Unable to open the preview window. Please allow pop-ups and try again.";
+  });
+
   els.printInvoice.addEventListener("click", () => {
     const invoice = getSelectedInvoice();
     if (!invoice) {
@@ -3485,6 +3547,19 @@ function bindEvents() {
     persistInvoices();
     renderInvoices();
     els.savedInvoiceFeedback.textContent = "Invoice confirmed.";
+  });
+
+  els.savedPreviewInvoice.addEventListener("click", () => {
+    const invoice = getSelectedInvoice();
+    if (!invoice) {
+      els.savedInvoiceFeedback.textContent = "Select an invoice first.";
+      return;
+    }
+
+    const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+    els.savedInvoiceFeedback.textContent = opened
+      ? "Invoice preview opened in a new tab."
+      : "Unable to open the preview window. Please allow pop-ups and try again.";
   });
 
   els.savedPrintInvoice.addEventListener("click", () => {
