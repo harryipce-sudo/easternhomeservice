@@ -25,6 +25,7 @@
         <a class="nav-item" href="#quote-history" data-page-link="history">Search Quote</a>
         <a class="nav-item" href="#invoices" data-page-link="invoices">Invoices</a>
         <a class="nav-item" href="#saved-invoices" data-page-link="savedInvoices">Saved Invoices</a>
+        <a class="nav-item" href="#recycle" data-page-link="recycle">Recycle</a>
       </nav>
     </aside>
 
@@ -709,6 +710,9 @@
               <p>Search by invoice number, quote number, customer, or address.</p>
             </div>
             <div class="invoice-status-actions">
+              <button class="ghost-button" id="saved-share-invoice" type="button">Share</button>
+              <button class="ghost-button" id="saved-print-invoice" type="button">Print / PDF</button>
+              <button class="secondary-button" id="saved-save-invoice" type="button">Save Invoice</button>
               <button class="ghost-button" id="mark-invoice-draft" type="button">Mark Draft</button>
               <button class="ghost-button" id="mark-invoice-sent" type="button">Mark Sent</button>
               <button class="secondary-button" id="mark-invoice-paid" type="button">Mark Paid</button>
@@ -738,6 +742,44 @@
             </table>
           </div>
           <div class="record-empty" id="invoice-list-empty">No invoices created yet.</div>
+          <p class="copy-feedback" id="saved-invoice-feedback"></p>
+        </section>
+      </section>
+
+      <section class="app-page" id="page-recycle" data-page="recycle">
+        <header class="page-header page-header-single">
+          <div>
+            <p class="section-kicker">Safety Net</p>
+            <h1 id="recycle">Recycle</h1>
+            <p class="page-copy">Deleted quotes and invoices stay here for 15 days before you permanently remove them.</p>
+          </div>
+        </header>
+
+        <section class="panel invoice-list-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Temporary Storage</p>
+              <h2>Recycle Bin</h2>
+              <p>Recover deleted records when something is removed by accident, or permanently delete them to free storage.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="quote-table records-table invoice-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Reference</th>
+                  <th>Customer</th>
+                  <th>Deleted</th>
+                  <th>Expires</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="recycle-list-body"></tbody>
+            </table>
+          </div>
+          <div class="record-empty" id="recycle-list-empty">Recycle bin is empty.</div>
+          <p class="copy-feedback" id="recycle-feedback"></p>
         </section>
       </section>
     </main>

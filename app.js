@@ -119,6 +119,7 @@ const state = {
   records: [],
   lines: [],
   curtainLines: [],
+  recycleBin: [],
   historySearch: "",
   selectedRecordId: "",
   invoices: [],
@@ -129,6 +130,8 @@ const state = {
 const LOCAL_RECORDS_KEY = "ehs-dimension-records";
 const LOCAL_PHOTOS_KEY = "ehs-house-photos";
 const LOCAL_INVOICES_KEY = "ehs-invoices";
+const LOCAL_RECYCLE_BIN_KEY = "ehs-recycle-bin";
+const RECYCLE_RETENTION_DAYS = 15;
 
 let els = {};
 let initRecoveryAttempted = false;
@@ -241,8 +244,15 @@ function cacheElements() {
     markInvoiceDraft: document.querySelector("#mark-invoice-draft"),
     markInvoiceSent: document.querySelector("#mark-invoice-sent"),
     markInvoicePaid: document.querySelector("#mark-invoice-paid"),
+    savedSaveInvoice: document.querySelector("#saved-save-invoice"),
+    savedPrintInvoice: document.querySelector("#saved-print-invoice"),
+    savedShareInvoice: document.querySelector("#saved-share-invoice"),
+    savedInvoiceFeedback: document.querySelector("#saved-invoice-feedback"),
     invoiceListBody: document.querySelector("#invoice-list-body"),
     invoiceListEmpty: document.querySelector("#invoice-list-empty"),
+    recycleListBody: document.querySelector("#recycle-list-body"),
+    recycleListEmpty: document.querySelector("#recycle-list-empty"),
+    recycleFeedback: document.querySelector("#recycle-feedback"),
     invoiceDetailTitle: document.querySelector("#invoice-detail-title"),
     invoiceNumberDisplay: document.querySelector("#invoice-number-display"),
     invoiceStatusBadge: document.querySelector("#invoice-status-badge"),
@@ -282,6 +292,7 @@ function hasRequiredElements() {
     els.recordsTableBody &&
     els.recordDetail &&
     els.invoiceListBody &&
+    els.recycleListBody &&
     els.invoiceCustomerName &&
     els.invoiceLinesBody &&
     els.clearBlinds &&
@@ -455,6 +466,9 @@ function getActivePageFromHash(hash = window.location.hash) {
   if (hash === "#saved-invoices") {
     return "savedInvoices";
   }
+  if (hash === "#recycle") {
+    return "recycle";
+  }
   return "builder";
 }
 
@@ -485,7 +499,8 @@ function syncPageNavigation() {
     const isHistory = activePage === "history" && href === "#quote-history";
     const isInvoices = activePage === "invoices" && href === "#invoices";
     const isSavedInvoices = activePage === "savedInvoices" && href === "#saved-invoices";
-    item.classList.toggle("active", isQuotesMain || isHistory || isInvoices || isSavedInvoices);
+    const isRecycle = activePage === "recycle" && href === "#recycle";
+    item.classList.toggle("active", isQuotesMain || isHistory || isInvoices || isSavedInvoices || isRecycle);
   });
 
   syncQuoteSubnav();
@@ -527,6 +542,34 @@ function formatRecordDate(value) {
     month: "short",
     year: "numeric"
   });
+}
+
+function confirmAction(message) {
+  return window.confirm(message);
+}
+
+function getRecycleExpiryDate(value) {
+  return addDaysToIsoDate(value, RECYCLE_RETENTION_DAYS);
+}
+
+function createRecycleEntry(itemType, payload) {
+  const deletedAt = new Date().toISOString();
+  const reference = itemType === "quote"
+    ? (payload.quoteNumber || "Saved Quote")
+    : (payload.invoiceNumber || "Saved Invoice");
+  const customerName = itemType === "quote"
+    ? (payload.customerName || "-")
+    : (payload.customerName || "-");
+
+  return {
+    id: crypto.randomUUID(),
+    itemType,
+    reference,
+    customerName,
+    deletedAt,
+    expiresAt: getRecycleExpiryDate(deletedAt),
+    payload
+  };
 }
 
 function evaluateCalculatorValue(value) {
@@ -969,6 +1012,55 @@ function loadInvoices() {
   }
 }
 
+function parseStoredRecycleBin(rawValue) {
+  const parsed = JSON.parse(rawValue || "[]");
+  return Array.isArray(parsed)
+    ? parsed
+        .filter((entry) => entry && typeof entry === "object" && entry.payload && typeof entry.payload === "object")
+        .map((entry) => ({
+          id: entry.id || crypto.randomUUID(),
+          itemType: entry.itemType === "invoice" ? "invoice" : "quote",
+          reference: entry.reference || (entry.itemType === "invoice" ? "Saved Invoice" : "Saved Quote"),
+          customerName: entry.customerName || "-",
+          deletedAt: entry.deletedAt || new Date().toISOString(),
+          expiresAt: entry.expiresAt || getRecycleExpiryDate(entry.deletedAt || new Date().toISOString()),
+          payload: entry.payload
+        }))
+    : [];
+}
+
+function persistRecycleBin() {
+  try {
+    localStorage.setItem(LOCAL_RECYCLE_BIN_KEY, JSON.stringify(state.recycleBin));
+  } catch (error) {
+    console.warn("Unable to persist recycle bin", error);
+  }
+}
+
+function purgeExpiredRecycleItems() {
+  const now = Date.now();
+  const nextItems = state.recycleBin.filter((entry) => new Date(entry.expiresAt).getTime() > now);
+  if (nextItems.length !== state.recycleBin.length) {
+    state.recycleBin = nextItems;
+    persistRecycleBin();
+  }
+}
+
+function loadRecycleBin() {
+  try {
+    state.recycleBin = parseStoredRecycleBin(localStorage.getItem(LOCAL_RECYCLE_BIN_KEY));
+  } catch (error) {
+    state.recycleBin = [];
+  }
+  purgeExpiredRecycleItems();
+}
+
+function addToRecycleBin(itemType, payload) {
+  state.recycleBin = [createRecycleEntry(itemType, payload), ...state.recycleBin];
+  persistRecycleBin();
+  renderRecycleBin();
+}
+
 function createRecordSnapshot() {
   const blindItems = state.lines.map((line) => {
     const computed = calculateBlindLine(line);
@@ -1245,8 +1337,14 @@ async function submitQuoteRecord() {
 }
 
 async function deleteRecord(id) {
+  const record = state.records.find((item) => item.id === id);
+  if (!record) {
+    return;
+  }
+
   const previousRecords = [...state.records];
-  state.records = state.records.filter((record) => record.id !== id);
+  addToRecycleBin("quote", record);
+  state.records = state.records.filter((item) => item.id !== id);
   if (state.selectedRecordId === id) {
     state.selectedRecordId = state.records[0]?.id || "";
   }
@@ -1260,13 +1358,19 @@ async function deleteRecord(id) {
   } catch (error) {
     console.warn("Unable to delete cloud quote record.", error);
     state.records = previousRecords;
+    state.recycleBin = state.recycleBin.filter((entry) => !(entry.itemType === "quote" && entry.payload.id === id));
+    persistRecycleBin();
+    renderRecycleBin();
     if (!state.selectedRecordId && previousRecords.length) {
       state.selectedRecordId = previousRecords[0].id;
     }
     persistRecords();
     renderRecords();
     els.copyFeedback.textContent = "Unable to delete the cloud record right now.";
+    return;
   }
+
+  els.copyFeedback.textContent = "Quote moved to recycle for 15 days.";
 }
 
 function getSelectedRecord() {
@@ -1405,13 +1509,74 @@ function createNewInvoice() {
 }
 
 function deleteInvoice(id) {
-  state.invoices = state.invoices.filter((invoice) => invoice.id !== id);
+  const invoice = state.invoices.find((item) => item.id === id);
+  if (!invoice) {
+    return;
+  }
+
+  addToRecycleBin("invoice", invoice);
+  state.invoices = state.invoices.filter((item) => item.id !== id);
   if (state.selectedInvoiceId === id) {
     state.selectedInvoiceId = state.invoices[0]?.id || "";
   }
   persistInvoices();
   renderInvoices();
-  els.invoiceFeedback.textContent = "Invoice deleted.";
+  els.invoiceFeedback.textContent = "Invoice moved to recycle for 15 days.";
+}
+
+async function recoverRecycleEntry(id) {
+  const entry = state.recycleBin.find((item) => item.id === id);
+  if (!entry) {
+    return;
+  }
+
+  if (entry.itemType === "quote") {
+    const restoredRecord = {
+      ...entry.payload,
+      submittedAt: entry.payload.submittedAt || new Date().toISOString()
+    };
+    state.records = [restoredRecord, ...state.records.filter((record) => record.id !== restoredRecord.id)];
+    state.selectedRecordId = restoredRecord.id;
+    persistRecords();
+    renderRecords();
+
+    try {
+      const savedRecord = await requestQuoteRecords("", {
+        method: "POST",
+        body: JSON.stringify(restoredRecord)
+      });
+      state.records = state.records.map((record) => (record.id === restoredRecord.id ? savedRecord : record));
+      state.selectedRecordId = savedRecord.id;
+      persistRecords();
+      renderRecords();
+    } catch (error) {
+      console.warn("Unable to restore cloud quote record.", error);
+      els.recycleFeedback.textContent = "Quote recovered locally. Cloud sync is unavailable right now.";
+    }
+  } else {
+    const restoredInvoice = createInvoice(entry.payload);
+    state.invoices = [restoredInvoice, ...state.invoices.filter((invoice) => invoice.id !== restoredInvoice.id)];
+    state.selectedInvoiceId = restoredInvoice.id;
+    persistInvoices();
+    renderInvoices();
+  }
+
+  state.recycleBin = state.recycleBin.filter((item) => item.id !== id);
+  persistRecycleBin();
+  renderRecycleBin();
+  els.recycleFeedback.textContent = `${entry.itemType === "quote" ? "Quote" : "Invoice"} recovered.`;
+}
+
+function permanentlyDeleteRecycleEntry(id) {
+  const entry = state.recycleBin.find((item) => item.id === id);
+  if (!entry) {
+    return;
+  }
+
+  state.recycleBin = state.recycleBin.filter((item) => item.id !== id);
+  persistRecycleBin();
+  renderRecycleBin();
+  els.recycleFeedback.textContent = `${entry.itemType === "quote" ? "Quote" : "Invoice"} permanently deleted.`;
 }
 
 function buildQuotePrintMarkup() {
@@ -1781,6 +1946,34 @@ function renderInvoices() {
   });
 
   renderInvoiceEditor(getSelectedInvoice());
+}
+
+function renderRecycleBin() {
+  purgeExpiredRecycleItems();
+  els.recycleListBody.innerHTML = "";
+
+  if (!state.recycleBin.length) {
+    els.recycleListEmpty.style.display = "grid";
+    return;
+  }
+
+  els.recycleListEmpty.style.display = "none";
+
+  state.recycleBin.forEach((entry) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td data-label="Type">${entry.itemType === "quote" ? "Quote" : "Invoice"}</td>
+      <td data-label="Reference"><strong>${escapeHtml(entry.reference)}</strong></td>
+      <td data-label="Customer">${escapeHtml(entry.customerName || "-")}</td>
+      <td data-label="Deleted">${formatRecordDate(entry.deletedAt)}</td>
+      <td data-label="Expires">${formatRecordDate(entry.expiresAt)}</td>
+      <td data-label="Action" class="table-actions-cell">
+        <button class="secondary-button table-action-button" data-recover-recycle="${entry.id}" type="button">Recover</button>
+        <button class="danger-button table-action-button" data-delete-recycle="${entry.id}" type="button">Permanent Delete</button>
+      </td>
+    `;
+    els.recycleListBody.appendChild(row);
+  });
 }
 
 function getFilteredRecords() {
@@ -2352,6 +2545,9 @@ function bindEvents() {
   els.airPhotoGrid.addEventListener("click", (event) => {
     const target = event.target;
     if (target.dataset.airDeletePhoto) {
+      if (!confirmAction("Delete this photo?")) {
+        return;
+      }
       removePhoto(target.dataset.airDeletePhoto);
       renderAirMode();
       els.airFeedback.textContent = "Photo removed.";
@@ -2361,12 +2557,18 @@ function bindEvents() {
   els.airItemsList.addEventListener("click", (event) => {
     const target = event.target;
     if (target.dataset.airDeleteBlind) {
+      if (!confirmAction("Delete this blind row?")) {
+        return;
+      }
       deleteBlindLine(target.dataset.airDeleteBlind);
       renderAll();
       return;
     }
 
     if (target.dataset.airDeleteCurtain) {
+      if (!confirmAction("Delete this curtain or sheer row?")) {
+        return;
+      }
       deleteCurtainLine(target.dataset.airDeleteCurtain);
       renderAll();
     }
@@ -2448,6 +2650,9 @@ function bindEvents() {
       renderAll();
     }
     if (target.dataset.deleteBlind) {
+      if (!confirmAction("Delete this blind row?")) {
+        return;
+      }
       deleteBlindLine(target.dataset.deleteBlind);
       renderAll();
     }
@@ -2505,6 +2710,9 @@ function bindEvents() {
       renderAll();
     }
     if (target.dataset.deleteCurtain) {
+      if (!confirmAction("Delete this curtain or sheer row?")) {
+        return;
+      }
       deleteCurtainLine(target.dataset.deleteCurtain);
       renderAll();
     }
@@ -2513,6 +2721,9 @@ function bindEvents() {
   els.photoGrid.addEventListener("click", (event) => {
     const target = event.target;
     if (target.dataset.deletePhoto) {
+      if (!confirmAction("Delete this photo?")) {
+        return;
+      }
       removePhoto(target.dataset.deletePhoto);
     }
   });
@@ -2557,6 +2768,9 @@ function bindEvents() {
     }
 
     if (target.dataset.deleteRecord) {
+      if (!confirmAction("Move this quote to recycle? You can recover it within 15 days.")) {
+        return;
+      }
       deleteRecord(target.dataset.deleteRecord);
     }
   });
@@ -2646,6 +2860,42 @@ function bindEvents() {
     setInvoiceStatus("paid");
   });
 
+  els.savedSaveInvoice.addEventListener("click", () => {
+    if (!getSelectedInvoice()) {
+      els.savedInvoiceFeedback.textContent = "Select an invoice first.";
+      return;
+    }
+    persistInvoices();
+    renderInvoices();
+    els.savedInvoiceFeedback.textContent = "Invoice saved.";
+  });
+
+  els.savedPrintInvoice.addEventListener("click", () => {
+    const invoice = getSelectedInvoice();
+    if (!invoice) {
+      els.savedInvoiceFeedback.textContent = "Select an invoice first.";
+      return;
+    }
+
+    openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+    els.savedInvoiceFeedback.textContent = "Invoice print / PDF window opened.";
+  });
+
+  els.savedShareInvoice.addEventListener("click", async () => {
+    const invoice = getSelectedInvoice();
+    if (!invoice) {
+      els.savedInvoiceFeedback.textContent = "Select an invoice first.";
+      return;
+    }
+
+    const totals = calculateInvoiceTotals(invoice);
+    const shared = await shareDocument(
+      `Invoice ${invoice.invoiceNumber}`,
+      `Invoice ${invoice.invoiceNumber}\nCustomer: ${invoice.customerName || "-"}\nQuote Number: ${invoice.sourceQuoteNumber || "-"}\nTotal: ${formatCurrency(totals.total)}\nAmount Due: ${formatCurrency(totals.amountDue)}`
+    );
+    els.savedInvoiceFeedback.textContent = shared ? "Invoice shared." : "Invoice copied for sharing.";
+  });
+
   els.invoiceListBody.addEventListener("click", (event) => {
     const target = event.target;
     const selectButton = target.closest("[data-select-invoice]");
@@ -2666,7 +2916,25 @@ function bindEvents() {
     }
 
     if (target.dataset.deleteInvoice) {
+      if (!confirmAction("Move this invoice to recycle? You can recover it within 15 days.")) {
+        return;
+      }
       deleteInvoice(target.dataset.deleteInvoice);
+    }
+  });
+
+  els.recycleListBody.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.recoverRecycle) {
+      recoverRecycleEntry(target.dataset.recoverRecycle);
+      return;
+    }
+
+    if (target.dataset.deleteRecycle) {
+      if (!confirmAction("Permanently delete this item from recycle? This cannot be undone.")) {
+        return;
+      }
+      permanentlyDeleteRecycleEntry(target.dataset.deleteRecycle);
     }
   });
 
@@ -2703,6 +2971,9 @@ function bindEvents() {
   els.invoiceLinesBody.addEventListener("click", (event) => {
     const target = event.target;
     if (target.dataset.deleteInvoiceLine) {
+      if (!confirmAction("Delete this invoice line?")) {
+        return;
+      }
       removeInvoiceLine(target.dataset.deleteInvoiceLine);
     }
   });
@@ -2827,6 +3098,7 @@ async function init() {
     loadPhotos();
     await loadRecords();
     loadInvoices();
+    loadRecycleBin();
     els.airCurtainMaterial.innerHTML = Object.keys(CURTAIN_MATERIALS)
       .map((material) => `<option value="${material}" ${material === "Begonia" ? "selected" : ""}>${material}</option>`)
       .join("");
@@ -2838,6 +3110,7 @@ async function init() {
     renderPhotos();
     renderRecords();
     renderInvoices();
+    renderRecycleBin();
     renderAll();
     syncPageNavigation();
   } catch (error) {
@@ -2848,12 +3121,14 @@ async function init() {
         localStorage.removeItem(LOCAL_PHOTOS_KEY);
         localStorage.removeItem(LOCAL_RECORDS_KEY);
         localStorage.removeItem(LOCAL_INVOICES_KEY);
+        localStorage.removeItem(LOCAL_RECYCLE_BIN_KEY);
       } catch (storageError) {
         console.warn("Unable to clear saved quote builder data during recovery.", storageError);
       }
       state.photos = [];
       state.records = [];
       state.invoices = [];
+      state.recycleBin = [];
       init();
       return;
     }
