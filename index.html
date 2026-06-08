@@ -472,6 +472,25 @@
         <section class="panel air-mode-panel">
           <div class="panel-heading">
             <div>
+              <h2>Site Photos</h2>
+              <p>Take photos in Air Mode and keep them attached to the same quote.</p>
+            </div>
+            <strong id="air-photo-count">0 photos</strong>
+          </div>
+          <div class="summary-table-actions">
+            <label class="upload-button" for="air-camera-photos">Take Photo</label>
+            <input id="air-camera-photos" type="file" accept="image/*" capture="environment" hidden>
+            <label class="ghost-button" for="air-house-photos">Add From Gallery</label>
+            <input id="air-house-photos" type="file" accept="image/*" multiple hidden>
+          </div>
+          <div class="air-photo-grid" id="air-photo-grid">
+            <div class="record-empty" id="air-photo-empty">No photos added in Air Mode yet.</div>
+          </div>
+        </section>
+
+        <section class="panel air-mode-panel">
+          <div class="panel-heading">
+            <div>
               <h2>Current Items</h2>
               <p>Everything added here also appears in the full quote builder.</p>
             </div>

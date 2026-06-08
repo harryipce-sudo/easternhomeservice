@@ -182,6 +182,11 @@ function cacheElements() {
     airClearForm: document.querySelector("#air-clear-form"),
     airSaveQuote: document.querySelector("#air-save-quote"),
     airFeedback: document.querySelector("#air-feedback"),
+    airCameraPhotos: document.querySelector("#air-camera-photos"),
+    airHousePhotos: document.querySelector("#air-house-photos"),
+    airPhotoGrid: document.querySelector("#air-photo-grid"),
+    airPhotoEmpty: document.querySelector("#air-photo-empty"),
+    airPhotoCount: document.querySelector("#air-photo-count"),
     airItemsList: document.querySelector("#air-items-list"),
     airItemsEmpty: document.querySelector("#air-items-empty"),
     airTotal: document.querySelector("#air-total"),
@@ -266,6 +271,7 @@ function hasRequiredElements() {
     els.addCurtainLine &&
     els.airCustomerName &&
     els.airProductType &&
+    els.airPhotoGrid &&
     els.airItemsList &&
     els.saveAllBlinds &&
     els.saveAllCurtains &&
@@ -1117,6 +1123,28 @@ function renderAirMode() {
   }
 
   els.airTotal.textContent = els.grandTotal.textContent;
+
+  els.airPhotoGrid.innerHTML = "";
+  if (!state.photos.length) {
+    els.airPhotoGrid.appendChild(els.airPhotoEmpty);
+    els.airPhotoEmpty.style.display = "grid";
+  } else {
+    els.airPhotoEmpty.style.display = "none";
+    state.photos.forEach((photo) => {
+      const card = document.createElement("div");
+      card.className = "air-photo-card";
+      card.innerHTML = `
+        <img src="${photo.dataUrl}" alt="${escapeHtml(photo.name)}">
+        <div class="air-photo-card-footer">
+          <span title="${escapeHtml(photo.name)}">${escapeHtml(photo.name)}</span>
+          <button class="danger-button table-action-button" data-air-delete-photo="${photo.id}" type="button">Remove</button>
+        </div>
+      `;
+      els.airPhotoGrid.appendChild(card);
+    });
+  }
+
+  els.airPhotoCount.textContent = `${state.photos.length} photo${state.photos.length === 1 ? "" : "s"}`;
 }
 
 function addAirModeItem() {
@@ -2128,6 +2156,35 @@ function bindEvents() {
   els.airSaveQuote.addEventListener("click", async () => {
     await submitQuoteRecord();
     els.airFeedback.textContent = els.copyFeedback.textContent;
+  });
+
+  els.airCameraPhotos.addEventListener("change", (event) => {
+    const { files } = event.target;
+    if (files && files.length) {
+      addPhotos(files);
+      event.target.value = "";
+      renderAirMode();
+      els.airFeedback.textContent = "Photo added.";
+    }
+  });
+
+  els.airHousePhotos.addEventListener("change", (event) => {
+    const { files } = event.target;
+    if (files && files.length) {
+      addPhotos(files);
+      event.target.value = "";
+      renderAirMode();
+      els.airFeedback.textContent = "Photo added.";
+    }
+  });
+
+  els.airPhotoGrid.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.airDeletePhoto) {
+      removePhoto(target.dataset.airDeletePhoto);
+      renderAirMode();
+      els.airFeedback.textContent = "Photo removed.";
+    }
   });
 
   els.airItemsList.addEventListener("click", (event) => {
