@@ -548,6 +548,27 @@ function confirmAction(message) {
   return window.confirm(message);
 }
 
+function getLogoAssetUrl() {
+  return new URL("./assets/eastern-home-service-logo.jpg", window.location.href).href;
+}
+
+function buildDocumentHeaderMarkup(title, subtitle = "") {
+  return `
+    <div class="print-header">
+      <div class="print-brand-block">
+        <img class="print-logo" src="${getLogoAssetUrl()}" alt="Eastern Home Service logo">
+        <div class="print-brand-copy">
+          <p class="print-brand-name">Eastern Home Service</p>
+          <p class="print-brand-subtitle">${escapeHtml(subtitle || "One Call. All Sorted.")}</p>
+        </div>
+      </div>
+      <div class="print-title-block">
+        <h1>${escapeHtml(title)}</h1>
+      </div>
+    </div>
+  `;
+}
+
 function getRecycleExpiryDate(value) {
   return addDaysToIsoDate(value, RECYCLE_RETENTION_DAYS);
 }
@@ -1609,7 +1630,7 @@ function buildQuotePrintMarkup() {
   }).join("");
 
   return `
-    <h1>Quote</h1>
+    ${buildDocumentHeaderMarkup("Quote", "One Call. All Sorted.")}
     <p><strong>Customer:</strong> ${escapeHtml(state.customer.name || "-")}</p>
     <p><strong>Phone:</strong> ${escapeHtml(state.customer.phone || "-")}</p>
     <p><strong>Address:</strong> ${escapeHtml(state.customer.address || "-")}</p>
@@ -1653,7 +1674,7 @@ function buildInvoicePrintMarkup(invoice) {
   `).join("");
 
   return `
-    <h1>Invoice ${escapeHtml(invoice.invoiceNumber)}</h1>
+    ${buildDocumentHeaderMarkup(`Invoice ${invoice.invoiceNumber}`, "One Call. All Sorted.")}
     <p><strong>Customer:</strong> ${escapeHtml(invoice.customerName || "-")}</p>
     <p><strong>Phone:</strong> ${escapeHtml(invoice.customerPhone || "-")}</p>
     <p><strong>Address:</strong> ${escapeHtml(invoice.customerAddress || "-")}</p>
@@ -1703,11 +1724,19 @@ function openPrintDocument(title, bodyMarkup) {
         <title>${escapeHtml(title)}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-          h1 { margin-bottom: 16px; }
+          h1 { margin: 0; }
           p { margin: 6px 0; line-height: 1.45; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ccc; padding: 10px; text-align: left; vertical-align: top; }
           .totals, .notes { margin-top: 24px; }
+          .print-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 2px solid #d7e5f5; }
+          .print-brand-block { display: flex; align-items: center; gap: 16px; }
+          .print-logo { width: 110px; height: auto; display: block; }
+          .print-brand-copy p { margin: 0; }
+          .print-brand-name { font-size: 20px; font-weight: 800; color: #092654; }
+          .print-brand-subtitle { margin-top: 6px; color: #236fcb; }
+          .print-title-block { text-align: right; }
+          @media print { body { padding: 18px; } .print-logo { width: 96px; } }
         </style>
       </head>
       <body>${bodyMarkup}</body>
