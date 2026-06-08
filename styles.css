@@ -325,6 +325,11 @@ select {
   padding: 12px 14px;
 }
 
+input[readonly] {
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbe7f4;
+}
+
 .input-prefix,
 .input-suffix {
   display: flex;
@@ -356,6 +361,10 @@ select {
   display: grid;
   gap: 24px;
   min-width: 0;
+}
+
+.cleaning-config-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .table-wrap {
@@ -957,6 +966,15 @@ select {
   background: linear-gradient(180deg, rgba(20, 29, 38, 0.98), rgba(13, 20, 27, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.07);
   width: 100%;
+}
+
+.records-cleaning-base {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .record-detail-empty {

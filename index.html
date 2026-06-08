@@ -24,10 +24,8 @@
 
       <nav class="nav">
         <a class="nav-item active" href="#quote-builder" data-page-link="quotes">Blinds and Curtain</a>
-        <a class="nav-item" href="#quote-history" data-page-link="history">Search Quote</a>
-        <a class="nav-item" href="#invoices" data-page-link="invoices">Invoices</a>
-        <a class="nav-item" href="#saved-invoices" data-page-link="savedInvoices">Saved Invoices</a>
-        <a class="nav-item" href="#recycle" data-page-link="recycle">Recycle</a>
+        <a class="nav-item" href="#cleaning-quote" data-page-link="cleaning">Cleaning Quote</a>
+        <a class="nav-item" href="#quote-history" data-page-link="ops">Quote / Invoice</a>
       </nav>
     </aside>
 
@@ -75,7 +73,7 @@
           </label>
           <label>
             <span>Quote Number</span>
-            <input id="quote-number" type="text" placeholder="EHS-001">
+            <input id="quote-number" type="text" placeholder="INV-3001" readonly>
           </label>
         </div>
       </section>
@@ -383,7 +381,7 @@
             </label>
             <label>
               <span>Quote Number</span>
-              <input id="air-quote-number" type="text" placeholder="EHS-001">
+              <input id="air-quote-number" type="text" placeholder="INV-3001" readonly>
             </label>
           </div>
         </section>
@@ -517,6 +515,145 @@
         </section>
       </section>
 
+      <section class="app-page" id="page-cleaning" data-page="cleaning">
+        <header class="page-header">
+          <div>
+            <p class="section-kicker">Estimator</p>
+            <h1 id="cleaning-quote">Cleaning Quote</h1>
+            <p class="page-copy">Build end-of-lease cleaning quotes from subcontractor cost pricing with automatic retail, profit, and GST.</p>
+          </div>
+          <div class="header-actions">
+            <button class="ghost-button" id="clear-cleaning-quote" type="button">Reset</button>
+            <button class="primary-button" id="save-cleaning-quote" type="button">Save Quote</button>
+          </div>
+        </header>
+
+        <section class="panel customer-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Customer Details</h2>
+              <p>These details sync with the rest of the app and use the same auto-generated quote number.</p>
+            </div>
+          </div>
+          <div class="customer-grid">
+            <label>
+              <span>Customer Name</span>
+              <input id="cleaning-customer-name" type="text" placeholder="Client name">
+            </label>
+            <label>
+              <span>Phone</span>
+              <input id="cleaning-customer-phone" type="text" placeholder="0400 000 000">
+            </label>
+            <label>
+              <span>Address</span>
+              <input id="cleaning-customer-address" type="text" placeholder="Job address">
+            </label>
+            <label>
+              <span>Quote Number</span>
+              <input id="cleaning-quote-number" type="text" placeholder="INV-3001" readonly>
+            </label>
+          </div>
+        </section>
+
+        <section class="content-grid">
+          <div class="workspace">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Base Service</h2>
+                  <p>Apartment packages and standalone steam carpet cleaning use a 40% markup on subcontractor cost.</p>
+                </div>
+              </div>
+              <div class="customer-grid cleaning-config-grid">
+                <label>
+                  <span>Select Service</span>
+                  <select id="cleaning-base-service"></select>
+                </label>
+                <label id="cleaning-standalone-fields">
+                  <span>Standalone Carpet Rooms</span>
+                  <input id="cleaning-standalone-rooms" type="number" min="1" step="1" value="1">
+                </label>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Additional Services</h2>
+                  <p>Extra services use a 20% markup. For ranged subcontractor pricing, the system starts with a sensible default that you can adjust.</p>
+                </div>
+                <button class="secondary-button" id="add-cleaning-extra" type="button">Add Service</button>
+              </div>
+              <div class="table-wrap">
+                <table class="quote-table summary-table">
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Qty</th>
+                      <th>Unit</th>
+                      <th>Cost</th>
+                      <th>Retail</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cleaning-extras-body"></tbody>
+                </table>
+              </div>
+              <div class="record-empty" id="cleaning-extras-empty">No additional cleaning services added yet.</div>
+            </section>
+
+            <p class="copy-feedback" id="cleaning-feedback"></p>
+          </div>
+
+          <aside class="summary-column">
+            <section class="summary-card">
+              <div class="summary-top">
+                <p class="section-kicker">Live Quote</p>
+                <h2>Cleaning Summary</h2>
+              </div>
+              <div class="summary-matrix">
+                <div class="summary-matrix-head">
+                  <span>Item</span>
+                  <span>Cost</span>
+                  <span>Retail Price</span>
+                </div>
+                <div class="summary-matrix-row">
+                  <span>Base Service</span>
+                  <strong id="cleaning-base-cost">$0.00</strong>
+                  <strong id="cleaning-base-retail">$0.00</strong>
+                </div>
+                <div class="summary-matrix-row">
+                  <span>Additional Services</span>
+                  <strong id="cleaning-extras-cost">$0.00</strong>
+                  <strong id="cleaning-extras-retail">$0.00</strong>
+                </div>
+                <div class="summary-matrix-row">
+                  <span>Total Ex GST</span>
+                  <strong id="cleaning-subtotal-cost">$0.00</strong>
+                  <strong id="cleaning-subtotal-retail">$0.00</strong>
+                </div>
+                <div class="summary-matrix-row">
+                  <span>GST (10%)</span>
+                  <strong>-</strong>
+                  <strong id="cleaning-gst">$0.00</strong>
+                </div>
+                <div class="summary-matrix-row grand-total">
+                  <span>Total Incl GST</span>
+                  <strong>-</strong>
+                  <strong id="cleaning-total">$0.00</strong>
+                </div>
+              </div>
+              <div class="profit-card">
+                <span>Estimated Gross Profit</span>
+                <strong id="cleaning-profit">$0.00</strong>
+                <p class="profit-percent" id="cleaning-profit-percent">0.0% profit margin</p>
+                <p>Base packages use 40% markup. Additional services use 20% markup.</p>
+              </div>
+            </section>
+          </aside>
+        </section>
+      </section>
+
       <section class="app-page" id="page-history" data-page="history">
         <header class="page-header page-header-single">
           <div>
@@ -525,6 +662,13 @@
             <p class="page-copy">Search saved quotes by quote number or customer details, then open the full order summary.</p>
           </div>
         </header>
+
+        <nav class="subnav">
+          <a class="subnav-link active" href="#quote-history" data-ops-subnav="history">Search Quote</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+        </nav>
 
         <section class="panel records-panel" id="dimension-records">
           <div class="panel-heading">
@@ -580,9 +724,16 @@
             <button class="secondary-button" id="create-invoice-from-quote" type="button">From Selected Quote</button>
             <button class="ghost-button" id="share-invoice" type="button">Share</button>
             <button class="ghost-button" id="print-invoice" type="button">Print / PDF</button>
-            <button class="primary-button" id="save-invoice" type="button">Save Invoice</button>
+            <button class="primary-button" id="save-invoice" type="button">Confirm</button>
           </div>
         </header>
+
+        <nav class="subnav">
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
+          <a class="subnav-link active" href="#invoices" data-ops-subnav="invoices">Invoices</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+        </nav>
 
         <section class="panel invoice-editor-panel">
           <div class="panel-heading">
@@ -612,7 +763,7 @@
             </label>
             <label>
               <span>Quote Number</span>
-              <input id="invoice-reference" type="text" placeholder="EHS-001">
+              <input id="invoice-reference" type="text" placeholder="INV-3001" readonly>
             </label>
             <label>
               <span>Invoice Date</span>
@@ -705,6 +856,13 @@
           </div>
         </header>
 
+        <nav class="subnav">
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
+          <a class="subnav-link active" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+        </nav>
+
         <section class="panel invoice-list-panel">
           <div class="panel-heading">
             <div>
@@ -715,7 +873,7 @@
             <div class="invoice-status-actions">
               <button class="ghost-button" id="saved-share-invoice" type="button">Share</button>
               <button class="ghost-button" id="saved-print-invoice" type="button">Print / PDF</button>
-              <button class="secondary-button" id="saved-save-invoice" type="button">Save Invoice</button>
+              <button class="secondary-button" id="saved-save-invoice" type="button">Confirm</button>
               <button class="ghost-button" id="mark-invoice-draft" type="button">Mark Draft</button>
               <button class="ghost-button" id="mark-invoice-sent" type="button">Mark Sent</button>
               <button class="secondary-button" id="mark-invoice-paid" type="button">Mark Paid</button>
@@ -757,6 +915,13 @@
             <p class="page-copy">Deleted quotes and invoices stay here for 15 days before you permanently remove them.</p>
           </div>
         </header>
+
+        <nav class="subnav">
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link active" href="#recycle" data-ops-subnav="recycle">Recycle</a>
+        </nav>
 
         <section class="panel invoice-list-panel">
           <div class="panel-heading">

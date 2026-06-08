@@ -100,9 +100,47 @@ const STACKING_OPTIONS = ["Side Open", "Center Open"];
 const SHEER_BOTTOM_STYLES = ["None", "With Base Weight", "80mm Hem"];
 const BLOCKOUT_OPTIONS = ["Yes", "No"];
 const TRACK_PRICE_PER_M = 60;
+const GST_RATE = 0.1;
+
+const CLEANING_BASE_SERVICES = [
+  { value: "apt-1b1b-indoor", label: "Apartment 1B1B - Indoor Cleaning Only", cost: 220 },
+  { value: "apt-1b1b-carpet", label: "Apartment 1B1B - Incl. Carpet Steam Clean", cost: 330 },
+  { value: "apt-2b1b-indoor", label: "Apartment 2B1B - Indoor Cleaning Only", cost: 270 },
+  { value: "apt-2b1b-carpet", label: "Apartment 2B1B - Incl. Carpet Steam Clean", cost: 370 },
+  { value: "apt-2b2b-indoor", label: "Apartment 2B2B - Indoor Cleaning Only", cost: 330 },
+  { value: "apt-2b2b-carpet", label: "Apartment 2B2B - Incl. Carpet Steam Clean", cost: 430 },
+  { value: "apt-3b1b-indoor", label: "Apartment 3B1B - Indoor Cleaning Only", cost: 350 },
+  { value: "apt-3b1b-carpet", label: "Apartment 3B1B - Incl. Carpet Steam Clean", cost: 500 },
+  { value: "apt-3b2b-indoor", label: "Apartment 3B2B - Indoor Cleaning Only", cost: 400 },
+  { value: "apt-3b2b-carpet", label: "Apartment 3B2B - Incl. Carpet Steam Clean", cost: 550 },
+  { value: "apt-4b2b-indoor", label: "Apartment 4B2B - Indoor Cleaning Only", cost: 500 },
+  { value: "apt-4b2b-carpet", label: "Apartment 4B2B - Incl. Carpet Steam Clean", cost: 700 },
+  { value: "standalone-carpet", label: "Standalone Steam Carpet Cleaning", costPerRoom: 65, minCharge: 150 }
+];
+
+const CLEANING_EXTRA_SERVICES = [
+  { value: "wall-stains", label: "Wall Stains", defaultCost: 50, unit: "job" },
+  { value: "microwave", label: "Microwave", defaultCost: 30, unit: "each" },
+  { value: "windows-glass-doors", label: "Windows / Glass Doors", defaultCost: 17.5, unit: "each" },
+  { value: "washing-machine-dryer", label: "Washing Machine / Dryer", defaultCost: 30, unit: "each" },
+  { value: "refrigerator", label: "Refrigerator", defaultCost: 75, unit: "each" },
+  { value: "pet-hair-removal", label: "Pet Hair Removal on Carpet", defaultCost: 100, unit: "room" },
+  { value: "oven", label: "Oven", defaultCost: 115, unit: "each" },
+  { value: "stairs", label: "Stairs", defaultCost: 60, unit: "flight" },
+  { value: "mold-removal", label: "Mold Removal", defaultCost: 40, unit: "job" },
+  { value: "aircon-filter", label: "Air Conditioner Filter", defaultCost: 20, unit: "each" },
+  { value: "balcony", label: "Balcony (Standard)", defaultCost: 75, unit: "each" },
+  { value: "rubbish-removal", label: "Rubbish Removal", defaultCost: 0, unit: "job" },
+  { value: "extra-bathroom", label: "Extra Bathroom", defaultCost: 80, unit: "each" },
+  { value: "blinds", label: "Blinds", defaultCost: 100, unit: "each" },
+  { value: "weeding", label: "Weeding", defaultCost: 70, unit: "hour / person" },
+  { value: "bedroom-mopping", label: "Bedroom Mopping", defaultCost: 25, unit: "each" },
+  { value: "furniture-wiping", label: "Furniture Wiping", defaultCost: 100, unit: "apt." },
+  { value: "garage", label: "Garage", defaultCost: 80, unit: "each" }
+];
 
 const state = {
-  gstRate: 0.1,
+  gstRate: GST_RATE,
   settings: {
     supplyMarkup: 40,
     curtainMarkup: 40,
@@ -119,6 +157,11 @@ const state = {
   records: [],
   lines: [],
   curtainLines: [],
+  cleaning: {
+    baseService: "apt-1b1b-indoor",
+    standaloneRooms: 1,
+    extras: []
+  },
   recycleBin: [],
   historySearch: "",
   selectedRecordId: "",
@@ -227,10 +270,34 @@ function cacheElements() {
     navItems: Array.from(document.querySelectorAll(".nav-item[data-page-link]")),
     appPages: Array.from(document.querySelectorAll(".app-page[data-page]")),
     quoteSubnavLinks: Array.from(document.querySelectorAll(".subnav-link[data-quote-subnav]")),
+    opsSubnavLinks: Array.from(document.querySelectorAll(".subnav-link[data-ops-subnav]")),
     summaryBlindsBody: document.querySelector("#summary-blinds-body"),
     summaryBlindsEmpty: document.querySelector("#summary-blinds-empty"),
     summaryCurtainsBody: document.querySelector("#summary-curtains-body"),
     summaryCurtainsEmpty: document.querySelector("#summary-curtains-empty"),
+    cleaningCustomerName: document.querySelector("#cleaning-customer-name"),
+    cleaningCustomerPhone: document.querySelector("#cleaning-customer-phone"),
+    cleaningCustomerAddress: document.querySelector("#cleaning-customer-address"),
+    cleaningQuoteNumber: document.querySelector("#cleaning-quote-number"),
+    cleaningBaseService: document.querySelector("#cleaning-base-service"),
+    cleaningStandaloneFields: document.querySelector("#cleaning-standalone-fields"),
+    cleaningStandaloneRooms: document.querySelector("#cleaning-standalone-rooms"),
+    cleaningExtrasBody: document.querySelector("#cleaning-extras-body"),
+    cleaningExtrasEmpty: document.querySelector("#cleaning-extras-empty"),
+    addCleaningExtra: document.querySelector("#add-cleaning-extra"),
+    clearCleaningQuote: document.querySelector("#clear-cleaning-quote"),
+    saveCleaningQuote: document.querySelector("#save-cleaning-quote"),
+    cleaningFeedback: document.querySelector("#cleaning-feedback"),
+    cleaningBaseCost: document.querySelector("#cleaning-base-cost"),
+    cleaningBaseRetail: document.querySelector("#cleaning-base-retail"),
+    cleaningExtrasCost: document.querySelector("#cleaning-extras-cost"),
+    cleaningExtrasRetail: document.querySelector("#cleaning-extras-retail"),
+    cleaningSubtotalCost: document.querySelector("#cleaning-subtotal-cost"),
+    cleaningSubtotalRetail: document.querySelector("#cleaning-subtotal-retail"),
+    cleaningGst: document.querySelector("#cleaning-gst"),
+    cleaningTotal: document.querySelector("#cleaning-total"),
+    cleaningProfit: document.querySelector("#cleaning-profit"),
+    cleaningProfitPercent: document.querySelector("#cleaning-profit-percent"),
     historySearch: document.querySelector("#history-search"),
     recordsTableBody: document.querySelector("#records-table-body"),
     recordDetail: document.querySelector("#record-detail"),
@@ -293,6 +360,8 @@ function hasRequiredElements() {
     els.recordDetail &&
     els.invoiceListBody &&
     els.recycleListBody &&
+    els.cleaningBaseService &&
+    els.cleaningExtrasBody &&
     els.invoiceCustomerName &&
     els.invoiceLinesBody &&
     els.clearBlinds &&
@@ -335,7 +404,7 @@ function createCurtainLine() {
 
 function createInvoiceLine(partial = {}) {
   return {
-    id: crypto.randomUUID(),
+    id: partial.id || crypto.randomUUID(),
     description: partial.description || "",
     quantity: Number(partial.quantity) || 1,
     unitPrice: Number(partial.unitPrice) || 0,
@@ -343,12 +412,30 @@ function createInvoiceLine(partial = {}) {
   };
 }
 
-function generateInvoiceNumber() {
-  const numericParts = state.invoices
-    .map((invoice) => Number(String(invoice.invoiceNumber || "").replace(/\D/g, "")))
+function getAllDocumentNumbers() {
+  return [
+    ...state.invoices.flatMap((invoice) => [invoice.invoiceNumber, invoice.sourceQuoteNumber]),
+    ...state.records.map((record) => record.quoteNumber)
+  ];
+}
+
+function generateDocumentNumber() {
+  const numericParts = getAllDocumentNumbers()
+    .map((value) => Number(String(value || "").replace(/\D/g, "")))
     .filter((value) => Number.isFinite(value) && value > 0);
   const nextNumber = (numericParts.length ? Math.max(...numericParts) : 3000) + 1;
   return `INV-${nextNumber}`;
+}
+
+function generateInvoiceNumber() {
+  return generateDocumentNumber();
+}
+
+function ensureQuoteNumber() {
+  if (!String(state.customer.quoteNumber || "").trim()) {
+    state.customer.quoteNumber = generateDocumentNumber();
+  }
+  return state.customer.quoteNumber;
 }
 
 function getTodayIsoDate() {
@@ -384,12 +471,12 @@ function calculateDayDifference(fromDateString, toDateString) {
 
 function createInvoice(partial = {}) {
   const today = getTodayIsoDate();
-  const invoiceNumber = partial.invoiceNumber || generateInvoiceNumber();
+  const invoiceNumber = partial.invoiceNumber || generateDocumentNumber();
   const invoiceDate = partial.invoiceDate || today;
   const paymentTermsDays = parsePaymentTermsDays(partial.paymentTerms || "7 Days") || 7;
   const dueDate = partial.dueDate || addDaysToIsoDate(invoiceDate, paymentTermsDays);
   return {
-    id: crypto.randomUUID(),
+    id: partial.id || crypto.randomUUID(),
     invoiceNumber,
     sourceQuoteNumber: partial.sourceQuoteNumber || invoiceNumber,
     status: partial.status || "draft",
@@ -405,6 +492,24 @@ function createInvoice(partial = {}) {
     lines: Array.isArray(partial.lines) && partial.lines.length
       ? partial.lines.map((line) => createInvoiceLine(line))
       : [createInvoiceLine()]
+  };
+}
+
+function getCleaningBaseServiceOption(value) {
+  return CLEANING_BASE_SERVICES.find((item) => item.value === value) || CLEANING_BASE_SERVICES[0];
+}
+
+function getCleaningExtraServiceOption(value) {
+  return CLEANING_EXTRA_SERVICES.find((item) => item.value === value) || CLEANING_EXTRA_SERVICES[0];
+}
+
+function createCleaningExtraLine(partial = {}) {
+  const service = getCleaningExtraServiceOption(partial.service || CLEANING_EXTRA_SERVICES[0].value);
+  return {
+    id: partial.id || crypto.randomUUID(),
+    service: service.value,
+    quantity: Number(partial.quantity) || 1,
+    unitCost: Number.isFinite(Number(partial.unitCost)) ? Number(partial.unitCost) : service.defaultCost
   };
 }
 
@@ -457,6 +562,9 @@ function getActivePageFromHash(hash = window.location.hash) {
   if (hash === "#air-mode") {
     return "airMode";
   }
+  if (hash === "#cleaning-quote") {
+    return "cleaning";
+  }
   if (hash === "#quote-history") {
     return "history";
   }
@@ -485,9 +593,23 @@ function syncQuoteSubnav() {
   });
 }
 
+function syncOpsSubnav() {
+  const currentHash = window.location.hash || "#quote-history";
+  const subnavView = currentHash === "#invoices"
+    ? "invoices"
+    : currentHash === "#saved-invoices"
+      ? "saved"
+      : currentHash === "#recycle"
+        ? "recycle"
+        : "history";
+
+  els.opsSubnavLinks.forEach((item) => {
+    item.classList.toggle("active", item.dataset.opsSubnav === subnavView);
+  });
+}
+
 function syncPageNavigation() {
   const activePage = getActivePageFromHash();
-  const currentHash = window.location.hash || "#quote-builder";
 
   els.appPages.forEach((page) => {
     page.classList.toggle("app-page-active", page.dataset.page === activePage);
@@ -496,14 +618,13 @@ function syncPageNavigation() {
   els.navItems.forEach((item) => {
     const href = item.getAttribute("href");
     const isQuotesMain = (activePage === "builder" || activePage === "airMode") && href === "#quote-builder";
-    const isHistory = activePage === "history" && href === "#quote-history";
-    const isInvoices = activePage === "invoices" && href === "#invoices";
-    const isSavedInvoices = activePage === "savedInvoices" && href === "#saved-invoices";
-    const isRecycle = activePage === "recycle" && href === "#recycle";
-    item.classList.toggle("active", isQuotesMain || isHistory || isInvoices || isSavedInvoices || isRecycle);
+    const isQuoteInvoiceMain = ["history", "invoices", "savedInvoices", "recycle"].includes(activePage) && href === "#quote-history";
+    const isCleaningMain = activePage === "cleaning" && href === "#cleaning-quote";
+    item.classList.toggle("active", isQuotesMain || isQuoteInvoiceMain || isCleaningMain);
   });
 
   syncQuoteSubnav();
+  syncOpsSubnav();
 }
 
 function formatCurrency(value) {
@@ -929,14 +1050,21 @@ function parseStoredRecords(value) {
   return Array.isArray(parsed)
     ? parsed.filter((record) => record && typeof record === "object").map((record) => ({
         id: record.id || crypto.randomUUID(),
+        recordType: record.recordType || "blinds-curtains",
         submittedAt: record.submittedAt || new Date().toISOString(),
         customerName: record.customerName || "-",
         phone: record.phone || "-",
         address: record.address || "-",
         quoteNumber: record.quoteNumber || "-",
         totalQuote: record.totalQuote || formatCurrency(0),
+        subtotalExGst: record.subtotalExGst || formatCurrency(0),
+        gstTotal: record.gstTotal || formatCurrency(0),
+        blindCount: Number(record.blindCount) || 0,
+        curtainCount: Number(record.curtainCount) || 0,
+        sheerCount: Number(record.sheerCount) || 0,
         blindItems: Array.isArray(record.blindItems) ? record.blindItems : [],
-        curtainItems: Array.isArray(record.curtainItems) ? record.curtainItems : []
+        curtainItems: Array.isArray(record.curtainItems) ? record.curtainItems : [],
+        cleaningSummary: record.cleaningSummary && typeof record.cleaningSummary === "object" ? record.cleaningSummary : null
       }))
     : [];
 }
@@ -1082,7 +1210,121 @@ function addToRecycleBin(itemType, payload) {
   renderRecycleBin();
 }
 
+function calculateCleaningBaseService() {
+  const baseService = getCleaningBaseServiceOption(state.cleaning.baseService);
+  const quantity = baseService.value === "standalone-carpet"
+    ? Math.max(1, Number(state.cleaning.standaloneRooms) || 1)
+    : 1;
+  const rawCost = baseService.value === "standalone-carpet"
+    ? Math.max(quantity * baseService.costPerRoom, baseService.minCharge || 0)
+    : baseService.cost;
+  const retailExGst = rawCost * 1.4;
+
+  return {
+    label: baseService.label,
+    quantity,
+    rawCost,
+    retailExGst,
+    lineTotal: retailExGst * (1 + state.gstRate),
+    detail: baseService.value === "standalone-carpet"
+      ? `${quantity} room${quantity === 1 ? "" : "s"} at ${formatCurrency(baseService.costPerRoom)} each (minimum ${formatCurrency(baseService.minCharge || 0)})`
+      : "Apartment package pricing from subcontractor cost list"
+  };
+}
+
+function calculateCleaningExtraLine(line) {
+  const service = getCleaningExtraServiceOption(line.service);
+  const quantity = Math.max(1, Number(line.quantity) || 1);
+  const unitCost = Math.max(0, Number(line.unitCost) || 0);
+  const costExGst = quantity * unitCost;
+  const retailExGst = costExGst * 1.2;
+  return {
+    label: service.label,
+    unit: service.unit,
+    quantity,
+    unitCost,
+    costExGst,
+    retailExGst,
+    lineTotal: retailExGst * (1 + state.gstRate)
+  };
+}
+
+function calculateCleaningTotals() {
+  const base = calculateCleaningBaseService();
+  const extras = state.cleaning.extras.map((line) => ({
+    ...line,
+    ...calculateCleaningExtraLine(line)
+  }));
+  const extrasCost = extras.reduce((sum, line) => sum + line.costExGst, 0);
+  const extrasRetail = extras.reduce((sum, line) => sum + line.retailExGst, 0);
+  const subtotalCost = base.rawCost + extrasCost;
+  const subtotalRetail = base.retailExGst + extrasRetail;
+  const gst = subtotalRetail * state.gstRate;
+  const total = subtotalRetail + gst;
+  const profit = subtotalRetail - subtotalCost;
+  const profitPercent = subtotalRetail > 0 ? (profit / subtotalRetail) * 100 : 0;
+
+  return {
+    base,
+    extras,
+    extrasCost,
+    extrasRetail,
+    subtotalCost,
+    subtotalRetail,
+    gst,
+    total,
+    profit,
+    profitPercent
+  };
+}
+
+function createCleaningRecordSnapshot() {
+  ensureQuoteNumber();
+  const totals = calculateCleaningTotals();
+
+  return {
+    id: crypto.randomUUID(),
+    recordType: "cleaning",
+    submittedAt: new Date().toISOString(),
+    customerName: state.customer.name || "-",
+    phone: state.customer.phone || "-",
+    address: state.customer.address || "-",
+    quoteNumber: state.customer.quoteNumber || "-",
+    totalQuote: formatCurrency(totals.total),
+    subtotalExGst: formatCurrency(totals.subtotalRetail),
+    gstTotal: formatCurrency(totals.gst),
+    blindCount: 0,
+    curtainCount: 0,
+    sheerCount: 0,
+    blindItems: [],
+    curtainItems: [],
+    cleaningSummary: {
+      baseServiceLabel: totals.base.label,
+      baseDetail: totals.base.detail,
+      baseCost: totals.base.rawCost,
+      baseRetail: totals.base.retailExGst,
+      extras: totals.extras.map((line) => ({
+        service: line.label,
+        unit: line.unit,
+        quantity: line.quantity,
+        unitCost: line.unitCost,
+        costExGst: line.costExGst,
+        retailExGst: line.retailExGst
+      })),
+      extrasCost: totals.extrasCost,
+      extrasRetail: totals.extrasRetail,
+      subtotalCost: totals.subtotalCost,
+      subtotalRetail: totals.subtotalRetail,
+      gst: totals.gst,
+      total: totals.total,
+      profit: totals.profit,
+      profitPercent: totals.profitPercent
+    }
+  };
+}
+
 function createRecordSnapshot() {
+  ensureQuoteNumber();
   const blindItems = state.lines.map((line) => {
     const computed = calculateBlindLine(line);
     return {
@@ -1106,6 +1348,7 @@ function createRecordSnapshot() {
 
   return {
     id: crypto.randomUUID(),
+    recordType: "blinds-curtains",
     submittedAt: new Date().toISOString(),
     customerName: state.customer.name || "-",
     phone: state.customer.phone || "-",
@@ -1277,6 +1520,87 @@ function renderAirMode() {
   els.airPhotoCount.textContent = `${state.photos.length} photo${state.photos.length === 1 ? "" : "s"}`;
 }
 
+function renderCleaningQuote() {
+  const baseOptions = CLEANING_BASE_SERVICES
+    .map((service) => `<option value="${service.value}" ${service.value === state.cleaning.baseService ? "selected" : ""}>${service.label}</option>`)
+    .join("");
+  els.cleaningBaseService.innerHTML = baseOptions;
+  const isStandalone = state.cleaning.baseService === "standalone-carpet";
+  els.cleaningStandaloneFields.style.display = isStandalone ? "grid" : "none";
+  els.cleaningStandaloneRooms.value = state.cleaning.standaloneRooms;
+
+  els.cleaningExtrasBody.innerHTML = "";
+  if (!state.cleaning.extras.length) {
+    els.cleaningExtrasEmpty.style.display = "grid";
+  } else {
+    els.cleaningExtrasEmpty.style.display = "none";
+    state.cleaning.extras.forEach((line) => {
+      const computed = calculateCleaningExtraLine(line);
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td data-label="Service">
+          <select data-cleaning-extra-id="${line.id}" data-cleaning-extra-field="service">
+            ${CLEANING_EXTRA_SERVICES.map((service) => `<option value="${service.value}" ${service.value === line.service ? "selected" : ""}>${service.label}</option>`).join("")}
+          </select>
+        </td>
+        <td data-label="Qty"><input class="compact-input" data-cleaning-extra-id="${line.id}" data-cleaning-extra-field="quantity" type="number" min="1" step="1" value="${line.quantity}"></td>
+        <td data-label="Unit">${escapeHtml(computed.unit)}</td>
+        <td data-label="Cost"><input class="compact-input" data-cleaning-extra-id="${line.id}" data-cleaning-extra-field="unitCost" type="number" min="0" step="0.01" value="${line.unitCost}"></td>
+        <td data-label="Retail">${formatCurrency(computed.retailExGst)}</td>
+        <td data-label="Action"><button class="danger-button table-action-button" data-delete-cleaning-extra="${line.id}" type="button">Delete</button></td>
+      `;
+      els.cleaningExtrasBody.appendChild(row);
+    });
+  }
+
+  const totals = calculateCleaningTotals();
+  els.cleaningBaseCost.textContent = formatCurrency(totals.base.rawCost);
+  els.cleaningBaseRetail.textContent = formatCurrency(totals.base.retailExGst);
+  els.cleaningExtrasCost.textContent = formatCurrency(totals.extrasCost);
+  els.cleaningExtrasRetail.textContent = formatCurrency(totals.extrasRetail);
+  els.cleaningSubtotalCost.textContent = formatCurrency(totals.subtotalCost);
+  els.cleaningSubtotalRetail.textContent = formatCurrency(totals.subtotalRetail);
+  els.cleaningGst.textContent = formatCurrency(totals.gst);
+  els.cleaningTotal.textContent = formatCurrency(totals.total);
+  els.cleaningProfit.textContent = formatCurrency(totals.profit);
+  els.cleaningProfitPercent.textContent = `${formatPercent(totals.profitPercent)} profit margin`;
+}
+
+function addCleaningExtraLine() {
+  state.cleaning.extras.push(createCleaningExtraLine());
+}
+
+function setCleaningExtraValue(id, field, value) {
+  state.cleaning.extras = state.cleaning.extras.map((line) => {
+    if (line.id !== id) {
+      return line;
+    }
+
+    if (field === "service") {
+      const service = getCleaningExtraServiceOption(value);
+      return {
+        ...line,
+        service: service.value,
+        unitCost: service.defaultCost
+      };
+    }
+
+    if (field === "quantity") {
+      return { ...line, quantity: Math.max(1, Number(value) || 1) };
+    }
+
+    if (field === "unitCost") {
+      return { ...line, unitCost: Math.max(0, Number(value) || 0) };
+    }
+
+    return line;
+  });
+}
+
+function deleteCleaningExtraLine(id) {
+  state.cleaning.extras = state.cleaning.extras.filter((line) => line.id !== id);
+}
+
 function addAirModeItem() {
   const productType = els.airProductType.value;
   const location = els.airLocation.value.trim();
@@ -1333,6 +1657,8 @@ async function submitQuoteRecord() {
     return;
   }
 
+  ensureQuoteNumber();
+  hydrateInputs();
   const record = createRecordSnapshot();
   state.records = [record, ...state.records];
   state.selectedRecordId = record.id;
@@ -1355,6 +1681,31 @@ async function submitQuoteRecord() {
   }
 
   document.querySelector("#dimension-records")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function submitCleaningQuoteRecord() {
+  ensureQuoteNumber();
+  hydrateInputs();
+  const record = createCleaningRecordSnapshot();
+  state.records = [record, ...state.records];
+  state.selectedRecordId = record.id;
+  persistRecords();
+  renderRecords();
+
+  try {
+    const savedRecord = await requestQuoteRecords("", {
+      method: "POST",
+      body: JSON.stringify(record)
+    });
+    state.records = state.records.map((item) => (item.id === record.id ? savedRecord : item));
+    state.selectedRecordId = savedRecord.id;
+    persistRecords();
+    renderRecords();
+    els.cleaningFeedback.textContent = "Cleaning quote saved to your cloud records.";
+  } catch (error) {
+    console.warn("Unable to sync cleaning quote record to cloud storage.", error);
+    els.cleaningFeedback.textContent = "Cleaning quote saved locally. Cloud sync is unavailable right now.";
+  }
 }
 
 async function deleteRecord(id) {
@@ -1443,6 +1794,11 @@ function formatInvoiceStatus(status) {
 }
 
 function buildInvoiceSummaryFromRecord(record) {
+  if (record.recordType === "cleaning" && record.cleaningSummary) {
+    const extraCount = Array.isArray(record.cleaningSummary.extras) ? record.cleaningSummary.extras.length : 0;
+    return `${record.cleaningSummary.baseServiceLabel}${extraCount ? ` + ${extraCount} extra service${extraCount === 1 ? "" : "s"}` : ""}`;
+  }
+
   const parts = [];
   if ((record.blindCount || 0) > 0) {
     parts.push(`${record.blindCount} blind${record.blindCount === 1 ? "" : "s"}`);
@@ -1463,6 +1819,7 @@ function createInvoiceFromRecord(record) {
   }
 
   const invoice = createInvoice({
+    invoiceNumber: record.quoteNumber !== "-" ? record.quoteNumber : generateDocumentNumber(),
     sourceQuoteNumber: record.quoteNumber !== "-" ? record.quoteNumber : "",
     customerName: record.customerName !== "-" ? record.customerName : "",
     customerPhone: record.phone !== "-" ? record.phone : "",
@@ -1491,11 +1848,13 @@ function createInvoiceFromRecord(record) {
 }
 
 function createInvoiceFromCurrentQuote() {
+  ensureQuoteNumber();
   const totals = {
     subtotalExGst: parseCurrency(els.subtotalExGst.textContent),
     total: parseCurrency(els.grandTotal.textContent)
   };
   const invoice = createInvoice({
+    invoiceNumber: state.customer.quoteNumber,
     sourceQuoteNumber: state.customer.quoteNumber,
     customerName: state.customer.name,
     customerPhone: state.customer.phone,
@@ -1518,6 +1877,35 @@ function createInvoiceFromCurrentQuote() {
   window.location.hash = "#invoices";
   syncPageNavigation();
   els.invoiceFeedback.textContent = "Invoice created from the current quote.";
+}
+
+function createInvoiceFromCurrentCleaningQuote() {
+  ensureQuoteNumber();
+  const totals = calculateCleaningTotals();
+  const invoice = createInvoice({
+    invoiceNumber: state.customer.quoteNumber,
+    sourceQuoteNumber: state.customer.quoteNumber,
+    customerName: state.customer.name,
+    customerPhone: state.customer.phone,
+    customerAddress: state.customer.address,
+    notes: "Invoice created from the current cleaning quote.",
+    lines: [
+      createInvoiceLine({
+        description: calculateCleaningBaseService().label,
+        quantity: 1,
+        unitPrice: totals.subtotalRetail,
+        taxRate: 0.1
+      })
+    ]
+  });
+
+  state.invoices = [invoice, ...state.invoices];
+  state.selectedInvoiceId = invoice.id;
+  persistInvoices();
+  renderInvoices();
+  window.location.hash = "#invoices";
+  syncPageNavigation();
+  els.invoiceFeedback.textContent = "Invoice created from the current cleaning quote.";
 }
 
 function createNewInvoice() {
@@ -1723,12 +2111,18 @@ function openPrintDocument(title, bodyMarkup) {
       <head>
         <title>${escapeHtml(title)}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          body { font-family: Arial, sans-serif; margin: 0; color: #111; background: #eef3f8; }
+          .print-page { max-width: 980px; margin: 0 auto; background: #fff; min-height: 100vh; padding: 24px; }
           h1 { margin: 0; }
           p { margin: 6px 0; line-height: 1.45; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ccc; padding: 10px; text-align: left; vertical-align: top; }
           .totals, .notes { margin-top: 24px; }
+          .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: #0f1a25; color: #fff; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.16); }
+          .print-toolbar button { border: none; border-radius: 999px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+          .print-toolbar .primary { background: #1f7aec; color: #fff; }
+          .print-toolbar .secondary { background: #dce7f5; color: #0b1117; }
+          .print-toolbar span { opacity: 0.82; }
           .print-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 2px solid #d7e5f5; }
           .print-brand-block { display: flex; align-items: center; gap: 16px; }
           .print-logo { width: 110px; height: auto; display: block; }
@@ -1736,15 +2130,26 @@ function openPrintDocument(title, bodyMarkup) {
           .print-brand-name { font-size: 20px; font-weight: 800; color: #092654; }
           .print-brand-subtitle { margin-top: 6px; color: #236fcb; }
           .print-title-block { text-align: right; }
-          @media print { body { padding: 18px; } .print-logo { width: 96px; } }
+          @media print {
+            body { background: #fff; }
+            .print-toolbar { display: none; }
+            .print-page { max-width: none; margin: 0; min-height: auto; padding: 18px; }
+            .print-logo { width: 96px; }
+          }
         </style>
       </head>
-      <body>${bodyMarkup}</body>
+      <body>
+        <div class="print-toolbar">
+          <button class="primary" type="button" onclick="window.print()">Print / Save PDF</button>
+          <button class="secondary" type="button" onclick="window.close()">Close</button>
+          <span>Use your browser print dialog and choose "Save as PDF" to download.</span>
+        </div>
+        <div class="print-page">${bodyMarkup}</div>
+      </body>
     </html>
   `);
   printWindow.document.close();
   printWindow.focus();
-  setTimeout(() => printWindow.print(), 300);
   return true;
 }
 
@@ -2029,6 +2434,79 @@ function renderRecordDetail(record) {
     els.recordDetail.innerHTML = `
       <div class="record-detail-empty">
         Select a customer detail to view the full quote and order summary.
+      </div>
+    `;
+    return;
+  }
+
+  if (record.recordType === "cleaning" && record.cleaningSummary) {
+    const extras = Array.isArray(record.cleaningSummary.extras) ? record.cleaningSummary.extras : [];
+    const extraRows = extras.length
+      ? extras.map((item, index) => `
+        <tr>
+          <td data-label="No.">${index + 1}</td>
+          <td data-label="Service">${escapeHtml(item.service)}</td>
+          <td data-label="Qty">${escapeHtml(String(item.quantity))}</td>
+          <td data-label="Unit Cost">${formatCurrency(item.unitCost)}</td>
+          <td data-label="Cost">${formatCurrency(item.costExGst)}</td>
+          <td data-label="Retail">${formatCurrency(item.retailExGst)}</td>
+        </tr>
+      `).join("")
+      : `
+        <tr>
+          <td colspan="6" class="detail-empty-cell">No additional cleaning services saved in this quote.</td>
+        </tr>
+      `;
+
+    els.recordDetail.innerHTML = `
+      <div class="record-detail-top">
+        <div>
+          <p class="section-kicker">Selected Cleaning Quote</p>
+          <h3>${escapeHtml(record.quoteNumber !== "-" ? record.quoteNumber : "Saved Quote")}</h3>
+          <p class="record-detail-subtitle">${escapeHtml(record.customerName)} | ${escapeHtml(record.phone)}</p>
+        </div>
+        <div class="record-detail-top-actions">
+          <strong>${escapeHtml(record.totalQuote)}</strong>
+          <button class="secondary-button table-action-button" data-create-invoice-record="${record.id}" type="button">Create Invoice</button>
+        </div>
+      </div>
+      <div class="record-detail-meta">
+        <span><strong>Address:</strong> ${escapeHtml(record.address)}</span>
+        <span><strong>Saved:</strong> ${formatRecordDate(record.submittedAt)}</span>
+        <span><strong>Subtotal:</strong> ${escapeHtml(record.subtotalExGst || formatCurrency(0))}</span>
+        <span><strong>GST:</strong> ${escapeHtml(record.gstTotal || formatCurrency(0))}</span>
+      </div>
+      <div class="record-detail-section">
+        <div class="summary-table-head">
+          <h3>Base Cleaning Service</h3>
+          <p>${escapeHtml(record.cleaningSummary.baseDetail || "")}</p>
+        </div>
+        <div class="records-cleaning-base">
+          <div><strong>Service:</strong> ${escapeHtml(record.cleaningSummary.baseServiceLabel)}</div>
+          <div><strong>Cost:</strong> ${formatCurrency(record.cleaningSummary.baseCost)}</div>
+          <div><strong>Retail:</strong> ${formatCurrency(record.cleaningSummary.baseRetail)}</div>
+        </div>
+      </div>
+      <div class="record-detail-section">
+        <div class="summary-table-head">
+          <h3>Additional Services</h3>
+          <p>Extra cleaning services priced from the subcontractor cost list.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="quote-table records-detail-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Service</th>
+                <th>Qty</th>
+                <th>Unit Cost</th>
+                <th>Cost</th>
+                <th>Retail</th>
+              </tr>
+            </thead>
+            <tbody>${extraRows}</tbody>
+          </table>
+        </div>
       </div>
     `;
     return;
@@ -2474,6 +2952,7 @@ function renderAll() {
   renderCurtainSummaryTable();
   updateSummary();
   renderAirMode();
+  renderCleaningQuote();
   applyPendingFocus();
 }
 
@@ -2549,6 +3028,54 @@ function bindEvents() {
   els.airSaveQuote.addEventListener("click", async () => {
     await submitQuoteRecord();
     els.airFeedback.textContent = els.copyFeedback.textContent;
+  });
+
+  els.cleaningBaseService.addEventListener("change", () => {
+    state.cleaning.baseService = els.cleaningBaseService.value;
+    renderCleaningQuote();
+  });
+
+  els.cleaningStandaloneRooms.addEventListener("input", () => {
+    state.cleaning.standaloneRooms = Math.max(1, Number(els.cleaningStandaloneRooms.value) || 1);
+    renderCleaningQuote();
+  });
+
+  els.addCleaningExtra.addEventListener("click", () => {
+    addCleaningExtraLine();
+    renderCleaningQuote();
+  });
+
+  els.clearCleaningQuote.addEventListener("click", () => {
+    state.cleaning = {
+      baseService: "apt-1b1b-indoor",
+      standaloneRooms: 1,
+      extras: []
+    };
+    els.cleaningFeedback.textContent = "";
+    renderCleaningQuote();
+  });
+
+  els.saveCleaningQuote.addEventListener("click", async () => {
+    await submitCleaningQuoteRecord();
+  });
+
+  els.cleaningExtrasBody.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target.dataset.cleaningExtraId && target.dataset.cleaningExtraField) {
+      setCleaningExtraValue(target.dataset.cleaningExtraId, target.dataset.cleaningExtraField, target.value);
+      renderCleaningQuote();
+    }
+  });
+
+  els.cleaningExtrasBody.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target.dataset.deleteCleaningExtra) {
+      if (!confirmAction("Delete this cleaning extra service?")) {
+        return;
+      }
+      deleteCleaningExtraLine(target.dataset.deleteCleaningExtra);
+      renderCleaningQuote();
+    }
   });
 
   els.airCameraPhotos.addEventListener("change", (event) => {
@@ -2838,6 +3365,11 @@ function bindEvents() {
       return;
     }
 
+    if (getActivePageFromHash() === "cleaning") {
+      createInvoiceFromCurrentCleaningQuote();
+      return;
+    }
+
     els.invoiceFeedback.textContent = "Select a saved quote or build a current quote first.";
   });
 
@@ -2848,7 +3380,7 @@ function bindEvents() {
     }
     persistInvoices();
     renderInvoices();
-    els.invoiceFeedback.textContent = "Invoice saved.";
+    els.invoiceFeedback.textContent = "Invoice confirmed.";
   });
 
   els.printInvoice.addEventListener("click", () => {
@@ -2858,8 +3390,10 @@ function bindEvents() {
       return;
     }
 
-    openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
-    els.invoiceFeedback.textContent = "Invoice print / PDF window opened.";
+    const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+    els.invoiceFeedback.textContent = opened
+      ? "Invoice document opened. Use Print / Save PDF in the new tab."
+      : "Unable to open the print window. Please allow pop-ups and try again.";
   });
 
   els.shareInvoice.addEventListener("click", async () => {
@@ -2896,7 +3430,7 @@ function bindEvents() {
     }
     persistInvoices();
     renderInvoices();
-    els.savedInvoiceFeedback.textContent = "Invoice saved.";
+    els.savedInvoiceFeedback.textContent = "Invoice confirmed.";
   });
 
   els.savedPrintInvoice.addEventListener("click", () => {
@@ -2906,8 +3440,10 @@ function bindEvents() {
       return;
     }
 
-    openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
-    els.savedInvoiceFeedback.textContent = "Invoice print / PDF window opened.";
+    const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+    els.savedInvoiceFeedback.textContent = opened
+      ? "Invoice document opened. Use Print / Save PDF in the new tab."
+      : "Unable to open the print window. Please allow pop-ups and try again.";
   });
 
   els.savedShareInvoice.addEventListener("click", async () => {
@@ -2931,8 +3467,6 @@ function bindEvents() {
     if (selectButton) {
       state.selectedInvoiceId = selectButton.dataset.selectInvoice;
       renderInvoices();
-      window.location.hash = "#invoices";
-      syncPageNavigation();
       return;
     }
 
@@ -3031,11 +3565,12 @@ function bindEvents() {
     ["name", els.customerName],
     ["phone", els.customerPhone],
     ["address", els.customerAddress],
-    ["quoteNumber", els.quoteNumber],
     ["name", els.airCustomerName],
     ["phone", els.airCustomerPhone],
     ["address", els.airCustomerAddress],
-    ["quoteNumber", els.airQuoteNumber]
+    ["name", els.cleaningCustomerName],
+    ["phone", els.cleaningCustomerPhone],
+    ["address", els.cleaningCustomerAddress]
   ].forEach(([field, element]) => {
     element.addEventListener("input", () => {
       state.customer[field] = element.value;
@@ -3055,14 +3590,20 @@ function bindEvents() {
       name: "",
       phone: "",
       address: "",
-      quoteNumber: ""
+      quoteNumber: generateDocumentNumber()
     };
     state.photos = [];
     persistPhotos();
     state.lines = [];
     state.curtainLines = [];
+    state.cleaning = {
+      baseService: "apt-1b1b-indoor",
+      standaloneRooms: 1,
+      extras: []
+    };
     els.copyFeedback.textContent = "";
     els.airFeedback.textContent = "";
+    els.cleaningFeedback.textContent = "";
     clearAirModeForm();
     hydrateInputs();
     renderPhotos();
@@ -3070,8 +3611,10 @@ function bindEvents() {
   });
 
   els.printQuote.addEventListener("click", () => {
-    openPrintDocument("Quote", buildQuotePrintMarkup());
-    els.copyFeedback.textContent = "Quote print / PDF window opened.";
+    const opened = openPrintDocument("Quote", buildQuotePrintMarkup());
+    els.copyFeedback.textContent = opened
+      ? "Quote document opened. Use Print / Save PDF in the new tab."
+      : "Unable to open the print window. Please allow pop-ups and try again.";
   });
 
   els.shareQuote.addEventListener("click", async () => {
@@ -3096,6 +3639,7 @@ function bindEvents() {
 }
 
 function hydrateInputs() {
+  ensureQuoteNumber();
   els.supplyMarkup.value = state.settings.supplyMarkup;
   els.curtainMarkup.value = state.settings.curtainMarkup;
   els.installCost.value = state.settings.installCost;
@@ -3108,6 +3652,10 @@ function hydrateInputs() {
   els.airCustomerPhone.value = state.customer.phone;
   els.airCustomerAddress.value = state.customer.address;
   els.airQuoteNumber.value = state.customer.quoteNumber;
+  els.cleaningCustomerName.value = state.customer.name;
+  els.cleaningCustomerPhone.value = state.customer.phone;
+  els.cleaningCustomerAddress.value = state.customer.address;
+  els.cleaningQuoteNumber.value = state.customer.quoteNumber;
   if (els.historySearch) {
     els.historySearch.value = state.historySearch;
   }
