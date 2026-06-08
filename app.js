@@ -1025,6 +1025,43 @@ function clearAirModeForm() {
   els.airCurtainStyle.value = "S-Fold Metal Hook";
 }
 
+function queueAirModeEntryFocus() {
+  const selector = els.airProductType.value === "blind" ? "#air-blind-width" : "#air-curtain-width";
+  queueFocus(selector, true);
+  renderAll();
+}
+
+function handleAirModeEnterFlow(field) {
+  const productType = els.airProductType.value;
+
+  if (productType === "blind") {
+    if (field === "width") {
+      queueFocus("#air-blind-height", true);
+      renderAll();
+      return;
+    }
+
+    if (field === "height") {
+      if (addAirModeItem()) {
+        queueAirModeEntryFocus();
+      }
+    }
+    return;
+  }
+
+  if (field === "width") {
+    queueFocus("#air-curtain-drop", true);
+    renderAll();
+    return;
+  }
+
+  if (field === "drop") {
+    if (addAirModeItem()) {
+      queueAirModeEntryFocus();
+    }
+  }
+}
+
 function renderAirMode() {
   updateAirModeFields();
   els.airItemsList.innerHTML = "";
@@ -1091,7 +1128,7 @@ function addAirModeItem() {
     const height = els.airBlindHeight.value.trim();
     if (!width || !height) {
       els.airFeedback.textContent = "Enter width and height before adding the blind.";
-      return;
+      return false;
     }
 
     const line = createLine();
@@ -1105,14 +1142,14 @@ function addAirModeItem() {
     clearAirModeForm();
     renderAll();
     els.airFeedback.textContent = "Blind item added.";
-    return;
+    return true;
   }
 
   const width = els.airCurtainWidth.value.trim();
   const drop = els.airCurtainDrop.value.trim();
   if (!width || !drop) {
     els.airFeedback.textContent = "Enter width and drop before adding the item.";
-    return;
+    return false;
   }
 
   const line = createCurtainLine();
@@ -1129,6 +1166,7 @@ function addAirModeItem() {
   clearAirModeForm();
   renderAll();
   els.airFeedback.textContent = `${productType === "curtain" ? "Curtain" : "Sheer"} item added.`;
+  return true;
 }
 
 async function submitQuoteRecord() {
@@ -2076,7 +2114,9 @@ function bindEvents() {
   });
 
   els.airAddItem.addEventListener("click", () => {
-    addAirModeItem();
+    if (addAirModeItem()) {
+      queueAirModeEntryFocus();
+    }
   });
 
   els.airClearForm.addEventListener("click", () => {
@@ -2102,6 +2142,22 @@ function bindEvents() {
       deleteCurtainLine(target.dataset.airDeleteCurtain);
       renderAll();
     }
+  });
+
+  [
+    [els.airBlindWidth, "width"],
+    [els.airBlindHeight, "height"],
+    [els.airCurtainWidth, "width"],
+    [els.airCurtainDrop, "drop"]
+  ].forEach(([element, field]) => {
+    element.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") {
+        return;
+      }
+
+      event.preventDefault();
+      handleAirModeEnterFlow(field);
+    });
   });
 
   els.addLine.addEventListener("click", () => {
