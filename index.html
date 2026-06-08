@@ -26,6 +26,7 @@
         <a class="nav-item active" href="#quote-builder" data-page-link="quotes">Blinds and Curtain</a>
         <a class="nav-item" href="#cleaning-quote" data-page-link="cleaning">Cleaning Quote</a>
         <a class="nav-item" href="#quote-history" data-page-link="ops">Quote / Invoice</a>
+        <a class="nav-item" href="#settings" data-page-link="settings">Settings</a>
       </nav>
     </aside>
 
@@ -721,7 +722,6 @@
           </div>
           <div class="header-actions">
             <button class="ghost-button" id="new-invoice" type="button">New Invoice</button>
-            <button class="secondary-button" id="create-invoice-from-quote" type="button">From Selected Quote</button>
             <button class="ghost-button" id="share-invoice" type="button">Share</button>
             <button class="ghost-button" id="print-invoice" type="button">Print / PDF</button>
             <button class="primary-button" id="save-invoice" type="button">Confirm</button>
@@ -948,6 +948,82 @@
           </div>
           <div class="record-empty" id="recycle-list-empty">Recycle bin is empty.</div>
           <p class="copy-feedback" id="recycle-feedback"></p>
+        </section>
+      </section>
+
+      <section class="app-page" id="page-settings" data-page="settings">
+        <header class="page-header page-header-single">
+          <div>
+            <p class="section-kicker">Admin</p>
+            <h1 id="settings">Settings</h1>
+            <p class="page-copy">Manage saved data and set up the next parts of the app as your services grow.</p>
+          </div>
+        </header>
+
+        <nav class="subnav">
+          <button class="subnav-link active" type="button">Data</button>
+          <button class="subnav-link" type="button">Branding Idea</button>
+          <button class="subnav-link" type="button">Pricing Idea</button>
+          <button class="subnav-link" type="button">Business Idea</button>
+        </nav>
+
+        <section class="panel settings-data-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Data Tools</p>
+              <h2>Clear Saved Records</h2>
+              <p>Use these actions if you want to wipe saved quote, invoice, or recycle data and start fresh.</p>
+            </div>
+          </div>
+
+          <div class="settings-action-grid">
+            <article class="settings-action-card">
+              <h3>Saved Quotes</h3>
+              <p>Clear all saved quote records from Search Quote.</p>
+              <button class="danger-button settings-danger-button" id="settings-clear-quotes" type="button">Clear Quotes</button>
+            </article>
+
+            <article class="settings-action-card">
+              <h3>Saved Invoices</h3>
+              <p>Clear all saved invoices from the invoice list.</p>
+              <button class="danger-button settings-danger-button" id="settings-clear-invoices" type="button">Clear Invoices</button>
+            </article>
+
+            <article class="settings-action-card">
+              <h3>Recycle Bin</h3>
+              <p>Remove everything currently kept in recycle.</p>
+              <button class="danger-button settings-danger-button" id="settings-clear-recycle" type="button">Clear Recycle</button>
+            </article>
+          </div>
+
+          <p class="copy-feedback" id="settings-feedback"></p>
+        </section>
+
+        <section class="panel settings-ideas-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Recommended Next Tabs</p>
+              <h2>Ideas For Later</h2>
+              <p>These would be useful settings areas when you want to expand the app.</p>
+            </div>
+          </div>
+
+          <div class="settings-action-grid">
+            <article class="settings-action-card">
+              <h3>Branding</h3>
+              <p>Business name, logo, bank details, footer note, and PDF message defaults.</p>
+            </article>
+
+            <article class="settings-action-card">
+              <h3>Pricing</h3>
+              <p>Default blind markup, curtain markup, install cost, install retail, and cleaning markups.</p>
+            </article>
+
+            <article class="settings-action-card">
+              <h3>Business Details</h3>
+              <p>ABN, payment terms, lead times, contact info, and service categories for future tabs.</p>
+            </article>
+          </div>
         </section>
       </section>
     </main>

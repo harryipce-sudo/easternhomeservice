@@ -306,7 +306,6 @@ function cacheElements() {
     recordEmpty: document.querySelector("#record-empty"),
     invoiceSearch: document.querySelector("#invoice-search"),
     newInvoice: document.querySelector("#new-invoice"),
-    createInvoiceFromQuote: document.querySelector("#create-invoice-from-quote"),
     saveInvoice: document.querySelector("#save-invoice"),
     printInvoice: document.querySelector("#print-invoice"),
     shareInvoice: document.querySelector("#share-invoice"),
@@ -322,6 +321,10 @@ function cacheElements() {
     recycleListBody: document.querySelector("#recycle-list-body"),
     recycleListEmpty: document.querySelector("#recycle-list-empty"),
     recycleFeedback: document.querySelector("#recycle-feedback"),
+    settingsClearQuotes: document.querySelector("#settings-clear-quotes"),
+    settingsClearInvoices: document.querySelector("#settings-clear-invoices"),
+    settingsClearRecycle: document.querySelector("#settings-clear-recycle"),
+    settingsFeedback: document.querySelector("#settings-feedback"),
     invoiceDetailTitle: document.querySelector("#invoice-detail-title"),
     invoiceNumberDisplay: document.querySelector("#invoice-number-display"),
     invoiceStatusBadge: document.querySelector("#invoice-status-badge"),
@@ -579,6 +582,9 @@ function getActivePageFromHash(hash = window.location.hash) {
   if (hash === "#recycle") {
     return "recycle";
   }
+  if (hash === "#settings") {
+    return "settings";
+  }
   return "builder";
 }
 
@@ -622,7 +628,8 @@ function syncPageNavigation() {
     const isQuotesMain = (activePage === "builder" || activePage === "airMode") && href === "#quote-builder";
     const isQuoteInvoiceMain = ["history", "invoices", "savedInvoices", "recycle"].includes(activePage) && href === "#quote-history";
     const isCleaningMain = activePage === "cleaning" && href === "#cleaning-quote";
-    item.classList.toggle("active", isQuotesMain || isQuoteInvoiceMain || isCleaningMain);
+    const isSettingsMain = activePage === "settings" && href === "#settings";
+    item.classList.toggle("active", isQuotesMain || isQuoteInvoiceMain || isCleaningMain || isSettingsMain);
   });
 
   syncQuoteSubnav();
@@ -1753,6 +1760,29 @@ async function deleteRecord(id) {
   }
 
   els.copyFeedback.textContent = "Quote moved to recycle for 15 days.";
+}
+
+async function clearAllQuoteRecords() {
+  const recordsToDelete = [...state.records];
+  state.records = [];
+  state.selectedRecordId = "";
+  persistRecords();
+  renderRecords();
+
+  if (!recordsToDelete.length) {
+    return { hadRemoteErrors: false, deletedCount: 0 };
+  }
+
+  const deleteResults = await Promise.allSettled(recordsToDelete.map((record) => (
+    requestQuoteRecords(`?id=${encodeURIComponent(record.id)}`, {
+      method: "DELETE"
+    })
+  )));
+
+  return {
+    hadRemoteErrors: deleteResults.some((result) => result.status === "rejected"),
+    deletedCount: recordsToDelete.length
+  };
 }
 
 function getSelectedRecord() {
@@ -3363,26 +3393,6 @@ function bindEvents() {
     createNewInvoice();
   });
 
-  els.createInvoiceFromQuote.addEventListener("click", () => {
-    const selectedRecord = getSelectedRecord();
-    if (selectedRecord) {
-      createInvoiceFromRecord(selectedRecord);
-      return;
-    }
-
-    if (state.lines.length || state.curtainLines.length) {
-      createInvoiceFromCurrentQuote();
-      return;
-    }
-
-    if (getActivePageFromHash() === "cleaning") {
-      createInvoiceFromCurrentCleaningQuote();
-      return;
-    }
-
-    els.invoiceFeedback.textContent = "Select a saved quote or build a current quote first.";
-  });
-
   els.saveInvoice.addEventListener("click", () => {
     if (!getSelectedInvoice()) {
       createNewInvoice();
@@ -3431,6 +3441,40 @@ function bindEvents() {
 
   els.markInvoicePaid.addEventListener("click", () => {
     setInvoiceStatus("paid");
+  });
+
+  els.settingsClearQuotes.addEventListener("click", async () => {
+    if (!confirmAction("Clear all saved quotes? This will remove quote records from Search Quote.")) {
+      return;
+    }
+
+    const result = await clearAllQuoteRecords();
+    els.settingsFeedback.textContent = result.hadRemoteErrors
+      ? "Saved quotes cleared locally. Some cloud quote records may need another sync to fully remove."
+      : `Saved quotes cleared${result.deletedCount ? ` (${result.deletedCount})` : ""}.`;
+  });
+
+  els.settingsClearInvoices.addEventListener("click", () => {
+    if (!confirmAction("Clear all saved invoices? This cannot be undone.")) {
+      return;
+    }
+
+    state.invoices = [];
+    state.selectedInvoiceId = "";
+    persistInvoices();
+    renderInvoices();
+    els.settingsFeedback.textContent = "Saved invoices cleared.";
+  });
+
+  els.settingsClearRecycle.addEventListener("click", () => {
+    if (!confirmAction("Clear everything in recycle? This cannot be undone.")) {
+      return;
+    }
+
+    state.recycleBin = [];
+    persistRecycleBin();
+    renderRecycleBin();
+    els.settingsFeedback.textContent = "Recycle bin cleared.";
   });
 
   els.savedSaveInvoice.addEventListener("click", () => {
