@@ -39,7 +39,8 @@
         <div class="header-actions">
           <button class="ghost-button" id="reset-quote" type="button">Reset</button>
           <button class="secondary-button" id="submit-quote" type="button">Save Quote</button>
-          <button class="primary-button" id="print-quote" type="button">Generate PDF</button>
+          <button class="ghost-button" id="share-quote" type="button">Share</button>
+          <button class="primary-button" id="print-quote" type="button">Print / PDF</button>
         </div>
       </header>
 
@@ -573,6 +574,8 @@
           <div class="header-actions">
             <button class="ghost-button" id="new-invoice" type="button">New Invoice</button>
             <button class="secondary-button" id="create-invoice-from-quote" type="button">From Selected Quote</button>
+            <button class="ghost-button" id="share-invoice" type="button">Share</button>
+            <button class="ghost-button" id="print-invoice" type="button">Print / PDF</button>
             <button class="primary-button" id="save-invoice" type="button">Save Invoice</button>
           </div>
         </header>
@@ -728,6 +731,7 @@
                   <th>Due Date</th>
                   <th>Total</th>
                   <th>Amount Due</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody id="invoice-list-body"></tbody>

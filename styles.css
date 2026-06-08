@@ -1107,6 +1107,10 @@ textarea {
   vertical-align: middle;
 }
 
+.invoice-table .table-actions-cell {
+  min-width: 180px;
+}
+
 .record-empty {
   min-height: 150px;
   display: grid;

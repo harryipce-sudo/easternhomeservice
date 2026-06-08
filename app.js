@@ -152,6 +152,7 @@ function cacheElements() {
     resetQuote: document.querySelector("#reset-quote"),
     submitQuote: document.querySelector("#submit-quote"),
     printQuote: document.querySelector("#print-quote"),
+    shareQuote: document.querySelector("#share-quote"),
     supplyMarkup: document.querySelector("#supply-markup"),
     curtainMarkup: document.querySelector("#curtain-markup"),
     installCost: document.querySelector("#install-cost"),
@@ -235,6 +236,8 @@ function cacheElements() {
     newInvoice: document.querySelector("#new-invoice"),
     createInvoiceFromQuote: document.querySelector("#create-invoice-from-quote"),
     saveInvoice: document.querySelector("#save-invoice"),
+    printInvoice: document.querySelector("#print-invoice"),
+    shareInvoice: document.querySelector("#share-invoice"),
     markInvoiceDraft: document.querySelector("#mark-invoice-draft"),
     markInvoiceSent: document.querySelector("#mark-invoice-sent"),
     markInvoicePaid: document.querySelector("#mark-invoice-paid"),
@@ -1411,6 +1414,156 @@ function deleteInvoice(id) {
   els.invoiceFeedback.textContent = "Invoice deleted.";
 }
 
+function buildQuotePrintMarkup() {
+  const blindLines = state.lines.map((line, index) => {
+    const computed = calculateBlindLine(line);
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(line.location || "Untitled Location")}</td>
+        <td>Roller Blind</td>
+        <td>${escapeHtml(String(evaluateCalculatorValue(line.width) || line.width || "-"))} x ${escapeHtml(String(evaluateCalculatorValue(line.height) || line.height || "-"))} mm</td>
+        <td>${escapeHtml(SERVICE_TYPES.find((item) => item.value === line.serviceType)?.label || line.serviceType)}</td>
+        <td>${formatCurrency(computed.lineTotal)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  const curtainLines = state.curtainLines.map((line, index) => {
+    const computed = calculateCurtainLine(line);
+    return `
+      <tr>
+        <td>${state.lines.length + index + 1}</td>
+        <td>${escapeHtml(line.location || "Untitled Location")}</td>
+        <td>${escapeHtml(CURTAIN_PRODUCTS.find((item) => item.value === line.product)?.label || line.product)}</td>
+        <td>${escapeHtml(String(evaluateCalculatorValue(line.width) || line.width || "-"))} x ${escapeHtml(String(evaluateCalculatorValue(line.drop) || line.drop || "-"))} mm</td>
+        <td>${escapeHtml(line.material)} / ${escapeHtml(line.color)}</td>
+        <td>${formatCurrency(computed.lineTotal)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  return `
+    <h1>Quote</h1>
+    <p><strong>Customer:</strong> ${escapeHtml(state.customer.name || "-")}</p>
+    <p><strong>Phone:</strong> ${escapeHtml(state.customer.phone || "-")}</p>
+    <p><strong>Address:</strong> ${escapeHtml(state.customer.address || "-")}</p>
+    <p><strong>Quote Number:</strong> ${escapeHtml(state.customer.quoteNumber || "-")}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Location</th>
+          <th>Type</th>
+          <th>Size</th>
+          <th>Detail</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>${blindLines}${curtainLines}</tbody>
+    </table>
+    <div class="totals">
+      <p><strong>Subtotal Ex GST:</strong> ${els.subtotalExGst.textContent}</p>
+      <p><strong>GST:</strong> ${els.gstTotal.textContent}</p>
+      <p><strong>Total Incl GST:</strong> ${els.grandTotal.textContent}</p>
+    </div>
+  `;
+}
+
+function buildInvoicePrintMarkup(invoice) {
+  if (!invoice) {
+    return "<p>No invoice selected.</p>";
+  }
+
+  const totals = calculateInvoiceTotals(invoice);
+  const lineRows = invoice.lines.map((line, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(line.description || "-")}</td>
+      <td>${escapeHtml(String(line.quantity))}</td>
+      <td>${formatCurrency(line.unitPrice)}</td>
+      <td>${Number(line.taxRate) === 0.1 ? "10% GST" : "No GST"}</td>
+      <td>${formatCurrency(calculateInvoiceLineAmount(line))}</td>
+    </tr>
+  `).join("");
+
+  return `
+    <h1>Invoice ${escapeHtml(invoice.invoiceNumber)}</h1>
+    <p><strong>Customer:</strong> ${escapeHtml(invoice.customerName || "-")}</p>
+    <p><strong>Phone:</strong> ${escapeHtml(invoice.customerPhone || "-")}</p>
+    <p><strong>Address:</strong> ${escapeHtml(invoice.customerAddress || "-")}</p>
+    <p><strong>Quote Number:</strong> ${escapeHtml(invoice.sourceQuoteNumber || "-")}</p>
+    <p><strong>Invoice Date:</strong> ${escapeHtml(invoice.invoiceDate || "-")}</p>
+    <p><strong>Due Date:</strong> ${escapeHtml(invoice.dueDate || "-")}</p>
+    <p><strong>Status:</strong> ${escapeHtml(formatInvoiceStatus(invoice.status))}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Tax</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>${lineRows}</tbody>
+    </table>
+    <div class="totals">
+      <p><strong>Subtotal:</strong> ${formatCurrency(totals.subtotal)}</p>
+      <p><strong>GST:</strong> ${formatCurrency(totals.gst)}</p>
+      <p><strong>Total:</strong> ${formatCurrency(totals.total)}</p>
+      <p><strong>Amount Paid:</strong> ${formatCurrency(totals.amountPaid)}</p>
+      <p><strong>Amount Due:</strong> ${formatCurrency(totals.amountDue)}</p>
+    </div>
+    <div class="notes">
+      <p><strong>Notes / Terms:</strong></p>
+      <p>${escapeHtml(invoice.notes || "-").replace(/\n/g, "<br>")}</p>
+      <p><strong>Bank Details:</strong></p>
+      <p>${escapeHtml(invoice.bankDetails || "-").replace(/\n/g, "<br>")}</p>
+    </div>
+  `;
+}
+
+function openPrintDocument(title, bodyMarkup) {
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+  if (!printWindow) {
+    return false;
+  }
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          h1 { margin-bottom: 16px; }
+          p { margin: 6px 0; line-height: 1.45; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 10px; text-align: left; vertical-align: top; }
+          .totals, .notes { margin-top: 24px; }
+        </style>
+      </head>
+      <body>${bodyMarkup}</body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 300);
+  return true;
+}
+
+async function shareDocument(title, text) {
+  if (navigator.share) {
+    await navigator.share({ title, text });
+    return true;
+  }
+
+  await copyText(text, title);
+  return false;
+}
+
 function setInvoiceValue(field, value) {
   state.invoices = state.invoices.map((invoice) => (
     invoice.id === state.selectedInvoiceId
@@ -1619,6 +1772,10 @@ function renderInvoices() {
       <td data-label="Due Date">${formatRecordDate(invoice.dueDate)}</td>
       <td data-label="Total">${formatCurrency(totals.total)}</td>
       <td data-label="Amount Due">${formatCurrency(totals.amountDue)}</td>
+      <td data-label="Action" class="table-actions-cell">
+        <button class="secondary-button table-action-button" data-edit-invoice="${invoice.id}" type="button">Edit</button>
+        <button class="danger-button table-action-button" data-delete-invoice="${invoice.id}" type="button">Delete</button>
+      </td>
     `;
     els.invoiceListBody.appendChild(row);
   });
@@ -2451,6 +2608,32 @@ function bindEvents() {
     els.invoiceFeedback.textContent = "Invoice saved.";
   });
 
+  els.printInvoice.addEventListener("click", () => {
+    const invoice = getSelectedInvoice();
+    if (!invoice) {
+      els.invoiceFeedback.textContent = "Select an invoice first.";
+      return;
+    }
+
+    openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+    els.invoiceFeedback.textContent = "Invoice print / PDF window opened.";
+  });
+
+  els.shareInvoice.addEventListener("click", async () => {
+    const invoice = getSelectedInvoice();
+    if (!invoice) {
+      els.invoiceFeedback.textContent = "Select an invoice first.";
+      return;
+    }
+
+    const totals = calculateInvoiceTotals(invoice);
+    const shared = await shareDocument(
+      `Invoice ${invoice.invoiceNumber}`,
+      `Invoice ${invoice.invoiceNumber}\nCustomer: ${invoice.customerName || "-"}\nQuote Number: ${invoice.sourceQuoteNumber || "-"}\nTotal: ${formatCurrency(totals.total)}\nAmount Due: ${formatCurrency(totals.amountDue)}`
+    );
+    els.invoiceFeedback.textContent = shared ? "Invoice shared." : "Invoice copied for sharing.";
+  });
+
   els.markInvoiceDraft.addEventListener("click", () => {
     setInvoiceStatus("draft");
   });
@@ -2471,6 +2654,19 @@ function bindEvents() {
       renderInvoices();
       window.location.hash = "#invoices";
       syncPageNavigation();
+      return;
+    }
+
+    if (target.dataset.editInvoice) {
+      state.selectedInvoiceId = target.dataset.editInvoice;
+      renderInvoices();
+      window.location.hash = "#invoices";
+      syncPageNavigation();
+      return;
+    }
+
+    if (target.dataset.deleteInvoice) {
+      deleteInvoice(target.dataset.deleteInvoice);
     }
   });
 
@@ -2574,7 +2770,16 @@ function bindEvents() {
   });
 
   els.printQuote.addEventListener("click", () => {
-    window.print();
+    openPrintDocument("Quote", buildQuotePrintMarkup());
+    els.copyFeedback.textContent = "Quote print / PDF window opened.";
+  });
+
+  els.shareQuote.addEventListener("click", async () => {
+    const shared = await shareDocument(
+      state.customer.quoteNumber ? `Quote ${state.customer.quoteNumber}` : "Quote",
+      `Customer: ${state.customer.name || "-"}\nQuote Number: ${state.customer.quoteNumber || "-"}\nTotal: ${els.grandTotal.textContent}`
+    );
+    els.copyFeedback.textContent = shared ? "Quote shared." : "Quote copied for sharing.";
   });
 
   els.submitQuote.addEventListener("click", () => {
