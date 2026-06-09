@@ -4249,19 +4249,23 @@ function bindEvents() {
     ["notes", els.invoiceNotes],
     ["bankDetails", els.invoiceBankDetails]
   ].forEach(([field, element]) => {
-    element.addEventListener("change", () => {
+    const syncInvoiceField = () => {
       setInvoiceValue(field, element.value);
       renderInvoices();
-    });
+    };
+    element.addEventListener("input", syncInvoiceField);
+    element.addEventListener("change", syncInvoiceField);
   });
 
-  els.invoiceLinesBody.addEventListener("change", (event) => {
+  const syncInvoiceLineFromEvent = (event) => {
     const target = event.target;
     if (target.dataset.invoiceLineId && target.dataset.invoiceLineField) {
       setInvoiceLineValue(target.dataset.invoiceLineId, target.dataset.invoiceLineField, target.value);
       renderInvoices();
     }
-  });
+  };
+  els.invoiceLinesBody.addEventListener("input", syncInvoiceLineFromEvent);
+  els.invoiceLinesBody.addEventListener("change", syncInvoiceLineFromEvent);
 
   els.invoiceLinesBody.addEventListener("click", (event) => {
     const target = event.target;
