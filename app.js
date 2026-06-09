@@ -212,6 +212,7 @@ function cacheElements() {
     clearCurtains: document.querySelector("#clear-curtains"),
     submitQuote: document.querySelector("#submit-quote"),
     sendQuote: document.querySelector("#send-quote"),
+    draftQuote: document.querySelector("#draft-quote"),
     printQuote: document.querySelector("#print-quote"),
     supplyMarkup: document.querySelector("#supply-markup"),
     curtainMarkup: document.querySelector("#curtain-markup"),
@@ -304,6 +305,7 @@ function cacheElements() {
     addCleaningExtra: document.querySelector("#add-cleaning-extra"),
     saveCleaningQuote: document.querySelector("#save-cleaning-quote"),
     sendCleaningQuote: document.querySelector("#send-cleaning-quote"),
+    draftCleaningQuote: document.querySelector("#draft-cleaning-quote"),
     cleaningFeedback: document.querySelector("#cleaning-feedback"),
     cleaningBaseCost: document.querySelector("#cleaning-base-cost"),
     cleaningBaseRetail: document.querySelector("#cleaning-base-retail"),
@@ -326,6 +328,7 @@ function cacheElements() {
     saveInvoice: document.querySelector("#save-invoice"),
     printInvoice: document.querySelector("#print-invoice"),
     shareInvoice: document.querySelector("#share-invoice"),
+    draftInvoice: document.querySelector("#draft-invoice"),
     previewInvoice: document.querySelector("#preview-invoice"),
     markInvoiceDraft: document.querySelector("#mark-invoice-draft"),
     markInvoiceSent: document.querySelector("#mark-invoice-sent"),
@@ -333,6 +336,7 @@ function cacheElements() {
     savedPreviewInvoice: document.querySelector("#saved-preview-invoice"),
     savedPrintInvoice: document.querySelector("#saved-print-invoice"),
     savedShareInvoice: document.querySelector("#saved-share-invoice"),
+    savedDraftInvoice: document.querySelector("#saved-draft-invoice"),
     savedInvoiceFeedback: document.querySelector("#saved-invoice-feedback"),
     invoiceListBody: document.querySelector("#invoice-list-body"),
     invoiceListEmpty: document.querySelector("#invoice-list-empty"),
@@ -2573,6 +2577,27 @@ async function sendPdfEmail({ to, subject, bodyMarkup, fileTitle, html, text }) 
   });
 }
 
+async function openMailDraftWithPdf({ to, subject, text, bodyMarkup, fileTitle, feedbackElement }) {
+  if (!isValidEmail(to)) {
+    feedbackElement.textContent = "Enter a valid customer email first.";
+    return;
+  }
+
+  try {
+    const pdfBlob = await buildPdfBlob(fileTitle, bodyMarkup);
+    const filename = getPdfFilename(fileTitle);
+    downloadBlob(pdfBlob, filename);
+
+    const draftBody = `${text}\n\nPDF download: ${filename}\nPlease attach the downloaded PDF before sending.`;
+    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(draftBody)}`;
+    window.location.href = mailtoUrl;
+    feedbackElement.textContent = `Email draft opened and ${filename} downloaded for attachment.`;
+  } catch (error) {
+    console.warn("Unable to open email draft with PDF.", error);
+    feedbackElement.textContent = error instanceof Error ? error.message : "Unable to open the email draft right now.";
+  }
+}
+
 function setInvoiceValue(field, value) {
   state.invoices = state.invoices.map((invoice) => (
     invoice.id === state.selectedInvoiceId
@@ -3461,6 +3486,41 @@ async function sendCurrentCleaningQuote() {
   }
 }
 
+async function openCurrentBlindCurtainQuoteDraft() {
+  if (!state.lines.length && !state.curtainLines.length) {
+    els.copyFeedback.textContent = "Add at least one blind, curtain, or sheer item before opening the draft.";
+    return;
+  }
+
+  ensureQuoteNumber();
+  hydrateInputs();
+  const recipient = String(state.customer.email || "").trim();
+  const emailContent = buildQuoteEmailContent();
+  await openMailDraftWithPdf({
+    to: recipient,
+    subject: emailContent.subject,
+    text: emailContent.text,
+    bodyMarkup: buildQuotePrintMarkup(),
+    fileTitle: `Quote ${state.customer.quoteNumber}`,
+    feedbackElement: els.copyFeedback
+  });
+}
+
+async function openCurrentCleaningQuoteDraft() {
+  ensureQuoteNumber();
+  hydrateInputs();
+  const recipient = String(state.customer.email || "").trim();
+  const emailContent = buildCleaningQuoteEmailContent();
+  await openMailDraftWithPdf({
+    to: recipient,
+    subject: emailContent.subject,
+    text: emailContent.text,
+    bodyMarkup: buildCleaningQuotePrintMarkup(),
+    fileTitle: `Cleaning Quote ${state.customer.quoteNumber}`,
+    feedbackElement: els.cleaningFeedback
+  });
+}
+
 async function sendSelectedInvoice() {
   const invoice = getSelectedInvoice();
   if (!invoice) {
@@ -3496,6 +3556,27 @@ async function sendSelectedInvoice() {
     els.invoiceFeedback.textContent = message;
     els.savedInvoiceFeedback.textContent = message;
   }
+}
+
+async function openSelectedInvoiceDraft() {
+  const invoice = getSelectedInvoice();
+  if (!invoice) {
+    els.invoiceFeedback.textContent = "Select an invoice first.";
+    els.savedInvoiceFeedback.textContent = "Select an invoice first.";
+    return;
+  }
+
+  const recipient = String(invoice.customerEmail || "").trim();
+  const emailContent = buildInvoiceEmailContent(invoice);
+  await openMailDraftWithPdf({
+    to: recipient,
+    subject: emailContent.subject,
+    text: emailContent.text,
+    bodyMarkup: buildInvoicePrintMarkup(invoice),
+    fileTitle: `Invoice ${invoice.invoiceNumber}`,
+    feedbackElement: els.invoiceFeedback
+  });
+  els.savedInvoiceFeedback.textContent = els.invoiceFeedback.textContent;
 }
 
 function renderAll() {
@@ -3602,6 +3683,10 @@ function bindEvents() {
 
   els.sendCleaningQuote.addEventListener("click", async () => {
     await sendCurrentCleaningQuote();
+  });
+
+  els.draftCleaningQuote.addEventListener("click", async () => {
+    await openCurrentCleaningQuoteDraft();
   });
 
   els.cleaningExtrasBody.addEventListener("change", (event) => {
@@ -3938,6 +4023,10 @@ function bindEvents() {
     await sendSelectedInvoice();
   });
 
+  els.draftInvoice.addEventListener("click", async () => {
+    await openSelectedInvoiceDraft();
+  });
+
   els.markInvoiceDraft.addEventListener("click", () => {
     setInvoiceStatus("draft");
   });
@@ -4012,6 +4101,10 @@ function bindEvents() {
 
   els.savedShareInvoice.addEventListener("click", async () => {
     await sendSelectedInvoice();
+  });
+
+  els.savedDraftInvoice.addEventListener("click", async () => {
+    await openSelectedInvoiceDraft();
   });
 
   els.invoiceListBody.addEventListener("click", (event) => {
@@ -4149,6 +4242,10 @@ function bindEvents() {
 
   els.sendQuote.addEventListener("click", async () => {
     await sendCurrentBlindCurtainQuote();
+  });
+
+  els.draftQuote.addEventListener("click", async () => {
+    await openCurrentBlindCurtainQuoteDraft();
   });
 
   els.copyEmail.addEventListener("click", () => {
