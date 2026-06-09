@@ -617,11 +617,7 @@ function getActivePageFromHash(hash = window.location.hash) {
 
 function syncQuoteSubnav() {
   const currentHash = window.location.hash || "#quote-builder";
-  const subnavView = currentHash === "#air-mode"
-    ? "air"
-    : currentHash === "#quote-preview"
-      ? "preview"
-      : "builder";
+  const subnavView = currentHash === "#air-mode" ? "air" : "builder";
 
   els.quoteSubnavLinks.forEach((item) => {
     item.classList.toggle("active", item.dataset.quoteSubnav === subnavView);
