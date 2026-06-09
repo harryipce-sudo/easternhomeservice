@@ -101,32 +101,6 @@ select {
   gap: 10px;
 }
 
-.sidebar-note {
-  display: grid;
-  gap: 8px;
-  margin-top: 22px;
-  padding: 18px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(18, 26, 35, 0.92), rgba(11, 17, 23, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.sidebar-note-label {
-  font-size: 0.76rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(158, 177, 195, 0.72);
-}
-
-.sidebar-note strong {
-  font-size: 1rem;
-}
-
-.sidebar-note span {
-  color: var(--muted);
-  line-height: 1.6;
-}
-
 .nav-item {
   display: block;
   padding: 12px 14px;
@@ -242,76 +216,6 @@ h1 {
 .subnav-link:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.1);
-}
-
-.workflow-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin: 0 0 24px;
-}
-
-.workflow-card {
-  display: grid;
-  gap: 8px;
-  padding: 18px 20px;
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(20, 29, 38, 0.98), rgba(13, 20, 27, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.workflow-card strong {
-  font-size: clamp(1.15rem, 1.8vw, 1.7rem);
-  line-height: 1.1;
-}
-
-.workflow-card p {
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.workflow-card-highlight {
-  background:
-    radial-gradient(circle at top right, rgba(49, 185, 113, 0.18), transparent 34%),
-    linear-gradient(180deg, rgba(22, 41, 33, 0.98), rgba(11, 24, 19, 0.98));
-  border-color: rgba(49, 185, 113, 0.2);
-}
-
-.workflow-label {
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(158, 177, 195, 0.74);
-}
-
-.section-jump-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0 0 24px;
-}
-
-.section-jump-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  color: var(--muted);
-  text-decoration: none;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  font-weight: 700;
-  transition: 0.2s ease;
-}
-
-.section-jump-link:hover {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.09);
 }
 
 .table-actions {
@@ -458,8 +362,9 @@ input[readonly] {
 }
 
 .content-grid {
-  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.88fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   align-items: start;
+  gap: 20px;
 }
 
 .workspace {
@@ -571,12 +476,6 @@ input[readonly] {
   margin-bottom: 16px;
 }
 
-.summary-caption {
-  color: var(--muted);
-  line-height: 1.6;
-  margin-top: 8px;
-}
-
 .summary-metrics {
   display: grid;
   gap: 12px;
@@ -598,12 +497,14 @@ input[readonly] {
 .summary-matrix-head,
 .summary-matrix-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1.6fr) minmax(140px, 0.8fr) minmax(140px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(104px, 118px) minmax(104px, 118px);
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
   background: var(--panel-strong);
   border-radius: 16px;
+  width: 100%;
+  min-width: 0;
 }
 
 .summary-matrix-head {
@@ -619,11 +520,17 @@ input[readonly] {
 .summary-matrix-row strong {
   justify-self: end;
   text-align: right;
+  min-width: 0;
 }
 
 .summary-matrix-row strong {
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
+}
+
+.summary-matrix-row span:first-child,
+.summary-matrix-head span:first-child {
+  min-width: 0;
 }
 
 .summary-table-block {
@@ -1021,10 +928,6 @@ input[readonly] {
   margin-bottom: 18px;
 }
 
-.workflow-strip-ops {
-  margin-top: -4px;
-}
-
 .records-search-field {
   display: grid;
   gap: 8px;
@@ -1313,10 +1216,6 @@ textarea {
 }
 
 @media (max-width: 1280px) {
-  .workflow-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .customer-grid,
   .settings-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1381,10 +1280,6 @@ textarea {
     flex-wrap: wrap;
   }
 
-  .workflow-strip {
-    grid-template-columns: 1fr;
-  }
-
   .table-actions {
     width: 100%;
   }
@@ -1406,6 +1301,12 @@ textarea {
 
   .settings-action-grid {
     grid-template-columns: 1fr;
+  }
+
+  .summary-matrix-head,
+  .summary-matrix-row {
+    grid-template-columns: minmax(0, 1fr) 96px 96px;
+    gap: 10px;
   }
 
   .panel,

@@ -223,13 +223,6 @@ function cacheElements() {
     customerAddress: document.querySelector("#customer-address"),
     customerEmail: document.querySelector("#customer-email"),
     quoteNumber: document.querySelector("#quote-number"),
-    builderStatusQuote: document.querySelector("#builder-status-quote"),
-    builderStatusCustomer: document.querySelector("#builder-status-customer"),
-    builderStatusCustomerSub: document.querySelector("#builder-status-customer-sub"),
-    builderStatusItems: document.querySelector("#builder-status-items"),
-    builderStatusItemsSub: document.querySelector("#builder-status-items-sub"),
-    builderStatusReadiness: document.querySelector("#builder-status-readiness"),
-    builderStatusReadinessSub: document.querySelector("#builder-status-readiness-sub"),
     airCustomerName: document.querySelector("#air-customer-name"),
     airCustomerPhone: document.querySelector("#air-customer-phone"),
     airCustomerAddress: document.querySelector("#air-customer-address"),
@@ -304,13 +297,6 @@ function cacheElements() {
     cleaningCustomerAddress: document.querySelector("#cleaning-customer-address"),
     cleaningCustomerEmail: document.querySelector("#cleaning-customer-email"),
     cleaningQuoteNumber: document.querySelector("#cleaning-quote-number"),
-    cleaningStatusQuote: document.querySelector("#cleaning-status-quote"),
-    cleaningStatusService: document.querySelector("#cleaning-status-service"),
-    cleaningStatusServiceSub: document.querySelector("#cleaning-status-service-sub"),
-    cleaningStatusExtras: document.querySelector("#cleaning-status-extras"),
-    cleaningStatusExtrasSub: document.querySelector("#cleaning-status-extras-sub"),
-    cleaningStatusTotal: document.querySelector("#cleaning-status-total"),
-    cleaningStatusProfit: document.querySelector("#cleaning-status-profit"),
     cleaningBaseService: document.querySelector("#cleaning-base-service"),
     cleaningStandaloneFields: document.querySelector("#cleaning-standalone-fields"),
     cleaningStandaloneRooms: document.querySelector("#cleaning-standalone-rooms"),
@@ -337,14 +323,6 @@ function cacheElements() {
     recordsTableBody: document.querySelector("#records-table-body"),
     recordDetail: document.querySelector("#record-detail"),
     recordEmpty: document.querySelector("#record-empty"),
-    opsStatusQuotes: document.querySelector("#ops-status-quotes"),
-    opsStatusQuotesSub: document.querySelector("#ops-status-quotes-sub"),
-    opsStatusInvoices: document.querySelector("#ops-status-invoices"),
-    opsStatusInvoicesSub: document.querySelector("#ops-status-invoices-sub"),
-    opsStatusDue: document.querySelector("#ops-status-due"),
-    opsStatusDueSub: document.querySelector("#ops-status-due-sub"),
-    opsStatusRecycle: document.querySelector("#ops-status-recycle"),
-    opsStatusRecycleSub: document.querySelector("#ops-status-recycle-sub"),
     invoiceSearch: document.querySelector("#invoice-search"),
     newInvoice: document.querySelector("#new-invoice"),
     saveInvoice: document.querySelector("#save-invoice"),
@@ -1646,7 +1624,6 @@ function renderCleaningQuote() {
   els.cleaningTotal.textContent = formatCurrency(totals.total);
   els.cleaningProfit.textContent = formatCurrency(totals.profit);
   els.cleaningProfitPercent.textContent = `${formatPercent(totals.profitPercent)} profit margin`;
-  updateCleaningWorkflowStatus(totals);
 }
 
 function addCleaningExtraLine() {
@@ -2933,7 +2910,6 @@ function renderInvoices() {
   });
 
   renderInvoiceEditor(getSelectedInvoice());
-  updateOperationsWorkflowStatus();
 }
 
 function renderRecycleBin() {
@@ -2942,7 +2918,6 @@ function renderRecycleBin() {
 
   if (!state.recycleBin.length) {
     els.recycleListEmpty.style.display = "grid";
-    updateOperationsWorkflowStatus();
     return;
   }
 
@@ -2964,7 +2939,6 @@ function renderRecycleBin() {
     els.recycleListBody.appendChild(row);
   });
 
-  updateOperationsWorkflowStatus();
 }
 
 function getFilteredRecords() {
@@ -3206,7 +3180,6 @@ function renderRecords() {
   if (!filteredRecords.length) {
     els.recordEmpty.style.display = "grid";
     renderRecordDetail(null);
-    updateOperationsWorkflowStatus();
     return;
   }
 
@@ -3241,7 +3214,6 @@ function renderRecords() {
 
   const selectedRecord = filteredRecords.find((record) => record.id === state.selectedRecordId) || filteredRecords[0];
   renderRecordDetail(selectedRecord);
-  updateOperationsWorkflowStatus();
 }
 
 function setBlindValue(id, field, value) {
@@ -3401,7 +3373,6 @@ function updateSummary() {
     gstTotal: blindTotals.gstTotal + curtainTotals.gstTotal,
     grandTotal
   });
-  updateBuilderWorkflowStatus({ grandTotal });
 }
 
 function syncPreview(totals) {
@@ -3473,77 +3444,6 @@ function buildOrderSummaryText(totals) {
     quoteNumber,
     totalText: formatCurrency(totals.grandTotal)
   };
-}
-
-function updateBuilderWorkflowStatus(totals) {
-  const blindCount = state.lines.length;
-  const curtainCount = state.curtainLines.filter((line) => line.product === "curtain").length;
-  const sheerCount = state.curtainLines.filter((line) => line.product === "sheer").length;
-  const totalItems = blindCount + curtainCount + sheerCount;
-  const customerFields = [
-    state.customer.name,
-    state.customer.phone,
-    state.customer.address,
-    state.customer.email
-  ];
-  const completedCustomerFields = customerFields.filter((value) => String(value || "").trim()).length;
-  const hasSendDetails = completedCustomerFields >= 3;
-
-  els.builderStatusQuote.textContent = state.customer.quoteNumber || "INV-0000";
-  els.builderStatusCustomer.textContent = hasSendDetails
-    ? "Ready for customer follow-up"
-    : `${completedCustomerFields}/4 details added`;
-  els.builderStatusCustomerSub.textContent = hasSendDetails
-    ? `${state.customer.name || "Customer"} • ${state.customer.phone || "phone pending"}`
-    : "Add name, phone, address, and email for a cleaner handoff.";
-  els.builderStatusItems.textContent = `${totalItems} item${totalItems === 1 ? "" : "s"}`;
-  els.builderStatusItemsSub.textContent = totalItems
-    ? `${blindCount} blind${blindCount === 1 ? "" : "s"}, ${curtainCount} curtain${curtainCount === 1 ? "" : "s"}, ${sheerCount} sheer${sheerCount === 1 ? "" : "s"}`
-    : "No blinds, curtains, or sheers added yet.";
-  els.builderStatusReadiness.textContent = formatCurrency(totals.grandTotal);
-  els.builderStatusReadinessSub.textContent = totalItems
-    ? (hasSendDetails ? "Ready to save, print, or send this quote." : "Quote total is live. Add customer details before sending.")
-    : "Build the quote and the live summary updates here.";
-}
-
-function updateCleaningWorkflowStatus(totals) {
-  const baseService = getCleaningBaseServiceOption(state.cleaning.baseService);
-  const extrasCount = state.cleaning.extras.reduce((sum, line) => sum + Math.max(1, Number(line.quantity) || 1), 0);
-
-  els.cleaningStatusQuote.textContent = state.customer.quoteNumber || "INV-0000";
-  els.cleaningStatusService.textContent = baseService.label;
-  els.cleaningStatusServiceSub.textContent = state.cleaning.baseService === "standalone-carpet"
-    ? `${Math.max(1, Number(state.cleaning.standaloneRooms) || 1)} room${Math.max(1, Number(state.cleaning.standaloneRooms) || 1) === 1 ? "" : "s"} at subcontractor pricing`
-    : "Apartment package pricing with 40% markup applied.";
-  els.cleaningStatusExtras.textContent = `${extrasCount} extra${extrasCount === 1 ? "" : "s"}`;
-  els.cleaningStatusExtrasSub.textContent = state.cleaning.extras.length
-    ? `${state.cleaning.extras.length} added service line${state.cleaning.extras.length === 1 ? "" : "s"} with 20% markup`
-    : "No extra cleaning services added yet.";
-  els.cleaningStatusTotal.textContent = formatCurrency(totals.total);
-  els.cleaningStatusProfit.textContent = `Profit ${formatCurrency(totals.profit)} • ${formatPercent(totals.profitPercent)} margin`;
-}
-
-function updateOperationsWorkflowStatus() {
-  const amountDue = state.invoices.reduce((sum, invoice) => sum + calculateInvoiceTotals(invoice).amountDue, 0);
-  const activeInvoices = state.invoices.filter((invoice) => invoice.status !== "paid").length;
-  const latestQuote = state.records[0];
-
-  els.opsStatusQuotes.textContent = String(state.records.length);
-  els.opsStatusQuotesSub.textContent = latestQuote
-    ? `Latest ${latestQuote.quoteNumber || "-"} saved ${formatRecordDate(latestQuote.submittedAt)}`
-    : "No saved quotes yet.";
-  els.opsStatusInvoices.textContent = String(state.invoices.length);
-  els.opsStatusInvoicesSub.textContent = activeInvoices
-    ? `${activeInvoices} invoice${activeInvoices === 1 ? "" : "s"} still open or unpaid`
-    : "No open invoices at the moment.";
-  els.opsStatusDue.textContent = formatCurrency(amountDue);
-  els.opsStatusDueSub.textContent = amountDue > 0
-    ? "Across all draft, sent, and partially paid invoices."
-    : "Nothing currently outstanding.";
-  els.opsStatusRecycle.textContent = `${state.recycleBin.length} item${state.recycleBin.length === 1 ? "" : "s"}`;
-  els.opsStatusRecycleSub.textContent = state.recycleBin.length
-    ? "Recover deleted records here before the 15-day window expires."
-    : "Deleted quotes and invoices remain recoverable for 15 days.";
 }
 
 function syncMessageDrafts(totals) {

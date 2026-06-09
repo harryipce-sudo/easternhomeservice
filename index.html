@@ -28,11 +28,6 @@
         <a class="nav-item" href="#quote-history" data-page-link="ops">Quote / Invoice</a>
       </nav>
 
-      <div class="sidebar-note">
-        <p class="sidebar-note-label">Workflow</p>
-        <strong>Measure, quote, save, invoice.</strong>
-        <span>Built for fast site visits and clean follow-up.</span>
-      </div>
     </aside>
 
     <main class="main-content">
@@ -55,38 +50,6 @@
         <a class="subnav-link active" href="#quote-builder" data-quote-subnav="builder">Quote Builder</a>
         <a class="subnav-link" href="#air-mode" data-quote-subnav="air">Air Mode</a>
         <a class="subnav-link" href="#quote-preview" data-quote-subnav="preview">Quote Preview</a>
-      </nav>
-
-      <section class="workflow-strip">
-        <article class="workflow-card">
-          <span class="workflow-label">Quote Number</span>
-          <strong id="builder-status-quote">INV-0000</strong>
-          <p>Auto-generated and shared across quote and invoice.</p>
-        </article>
-        <article class="workflow-card">
-          <span class="workflow-label">Client Status</span>
-          <strong id="builder-status-customer">Waiting for details</strong>
-          <p id="builder-status-customer-sub">Add name, phone, address, and email once ready.</p>
-        </article>
-        <article class="workflow-card">
-          <span class="workflow-label">Item Mix</span>
-          <strong id="builder-status-items">0 items</strong>
-          <p id="builder-status-items-sub">No blinds, curtains, or sheers added yet.</p>
-        </article>
-        <article class="workflow-card workflow-card-highlight">
-          <span class="workflow-label">Ready To Send</span>
-          <strong id="builder-status-readiness">$0.00</strong>
-          <p id="builder-status-readiness-sub">Build the quote and the live summary updates here.</p>
-        </article>
-      </section>
-
-      <nav class="section-jump-bar">
-        <a class="section-jump-link" href="#builder-customer-panel">Customer</a>
-        <a class="section-jump-link" href="#builder-items-panel">Items</a>
-        <a class="section-jump-link" href="#builder-summary-panel">Summary</a>
-        <a class="section-jump-link" href="#builder-settings-panel">Settings</a>
-        <a class="section-jump-link" href="#builder-photos-panel">Photos</a>
-        <a class="section-jump-link" href="#builder-message-panel">Message</a>
       </nav>
 
       <section class="panel customer-panel" id="builder-customer-panel">
@@ -306,7 +269,6 @@
             <div class="summary-top">
               <p class="section-kicker">Live Quote</p>
               <h2>Quote Summary</h2>
-              <p class="summary-caption">Keep this panel open while quoting to watch totals, profit, and the printable layout update live.</p>
             </div>
 
             <div class="summary-metrics summary-matrix">
@@ -576,29 +538,6 @@
           </div>
         </header>
 
-        <section class="workflow-strip">
-          <article class="workflow-card">
-            <span class="workflow-label">Quote Number</span>
-            <strong id="cleaning-status-quote">INV-0000</strong>
-            <p>Uses the same numbering flow as the rest of the app.</p>
-          </article>
-          <article class="workflow-card">
-            <span class="workflow-label">Base Service</span>
-            <strong id="cleaning-status-service">Not selected</strong>
-            <p id="cleaning-status-service-sub">Choose a package or standalone carpet clean.</p>
-          </article>
-          <article class="workflow-card">
-            <span class="workflow-label">Extra Services</span>
-            <strong id="cleaning-status-extras">0 extras</strong>
-            <p id="cleaning-status-extras-sub">No extra cleaning services added yet.</p>
-          </article>
-          <article class="workflow-card workflow-card-highlight">
-            <span class="workflow-label">Retail Total</span>
-            <strong id="cleaning-status-total">$0.00</strong>
-            <p id="cleaning-status-profit">Profit $0.00 • 0.0% margin</p>
-          </article>
-        </section>
-
         <section class="panel customer-panel">
           <div class="panel-heading">
             <div>
@@ -745,29 +684,6 @@
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
           <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
-
-        <section class="workflow-strip workflow-strip-ops">
-          <article class="workflow-card">
-            <span class="workflow-label">Saved Quotes</span>
-            <strong id="ops-status-quotes">0</strong>
-            <p id="ops-status-quotes-sub">No saved quotes yet.</p>
-          </article>
-          <article class="workflow-card">
-            <span class="workflow-label">Open Invoices</span>
-            <strong id="ops-status-invoices">0</strong>
-            <p id="ops-status-invoices-sub">Draft and sent invoices appear here.</p>
-          </article>
-          <article class="workflow-card">
-            <span class="workflow-label">Amount Due</span>
-            <strong id="ops-status-due">$0.00</strong>
-            <p id="ops-status-due-sub">Across all unpaid invoices.</p>
-          </article>
-          <article class="workflow-card workflow-card-highlight">
-            <span class="workflow-label">Recycle Safety Net</span>
-            <strong id="ops-status-recycle">0 items</strong>
-            <p id="ops-status-recycle-sub">Deleted quotes and invoices remain recoverable for 15 days.</p>
-          </article>
-        </section>
 
         <section class="panel records-panel" id="dimension-records">
           <div class="panel-heading">
@@ -1079,13 +995,6 @@
           <a class="subnav-link active" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
 
-        <nav class="subnav">
-          <button class="subnav-link active" type="button">Data</button>
-          <button class="subnav-link" type="button">Branding Idea</button>
-          <button class="subnav-link" type="button">Pricing Idea</button>
-          <button class="subnav-link" type="button">Business Idea</button>
-        </nav>
-
         <section class="panel settings-data-panel">
           <div class="panel-heading">
             <div>
@@ -1118,32 +1027,6 @@
           <p class="copy-feedback" id="settings-feedback"></p>
         </section>
 
-        <section class="panel settings-ideas-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="section-kicker">Recommended Next Tabs</p>
-              <h2>Ideas For Later</h2>
-              <p>These would be useful settings areas when you want to expand the app.</p>
-            </div>
-          </div>
-
-          <div class="settings-action-grid">
-            <article class="settings-action-card">
-              <h3>Branding</h3>
-              <p>Business name, logo, bank details, footer note, and PDF message defaults.</p>
-            </article>
-
-            <article class="settings-action-card">
-              <h3>Pricing</h3>
-              <p>Default blind markup, curtain markup, install cost, install retail, and cleaning markups.</p>
-            </article>
-
-            <article class="settings-action-card">
-              <h3>Business Details</h3>
-              <p>ABN, payment terms, lead times, contact info, and service categories for future tabs.</p>
-            </article>
-          </div>
-        </section>
       </section>
     </main>
   </div>
