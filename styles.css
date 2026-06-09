@@ -179,6 +179,15 @@ h1 {
 .header-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.header-actions > * {
+  position: relative;
+  z-index: 1;
 }
 
 .subnav {
@@ -1261,8 +1270,8 @@ textarea {
   }
 
   .header-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
   }
 
   .table-actions {

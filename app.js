@@ -2475,6 +2475,22 @@ function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+function formatSendLog(item) {
+  if (!item?.lastSentAt) {
+    return "Not sent";
+  }
+
+  const recipient = String(item.lastSentTo || "").trim() || "Unknown recipient";
+  const count = Math.max(1, Number(item.sendCount) || 1);
+  return `${formatRecordDate(item.lastSentAt)} to ${recipient}${count > 1 ? ` (${count}x)` : ""}`;
+}
+
+function confirmDirectSend(documentLabel, recipient, amountText = "") {
+  const recipientLabel = String(recipient || "").trim() || "no email";
+  const amountLine = amountText ? `\nAmount: ${amountText}` : "";
+  return confirmAction(`Send ${documentLabel} now?\nRecipient: ${recipientLabel}${amountLine}`);
+}
+
 function buildQuoteEmailContent() {
   const summary = buildOrderSummaryText({
     grandTotal: parseCurrency(els.grandTotal.textContent)
@@ -2595,6 +2611,31 @@ async function openMailDraftWithPdf({ to, subject, text, bodyMarkup, fileTitle, 
   } catch (error) {
     console.warn("Unable to open email draft with PDF.", error);
     feedbackElement.textContent = error instanceof Error ? error.message : "Unable to open the email draft right now.";
+  }
+}
+
+async function fallbackToMailDraft({
+  to,
+  subject,
+  text,
+  bodyMarkup,
+  fileTitle,
+  feedbackElement,
+  failureMessage
+}) {
+  try {
+    await openMailDraftWithPdf({
+      to,
+      subject,
+      text,
+      bodyMarkup,
+      fileTitle,
+      feedbackElement
+    });
+    feedbackElement.textContent = `${failureMessage} Opened your email draft instead.`;
+  } catch (fallbackError) {
+    console.warn("Unable to open fallback mail draft.", fallbackError);
+    feedbackElement.textContent = failureMessage;
   }
 }
 
@@ -2806,6 +2847,7 @@ function renderInvoices() {
       <td data-label="Customer">${escapeHtml(invoice.customerName || "-")}</td>
       <td data-label="Status"><span class="invoice-status-pill status-${invoice.status}">${formatInvoiceStatus(invoice.status)}</span></td>
       <td data-label="Due Date">${formatRecordDate(invoice.dueDate)}</td>
+      <td data-label="Send Log">${escapeHtml(formatSendLog(invoice))}</td>
       <td data-label="Total">${formatCurrency(totals.total)}</td>
       <td data-label="Amount Due">${formatCurrency(totals.amountDue)}</td>
       <td data-label="Action" class="table-actions-cell">
@@ -3109,6 +3151,7 @@ function renderRecords() {
       </td>
       <td data-label="Address">${escapeHtml(record.address)}</td>
       <td data-label="Saved">${formatRecordDate(record.submittedAt)}</td>
+      <td data-label="Send Log">${escapeHtml(formatSendLog(record))}</td>
       <td data-label="Total">${escapeHtml(record.totalQuote)}</td>
       <td data-label="Action">
         <button class="danger-button table-action-button" data-delete-record="${record.id}" type="button">Delete</button>
@@ -3423,6 +3466,11 @@ async function sendCurrentBlindCurtainQuote() {
     return;
   }
 
+  if (!confirmDirectSend(`quote ${state.customer.quoteNumber || ""}`.trim(), recipient, els.grandTotal.textContent)) {
+    els.copyFeedback.textContent = "Quote send cancelled.";
+    return;
+  }
+
   ensureQuoteNumber();
   hydrateInputs();
   const existingRecord = findRecordByQuoteNumber("blinds-curtains", state.customer.quoteNumber);
@@ -3447,7 +3495,16 @@ async function sendCurrentBlindCurtainQuote() {
     els.copyFeedback.textContent = `Quote sent to ${recipient}.`;
   } catch (error) {
     console.warn("Unable to send quote email.", error);
-    els.copyFeedback.textContent = error instanceof Error ? error.message : "Unable to send the quote right now.";
+    const failureMessage = error instanceof Error ? error.message : "Unable to send the quote right now.";
+    await fallbackToMailDraft({
+      to: recipient,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      bodyMarkup: buildQuotePrintMarkup(),
+      fileTitle: `Quote ${state.customer.quoteNumber}`,
+      feedbackElement: els.copyFeedback,
+      failureMessage
+    });
   }
 }
 
@@ -3455,6 +3512,11 @@ async function sendCurrentCleaningQuote() {
   const recipient = String(state.customer.email || "").trim();
   if (!isValidEmail(recipient)) {
     els.cleaningFeedback.textContent = "Enter a valid customer email before sending the quote.";
+    return;
+  }
+
+  if (!confirmDirectSend(`cleaning quote ${state.customer.quoteNumber || ""}`.trim(), recipient, formatCurrency(calculateCleaningTotals().total))) {
+    els.cleaningFeedback.textContent = "Quote send cancelled.";
     return;
   }
 
@@ -3482,7 +3544,16 @@ async function sendCurrentCleaningQuote() {
     els.cleaningFeedback.textContent = `Quote sent to ${recipient}.`;
   } catch (error) {
     console.warn("Unable to send cleaning quote email.", error);
-    els.cleaningFeedback.textContent = error instanceof Error ? error.message : "Unable to send the cleaning quote right now.";
+    const failureMessage = error instanceof Error ? error.message : "Unable to send the cleaning quote right now.";
+    await fallbackToMailDraft({
+      to: recipient,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      bodyMarkup: buildCleaningQuotePrintMarkup(),
+      fileTitle: `Cleaning Quote ${state.customer.quoteNumber}`,
+      feedbackElement: els.cleaningFeedback,
+      failureMessage
+    });
   }
 }
 
@@ -3536,6 +3607,12 @@ async function sendSelectedInvoice() {
     return;
   }
 
+  if (!confirmDirectSend(`invoice ${invoice.invoiceNumber}`, recipient, formatCurrency(calculateInvoiceTotals(invoice).amountDue))) {
+    els.invoiceFeedback.textContent = "Invoice send cancelled.";
+    els.savedInvoiceFeedback.textContent = "Invoice send cancelled.";
+    return;
+  }
+
   const emailContent = buildInvoiceEmailContent(invoice);
 
   try {
@@ -3553,8 +3630,16 @@ async function sendSelectedInvoice() {
   } catch (error) {
     console.warn("Unable to send invoice email.", error);
     const message = error instanceof Error ? error.message : "Unable to send the invoice right now.";
-    els.invoiceFeedback.textContent = message;
-    els.savedInvoiceFeedback.textContent = message;
+    await fallbackToMailDraft({
+      to: recipient,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      bodyMarkup: buildInvoicePrintMarkup(invoice),
+      fileTitle: `Invoice ${invoice.invoiceNumber}`,
+      feedbackElement: els.invoiceFeedback,
+      failureMessage: message
+    });
+    els.savedInvoiceFeedback.textContent = els.invoiceFeedback.textContent;
   }
 }
 
