@@ -202,10 +202,8 @@ function cacheElements() {
     saveAllCurtains: document.querySelector("#save-all-curtains"),
     clearBlinds: document.querySelector("#clear-blinds"),
     clearCurtains: document.querySelector("#clear-curtains"),
-    resetQuote: document.querySelector("#reset-quote"),
     submitQuote: document.querySelector("#submit-quote"),
     printQuote: document.querySelector("#print-quote"),
-    shareQuote: document.querySelector("#share-quote"),
     supplyMarkup: document.querySelector("#supply-markup"),
     curtainMarkup: document.querySelector("#curtain-markup"),
     installCost: document.querySelector("#install-cost"),
@@ -292,7 +290,6 @@ function cacheElements() {
     cleaningExtrasBody: document.querySelector("#cleaning-extras-body"),
     cleaningExtrasEmpty: document.querySelector("#cleaning-extras-empty"),
     addCleaningExtra: document.querySelector("#add-cleaning-extra"),
-    clearCleaningQuote: document.querySelector("#clear-cleaning-quote"),
     saveCleaningQuote: document.querySelector("#save-cleaning-quote"),
     cleaningFeedback: document.querySelector("#cleaning-feedback"),
     cleaningBaseCost: document.querySelector("#cleaning-base-cost"),
@@ -320,7 +317,6 @@ function cacheElements() {
     markInvoiceDraft: document.querySelector("#mark-invoice-draft"),
     markInvoiceSent: document.querySelector("#mark-invoice-sent"),
     markInvoicePaid: document.querySelector("#mark-invoice-paid"),
-    savedSaveInvoice: document.querySelector("#saved-save-invoice"),
     savedPreviewInvoice: document.querySelector("#saved-preview-invoice"),
     savedPrintInvoice: document.querySelector("#saved-print-invoice"),
     savedShareInvoice: document.querySelector("#saved-share-invoice"),
@@ -380,7 +376,6 @@ function hasRequiredElements() {
     els.invoiceLinesBody &&
     els.clearBlinds &&
     els.clearCurtains &&
-    els.resetQuote &&
     els.submitQuote &&
     els.printQuote
   );
@@ -1011,7 +1006,7 @@ function renderPhotos() {
         <img src="${photo.dataUrl}" alt="${photo.name}">
         <div class="photo-card-footer">
           <span title="${photo.name}">${photo.name}</span>
-          <button class="danger-button" data-delete-photo="${photo.id}" type="button">Remove</button>
+          <button class="danger-button" data-delete-photo="${photo.id}" type="button">Delete</button>
         </div>
       `;
       els.photoGrid.appendChild(card);
@@ -1539,7 +1534,7 @@ function renderAirMode() {
         <img src="${photo.dataUrl}" alt="${escapeHtml(photo.name)}">
         <div class="air-photo-card-footer">
           <span title="${escapeHtml(photo.name)}">${escapeHtml(photo.name)}</span>
-          <button class="danger-button table-action-button" data-air-delete-photo="${photo.id}" type="button">Remove</button>
+          <button class="danger-button table-action-button" data-air-delete-photo="${photo.id}" type="button">Delete</button>
         </div>
       `;
       els.airPhotoGrid.appendChild(card);
@@ -2210,18 +2205,70 @@ function openPrintDocument(title, bodyMarkup) {
   return true;
 }
 
-async function shareDocument(title, text) {
-  if (navigator.share) {
-    try {
-      await navigator.share({ title, text });
-      return true;
-    } catch (error) {
-      console.warn("Native share failed, falling back to copy.", error);
-    }
+function getPdfFilename(title) {
+  return `${String(title || "document").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "document"}.pdf`;
+}
+
+function downloadBlob(blob, filename) {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+}
+
+async function buildPdfBlob(title, bodyMarkup) {
+  if (typeof html2pdf === "undefined") {
+    throw new Error("PDF library is unavailable.");
   }
 
-  await copyText(text, title);
-  return false;
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-10000px";
+  container.style.top = "0";
+  container.style.width = "900px";
+  container.style.background = "#ffffff";
+  container.innerHTML = `
+    <div style="font-family: Arial, sans-serif; color: #111; background: #fff; padding: 24px;">
+      ${bodyMarkup}
+    </div>
+  `;
+  document.body.append(container);
+
+  try {
+    const worker = html2pdf().set({
+      margin: 10,
+      filename: getPdfFilename(title),
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+    }).from(container.firstElementChild).toPdf();
+
+    const pdf = await worker.get("pdf");
+    return pdf.output("blob");
+  } finally {
+    container.remove();
+  }
+}
+
+async function sharePdfDocument(title, bodyMarkup) {
+  const blob = await buildPdfBlob(title, bodyMarkup);
+  const filename = getPdfFilename(title);
+  const file = new File([blob], filename, { type: "application/pdf" });
+
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({
+      title,
+      files: [file]
+    });
+    return { mode: "share" };
+  }
+
+  downloadBlob(blob, filename);
+  return { mode: "download" };
 }
 
 function setInvoiceValue(field, value) {
@@ -3134,16 +3181,6 @@ function bindEvents() {
     renderCleaningQuote();
   });
 
-  els.clearCleaningQuote.addEventListener("click", () => {
-    state.cleaning = {
-      baseService: "apt-1b1b-indoor",
-      standaloneRooms: 1,
-      extras: []
-    };
-    els.cleaningFeedback.textContent = "";
-    renderCleaningQuote();
-  });
-
   els.saveCleaningQuote.addEventListener("click", async () => {
     await submitCleaningQuoteRecord();
   });
@@ -3485,12 +3522,18 @@ function bindEvents() {
       return;
     }
 
-    const totals = calculateInvoiceTotals(invoice);
-    const shared = await shareDocument(
-      `Invoice ${invoice.invoiceNumber}`,
-      `Invoice ${invoice.invoiceNumber}\nCustomer: ${invoice.customerName || "-"}\nQuote Number: ${invoice.sourceQuoteNumber || "-"}\nTotal: ${formatCurrency(totals.total)}\nAmount Due: ${formatCurrency(totals.amountDue)}`
-    );
-    els.invoiceFeedback.textContent = shared ? "Invoice shared." : "Invoice copied for sharing.";
+    try {
+      const result = await sharePdfDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+      els.invoiceFeedback.textContent = result.mode === "share"
+        ? "Invoice PDF shared."
+        : "Invoice PDF downloaded.";
+    } catch (error) {
+      console.warn("Unable to share invoice PDF.", error);
+      const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+      els.invoiceFeedback.textContent = opened
+        ? "PDF share was unavailable, so the invoice preview was opened instead."
+        : "Unable to share or preview the invoice right now.";
+    }
   });
 
   els.markInvoiceDraft.addEventListener("click", () => {
@@ -3539,16 +3582,6 @@ function bindEvents() {
     els.settingsFeedback.textContent = "Recycle bin cleared.";
   });
 
-  els.savedSaveInvoice.addEventListener("click", () => {
-    if (!getSelectedInvoice()) {
-      els.savedInvoiceFeedback.textContent = "Select an invoice first.";
-      return;
-    }
-    persistInvoices();
-    renderInvoices();
-    els.savedInvoiceFeedback.textContent = "Invoice confirmed.";
-  });
-
   els.savedPreviewInvoice.addEventListener("click", () => {
     const invoice = getSelectedInvoice();
     if (!invoice) {
@@ -3582,12 +3615,18 @@ function bindEvents() {
       return;
     }
 
-    const totals = calculateInvoiceTotals(invoice);
-    const shared = await shareDocument(
-      `Invoice ${invoice.invoiceNumber}`,
-      `Invoice ${invoice.invoiceNumber}\nCustomer: ${invoice.customerName || "-"}\nQuote Number: ${invoice.sourceQuoteNumber || "-"}\nTotal: ${formatCurrency(totals.total)}\nAmount Due: ${formatCurrency(totals.amountDue)}`
-    );
-    els.savedInvoiceFeedback.textContent = shared ? "Invoice shared." : "Invoice copied for sharing.";
+    try {
+      const result = await sharePdfDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+      els.savedInvoiceFeedback.textContent = result.mode === "share"
+        ? "Invoice PDF shared."
+        : "Invoice PDF downloaded.";
+    } catch (error) {
+      console.warn("Unable to share saved invoice PDF.", error);
+      const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
+      els.savedInvoiceFeedback.textContent = opened
+        ? "PDF share was unavailable, so the invoice preview was opened instead."
+        : "Unable to share or preview the invoice right now.";
+    }
   });
 
   els.invoiceListBody.addEventListener("click", (event) => {
@@ -3708,50 +3747,11 @@ function bindEvents() {
     });
   });
 
-  els.resetQuote.addEventListener("click", () => {
-    state.settings = {
-      supplyMarkup: 40,
-      curtainMarkup: 40,
-      installCost: 20,
-      installRetail: 35
-    };
-    state.customer = {
-      name: "",
-      phone: "",
-      address: "",
-      quoteNumber: generateDocumentNumber()
-    };
-    state.photos = [];
-    persistPhotos();
-    state.lines = [];
-    state.curtainLines = [];
-    state.cleaning = {
-      baseService: "apt-1b1b-indoor",
-      standaloneRooms: 1,
-      extras: []
-    };
-    els.copyFeedback.textContent = "";
-    els.airFeedback.textContent = "";
-    els.cleaningFeedback.textContent = "";
-    clearAirModeForm();
-    hydrateInputs();
-    renderPhotos();
-    renderAll();
-  });
-
   els.printQuote.addEventListener("click", () => {
     const opened = openPrintDocument("Quote", buildQuotePrintMarkup());
     els.copyFeedback.textContent = opened
       ? "Quote document opened. Use Print / Save PDF in the new tab."
       : "Unable to open the print window. Please allow pop-ups and try again.";
-  });
-
-  els.shareQuote.addEventListener("click", async () => {
-    const shared = await shareDocument(
-      state.customer.quoteNumber ? `Quote ${state.customer.quoteNumber}` : "Quote",
-      `Customer: ${state.customer.name || "-"}\nQuote Number: ${state.customer.quoteNumber || "-"}\nTotal: ${els.grandTotal.textContent}`
-    );
-    els.copyFeedback.textContent = shared ? "Quote shared." : "Quote copied for sharing.";
   });
 
   els.submitQuote.addEventListener("click", () => {
