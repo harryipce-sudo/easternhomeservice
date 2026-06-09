@@ -1836,6 +1836,57 @@ function getSelectedInvoice() {
   return state.invoices.find((invoice) => invoice.id === state.selectedInvoiceId) || null;
 }
 
+function collectInvoiceLinesFromEditor() {
+  const lines = Array.from(els.invoiceLinesBody.querySelectorAll("[data-invoice-line-id]"))
+    .reduce((map, input) => {
+      const lineId = input.dataset.invoiceLineId;
+      const field = input.dataset.invoiceLineField;
+      if (!lineId || !field) {
+        return map;
+      }
+      if (!map.has(lineId)) {
+        map.set(lineId, {});
+      }
+      map.get(lineId)[field] = input.value;
+      return map;
+    }, new Map());
+
+  if (!lines.size) {
+    return [createInvoiceLine()];
+  }
+
+  return Array.from(lines.values()).map((line) => createInvoiceLine(line));
+}
+
+function ensureInvoiceDraftSelection() {
+  const selectedInvoice = getSelectedInvoice();
+  if (selectedInvoice) {
+    return selectedInvoice;
+  }
+
+  const invoice = createInvoice({
+    sourceQuoteNumber: els.invoiceReference.value,
+    customerName: els.invoiceCustomerName.value,
+    customerPhone: els.invoiceCustomerPhone.value,
+    customerAddress: els.invoiceCustomerAddress.value,
+    customerEmail: els.invoiceCustomerEmail.value,
+    invoiceDate: els.invoiceDate.value || getTodayIsoDate(),
+    dueDate: els.invoiceDueDate.value || addDaysToIsoDate(getTodayIsoDate(), 7),
+    paymentTerms: els.invoicePaymentTerms.value || "7 Days",
+    amountPaid: Number(els.invoiceAmountPaidInput.value) || 0,
+    notes: els.invoiceNotes.value,
+    bankDetails: els.invoiceBankDetails.value,
+    lines: collectInvoiceLinesFromEditor()
+  });
+
+  state.invoices = [invoice, ...state.invoices];
+  state.selectedInvoiceId = invoice.id;
+  persistInvoices();
+  renderInvoices();
+  renderInvoiceEditor(invoice);
+  return invoice;
+}
+
 function applySendMetadata(item, recipient) {
   return {
     ...item,
@@ -3592,8 +3643,8 @@ async function openCurrentCleaningQuoteDraft() {
   });
 }
 
-async function sendSelectedInvoice() {
-  const invoice = getSelectedInvoice();
+async function sendSelectedInvoice(invoiceOverride = null) {
+  const invoice = invoiceOverride || getSelectedInvoice();
   if (!invoice) {
     els.invoiceFeedback.textContent = "Select an invoice first.";
     els.savedInvoiceFeedback.textContent = "Select an invoice first.";
@@ -3643,8 +3694,8 @@ async function sendSelectedInvoice() {
   }
 }
 
-async function openSelectedInvoiceDraft() {
-  const invoice = getSelectedInvoice();
+async function openSelectedInvoiceDraft(invoiceOverride = null) {
+  const invoice = invoiceOverride || getSelectedInvoice();
   if (!invoice) {
     els.invoiceFeedback.textContent = "Select an invoice first.";
     els.savedInvoiceFeedback.textContent = "Select an invoice first.";
@@ -4069,17 +4120,14 @@ function bindEvents() {
   });
 
   els.saveInvoice.addEventListener("click", () => {
-    if (!getSelectedInvoice()) {
-      createNewInvoice();
-      return;
-    }
+    ensureInvoiceDraftSelection();
     persistInvoices();
     renderInvoices();
     els.invoiceFeedback.textContent = "Invoice confirmed.";
   });
 
   els.previewInvoice.addEventListener("click", () => {
-    const invoice = getSelectedInvoice();
+    const invoice = ensureInvoiceDraftSelection();
     if (!invoice) {
       els.invoiceFeedback.textContent = "Select an invoice first.";
       return;
@@ -4092,7 +4140,7 @@ function bindEvents() {
   });
 
   els.printInvoice.addEventListener("click", () => {
-    const invoice = getSelectedInvoice();
+    const invoice = ensureInvoiceDraftSelection();
     if (!invoice) {
       els.invoiceFeedback.textContent = "Select an invoice first.";
       return;
@@ -4105,11 +4153,11 @@ function bindEvents() {
   });
 
   els.shareInvoice.addEventListener("click", async () => {
-    await sendSelectedInvoice();
+    await sendSelectedInvoice(ensureInvoiceDraftSelection());
   });
 
   els.draftInvoice.addEventListener("click", async () => {
-    await openSelectedInvoiceDraft();
+    await openSelectedInvoiceDraft(ensureInvoiceDraftSelection());
   });
 
   els.markInvoiceDraft.addEventListener("click", () => {
@@ -4250,21 +4298,25 @@ function bindEvents() {
     ["bankDetails", els.invoiceBankDetails]
   ].forEach(([field, element]) => {
     const syncInvoiceField = () => {
+      if (!getSelectedInvoice()) {
+        return;
+      }
       setInvoiceValue(field, element.value);
       renderInvoices();
     };
-    element.addEventListener("input", syncInvoiceField);
     element.addEventListener("change", syncInvoiceField);
   });
 
   const syncInvoiceLineFromEvent = (event) => {
+    if (!getSelectedInvoice()) {
+      return;
+    }
     const target = event.target;
     if (target.dataset.invoiceLineId && target.dataset.invoiceLineField) {
       setInvoiceLineValue(target.dataset.invoiceLineId, target.dataset.invoiceLineField, target.value);
       renderInvoices();
     }
   };
-  els.invoiceLinesBody.addEventListener("input", syncInvoiceLineFromEvent);
   els.invoiceLinesBody.addEventListener("change", syncInvoiceLineFromEvent);
 
   els.invoiceLinesBody.addEventListener("click", (event) => {
