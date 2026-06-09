@@ -9,7 +9,7 @@ function setCorsHeaders(req, res) {
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
@@ -65,6 +65,10 @@ function mapRecordToRow(record) {
     submittedAt: record.submittedAt,
     recordType: record.recordType || "blinds-curtains",
     sector: record.sector || (record.recordType === "cleaning" ? "Cleaning" : "Blinds / Curtain"),
+    email: record.email || "",
+    lastSentAt: record.lastSentAt || "",
+    lastSentTo: record.lastSentTo || "",
+    sendCount: Number(record.sendCount) || 0,
     blindItems,
     curtainItems,
     cleaningSummary: record.cleaningSummary && typeof record.cleaningSummary === "object" ? record.cleaningSummary : null
@@ -97,10 +101,14 @@ function mapRowToRecord(row) {
     customerName: row.customer_name || "-",
     phone: row.phone || "-",
     address: row.address || "-",
+    email: payload.email || "",
     quoteNumber: row.quote_number || "-",
     totalQuote: formatCurrency(Number(row.total_quote) || 0),
     subtotalExGst: formatCurrency(Number(row.subtotal_ex_gst) || 0),
     gstTotal: formatCurrency(Number(row.gst_total) || 0),
+    lastSentAt: payload.lastSentAt || "",
+    lastSentTo: payload.lastSentTo || "",
+    sendCount: Number(payload.sendCount) || 0,
     blindCount: Number(row.blind_count) || 0,
     curtainCount: Number(row.curtain_count) || 0,
     sheerCount: Number(row.sheer_count) || 0,
@@ -204,6 +212,33 @@ module.exports = async (req, res) => {
       }
 
       res.status(204).end();
+      return;
+    }
+
+    if (req.method === "PATCH") {
+      const { id } = req.query || {};
+      if (!id) {
+        res.status(400).json({ error: "Missing record id." });
+        return;
+      }
+
+      const record = await readJsonBody(req);
+      const response = await fetchSupabase(`quote_records?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(mapRecordToRow({ ...record, id })),
+        headers: {
+          Prefer: "return=representation"
+        }
+      });
+      const text = await response.text();
+
+      if (!response.ok) {
+        res.status(response.status).send(text);
+        return;
+      }
+
+      const [row] = JSON.parse(text);
+      res.status(200).json(mapRowToRecord(row));
       return;
     }
 

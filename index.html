@@ -39,6 +39,7 @@
         </div>
         <div class="header-actions">
           <button class="secondary-button" id="submit-quote" type="button">Save Quote</button>
+          <button class="ghost-button" id="send-quote" type="button">Send Quote</button>
           <button class="primary-button" id="print-quote" type="button">Print / PDF</button>
         </div>
       </header>
@@ -68,6 +69,10 @@
           <label>
             <span>Address</span>
             <input id="customer-address" type="text" placeholder="Job address">
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="customer-email" type="email" placeholder="customer@email.com">
           </label>
           <label>
             <span>Quote Number</span>
@@ -373,13 +378,17 @@
               <span>Phone</span>
               <input id="air-customer-phone" type="text" placeholder="0400 000 000">
             </label>
-            <label>
-              <span>Address</span>
-              <input id="air-customer-address" type="text" placeholder="Job address">
-            </label>
-            <label>
-              <span>Quote Number</span>
-              <input id="air-quote-number" type="text" placeholder="INV-3001" readonly>
+          <label>
+            <span>Address</span>
+            <input id="air-customer-address" type="text" placeholder="Job address">
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="air-customer-email" type="email" placeholder="customer@email.com">
+          </label>
+          <label>
+            <span>Quote Number</span>
+            <input id="air-quote-number" type="text" placeholder="INV-3001" readonly>
             </label>
           </div>
         </section>
@@ -522,6 +531,7 @@
           </div>
           <div class="header-actions">
             <button class="primary-button" id="save-cleaning-quote" type="button">Save Quote</button>
+            <button class="ghost-button" id="send-cleaning-quote" type="button">Send Quote</button>
           </div>
         </header>
 
@@ -541,13 +551,17 @@
               <span>Phone</span>
               <input id="cleaning-customer-phone" type="text" placeholder="0400 000 000">
             </label>
-            <label>
-              <span>Address</span>
-              <input id="cleaning-customer-address" type="text" placeholder="Job address">
-            </label>
-            <label>
-              <span>Quote Number</span>
-              <input id="cleaning-quote-number" type="text" placeholder="INV-3001" readonly>
+          <label>
+            <span>Address</span>
+            <input id="cleaning-customer-address" type="text" placeholder="Job address">
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="cleaning-customer-email" type="email" placeholder="customer@email.com">
+          </label>
+          <label>
+            <span>Quote Number</span>
+            <input id="cleaning-quote-number" type="text" placeholder="INV-3001" readonly>
             </label>
           </div>
         </section>
@@ -721,7 +735,7 @@
           <div class="header-actions">
             <button class="ghost-button" id="new-invoice" type="button">New Invoice</button>
             <button class="ghost-button" id="preview-invoice" type="button">Preview</button>
-            <button class="ghost-button" id="share-invoice" type="button">Share</button>
+            <button class="ghost-button" id="share-invoice" type="button">Send Invoice</button>
             <button class="ghost-button" id="print-invoice" type="button">Print / PDF</button>
             <button class="primary-button" id="save-invoice" type="button">Confirm</button>
           </div>
@@ -760,6 +774,10 @@
             <label>
               <span>Address</span>
               <input id="invoice-customer-address" type="text" placeholder="Service address">
+            </label>
+            <label>
+              <span>Email</span>
+              <input id="invoice-customer-email" type="email" placeholder="customer@email.com">
             </label>
             <label>
               <span>Quote Number</span>
@@ -873,7 +891,7 @@
             </div>
             <div class="invoice-status-actions">
               <button class="ghost-button" id="saved-preview-invoice" type="button">Preview</button>
-              <button class="ghost-button" id="saved-share-invoice" type="button">Share</button>
+              <button class="ghost-button" id="saved-share-invoice" type="button">Send Invoice</button>
               <button class="ghost-button" id="saved-print-invoice" type="button">Print / PDF</button>
               <button class="ghost-button" id="mark-invoice-draft" type="button">Mark Draft</button>
               <button class="ghost-button" id="mark-invoice-sent" type="button">Mark Sent</button>

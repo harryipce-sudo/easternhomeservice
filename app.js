@@ -151,6 +151,7 @@ const state = {
     name: "",
     phone: "",
     address: "",
+    email: "",
     quoteNumber: ""
   },
   photos: [],
@@ -194,6 +195,13 @@ function getQuoteRecordsEndpoint() {
   return `${baseUrl}/api/quote-records`;
 }
 
+function getSendDocumentEndpoint() {
+  const { hostname } = window.location;
+  const isLocalHost = hostname === "127.0.0.1" || hostname === "localhost";
+  const baseUrl = isLocalHost ? "https://easternhomeservice.vercel.app" : "";
+  return `${baseUrl}/api/send-document`;
+}
+
 function cacheElements() {
   els = {
     addLine: document.querySelector("#add-line"),
@@ -203,6 +211,7 @@ function cacheElements() {
     clearBlinds: document.querySelector("#clear-blinds"),
     clearCurtains: document.querySelector("#clear-curtains"),
     submitQuote: document.querySelector("#submit-quote"),
+    sendQuote: document.querySelector("#send-quote"),
     printQuote: document.querySelector("#print-quote"),
     supplyMarkup: document.querySelector("#supply-markup"),
     curtainMarkup: document.querySelector("#curtain-markup"),
@@ -211,10 +220,12 @@ function cacheElements() {
     customerName: document.querySelector("#customer-name"),
     customerPhone: document.querySelector("#customer-phone"),
     customerAddress: document.querySelector("#customer-address"),
+    customerEmail: document.querySelector("#customer-email"),
     quoteNumber: document.querySelector("#quote-number"),
     airCustomerName: document.querySelector("#air-customer-name"),
     airCustomerPhone: document.querySelector("#air-customer-phone"),
     airCustomerAddress: document.querySelector("#air-customer-address"),
+    airCustomerEmail: document.querySelector("#air-customer-email"),
     airQuoteNumber: document.querySelector("#air-quote-number"),
     airProductType: document.querySelector("#air-product-type"),
     airLocation: document.querySelector("#air-location"),
@@ -283,6 +294,7 @@ function cacheElements() {
     cleaningCustomerName: document.querySelector("#cleaning-customer-name"),
     cleaningCustomerPhone: document.querySelector("#cleaning-customer-phone"),
     cleaningCustomerAddress: document.querySelector("#cleaning-customer-address"),
+    cleaningCustomerEmail: document.querySelector("#cleaning-customer-email"),
     cleaningQuoteNumber: document.querySelector("#cleaning-quote-number"),
     cleaningBaseService: document.querySelector("#cleaning-base-service"),
     cleaningStandaloneFields: document.querySelector("#cleaning-standalone-fields"),
@@ -291,6 +303,7 @@ function cacheElements() {
     cleaningExtrasEmpty: document.querySelector("#cleaning-extras-empty"),
     addCleaningExtra: document.querySelector("#add-cleaning-extra"),
     saveCleaningQuote: document.querySelector("#save-cleaning-quote"),
+    sendCleaningQuote: document.querySelector("#send-cleaning-quote"),
     cleaningFeedback: document.querySelector("#cleaning-feedback"),
     cleaningBaseCost: document.querySelector("#cleaning-base-cost"),
     cleaningBaseRetail: document.querySelector("#cleaning-base-retail"),
@@ -336,6 +349,7 @@ function cacheElements() {
     invoiceCustomerName: document.querySelector("#invoice-customer-name"),
     invoiceCustomerPhone: document.querySelector("#invoice-customer-phone"),
     invoiceCustomerAddress: document.querySelector("#invoice-customer-address"),
+    invoiceCustomerEmail: document.querySelector("#invoice-customer-email"),
     invoiceReference: document.querySelector("#invoice-reference"),
     invoiceDate: document.querySelector("#invoice-date"),
     invoiceDueDate: document.querySelector("#invoice-due-date"),
@@ -493,12 +507,16 @@ function createInvoice(partial = {}) {
     customerName: partial.customerName || "",
     customerPhone: partial.customerPhone || "",
     customerAddress: partial.customerAddress || "",
+    customerEmail: partial.customerEmail || "",
     invoiceDate,
     dueDate,
     paymentTerms: partial.paymentTerms || formatPaymentTerms(paymentTermsDays),
     amountPaid: Number(partial.amountPaid) || 0,
     notes: partial.notes || "Thank you for choosing Eastern Home Service.",
     bankDetails: partial.bankDetails || "",
+    lastSentAt: partial.lastSentAt || "",
+    lastSentTo: partial.lastSentTo || "",
+    sendCount: Number(partial.sendCount) || 0,
     lines: Array.isArray(partial.lines) && partial.lines.length
       ? partial.lines.map((line) => createInvoiceLine(line))
       : [createInvoiceLine()]
@@ -1071,10 +1089,14 @@ function parseStoredRecords(value) {
         customerName: record.customerName || "-",
         phone: record.phone || "-",
         address: record.address || "-",
+        email: record.email || "",
         quoteNumber: record.quoteNumber || "-",
         totalQuote: record.totalQuote || formatCurrency(0),
         subtotalExGst: record.subtotalExGst || formatCurrency(0),
         gstTotal: record.gstTotal || formatCurrency(0),
+        lastSentAt: record.lastSentAt || "",
+        lastSentTo: record.lastSentTo || "",
+        sendCount: Number(record.sendCount) || 0,
         blindCount: Number(record.blindCount) || 0,
         curtainCount: Number(record.curtainCount) || 0,
         sheerCount: Number(record.sheerCount) || 0,
@@ -1310,10 +1332,14 @@ function createCleaningRecordSnapshot() {
     customerName: state.customer.name || "-",
     phone: state.customer.phone || "-",
     address: state.customer.address || "-",
+    email: state.customer.email || "",
     quoteNumber: state.customer.quoteNumber || "-",
     totalQuote: formatCurrency(totals.total),
     subtotalExGst: formatCurrency(totals.subtotalRetail),
     gstTotal: formatCurrency(totals.gst),
+    lastSentAt: "",
+    lastSentTo: "",
+    sendCount: 0,
     blindCount: 0,
     curtainCount: 0,
     sheerCount: 0,
@@ -1377,10 +1403,14 @@ function createRecordSnapshot() {
     customerName: state.customer.name || "-",
     phone: state.customer.phone || "-",
     address: state.customer.address || "-",
+    email: state.customer.email || "",
     quoteNumber: state.customer.quoteNumber || "-",
     totalQuote: els.grandTotal.textContent,
     subtotalExGst: els.subtotalExGst.textContent,
     gstTotal: els.gstTotal.textContent,
+    lastSentAt: "",
+    lastSentTo: "",
+    sendCount: 0,
     blindCount: blindItems.length,
     curtainCount: state.curtainLines.filter((line) => line.product === "curtain").length,
     sheerCount: state.curtainLines.filter((line) => line.product === "sheer").length,
@@ -1802,6 +1832,77 @@ function getSelectedInvoice() {
   return state.invoices.find((invoice) => invoice.id === state.selectedInvoiceId) || null;
 }
 
+function applySendMetadata(item, recipient) {
+  return {
+    ...item,
+    lastSentAt: new Date().toISOString(),
+    lastSentTo: recipient,
+    sendCount: (Number(item.sendCount) || 0) + 1
+  };
+}
+
+function findRecordByQuoteNumber(recordType, quoteNumber) {
+  return state.records.find((record) => (
+    record.recordType === recordType && String(record.quoteNumber || "").trim() === String(quoteNumber || "").trim()
+  )) || null;
+}
+
+async function saveQuoteRecord(record) {
+  const existingRecord = record.id ? state.records.find((item) => item.id === record.id) : null;
+  const nextRecord = {
+    ...record,
+    id: existingRecord?.id || record.id || crypto.randomUUID()
+  };
+
+  if (existingRecord) {
+    state.records = state.records.map((item) => (item.id === nextRecord.id ? nextRecord : item));
+  } else {
+    state.records = [nextRecord, ...state.records.filter((item) => item.id !== nextRecord.id)];
+  }
+
+  state.selectedRecordId = nextRecord.id;
+  persistRecords();
+  renderRecords();
+
+  try {
+    const savedRecord = existingRecord
+      ? await requestQuoteRecords(`?id=${encodeURIComponent(nextRecord.id)}`, {
+          method: "PATCH",
+          body: JSON.stringify(nextRecord)
+        })
+      : await requestQuoteRecords("", {
+          method: "POST",
+          body: JSON.stringify(nextRecord)
+        });
+
+    state.records = state.records.map((item) => (item.id === nextRecord.id ? savedRecord : item));
+    state.selectedRecordId = savedRecord.id;
+    persistRecords();
+    renderRecords();
+    return savedRecord;
+  } catch (error) {
+    console.warn("Unable to sync quote record update to cloud storage.", error);
+    return nextRecord;
+  }
+}
+
+function markInvoiceSent(invoiceId, recipient) {
+  const sentAt = new Date().toISOString();
+  state.invoices = state.invoices.map((invoice) => (
+    invoice.id === invoiceId
+      ? {
+          ...invoice,
+          status: "sent",
+          lastSentAt: sentAt,
+          lastSentTo: recipient,
+          sendCount: (Number(invoice.sendCount) || 0) + 1
+        }
+      : invoice
+  ));
+  persistInvoices();
+  renderInvoices();
+}
+
 function calculateInvoiceLineAmount(line) {
   const quantity = Number(line.quantity) || 0;
   const unitPrice = Number(line.unitPrice) || 0;
@@ -1874,6 +1975,7 @@ function createInvoiceFromRecord(record) {
     customerName: record.customerName !== "-" ? record.customerName : "",
     customerPhone: record.phone !== "-" ? record.phone : "",
     customerAddress: record.address !== "-" ? record.address : "",
+    customerEmail: record.email || "",
     invoiceDate: getTodayIsoDate(),
     dueDate: addDaysToIsoDate(getTodayIsoDate(), 7),
     paymentTerms: "7 Days",
@@ -1910,6 +2012,7 @@ function createInvoiceFromCurrentQuote() {
     customerName: state.customer.name,
     customerPhone: state.customer.phone,
     customerAddress: state.customer.address,
+    customerEmail: state.customer.email,
     notes: "Invoice created from the current quote builder.",
     lines: [
       createInvoiceLine({
@@ -1940,6 +2043,7 @@ function createInvoiceFromCurrentCleaningQuote() {
     customerName: state.customer.name,
     customerPhone: state.customer.phone,
     customerAddress: state.customer.address,
+    customerEmail: state.customer.email,
     notes: "Invoice created from the current cleaning quote.",
     lines: [
       createInvoiceLine({
@@ -2074,6 +2178,7 @@ function buildQuotePrintMarkup() {
     <p><strong>Customer:</strong> ${escapeHtml(state.customer.name || "-")}</p>
     <p><strong>Phone:</strong> ${escapeHtml(state.customer.phone || "-")}</p>
     <p><strong>Address:</strong> ${escapeHtml(state.customer.address || "-")}</p>
+    <p><strong>Email:</strong> ${escapeHtml(state.customer.email || "-")}</p>
     <p><strong>Quote Number:</strong> ${escapeHtml(state.customer.quoteNumber || "-")}</p>
     <table>
       <thead>
@@ -2092,6 +2197,66 @@ function buildQuotePrintMarkup() {
       <p><strong>Subtotal Ex GST:</strong> ${els.subtotalExGst.textContent}</p>
       <p><strong>GST:</strong> ${els.gstTotal.textContent}</p>
       <p><strong>Total Incl GST:</strong> ${els.grandTotal.textContent}</p>
+    </div>
+  `;
+}
+
+function buildCleaningQuotePrintMarkup() {
+  const totals = calculateCleaningTotals();
+  const extrasRows = totals.extras.map((line, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(line.label)}</td>
+      <td>${escapeHtml(String(line.quantity))}</td>
+      <td>${escapeHtml(line.unit)}</td>
+      <td>${formatCurrency(line.costExGst)}</td>
+      <td>${formatCurrency(line.retailExGst)}</td>
+    </tr>
+  `).join("");
+
+  return `
+    ${buildDocumentHeaderMarkup("Cleaning Quote", "One Call. All Sorted.")}
+    <p><strong>Customer:</strong> ${escapeHtml(state.customer.name || "-")}</p>
+    <p><strong>Phone:</strong> ${escapeHtml(state.customer.phone || "-")}</p>
+    <p><strong>Address:</strong> ${escapeHtml(state.customer.address || "-")}</p>
+    <p><strong>Email:</strong> ${escapeHtml(state.customer.email || "-")}</p>
+    <p><strong>Quote Number:</strong> ${escapeHtml(state.customer.quoteNumber || "-")}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Detail</th>
+          <th>Cost Ex GST</th>
+          <th>Retail Ex GST</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Base Service</td>
+          <td>${escapeHtml(totals.base.detail)}</td>
+          <td>${formatCurrency(totals.base.rawCost)}</td>
+          <td>${formatCurrency(totals.base.retailExGst)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Additional Service</th>
+          <th>Qty</th>
+          <th>Unit</th>
+          <th>Cost Ex GST</th>
+          <th>Retail Ex GST</th>
+        </tr>
+      </thead>
+      <tbody>${extrasRows || '<tr><td colspan="6">No additional services added.</td></tr>'}</tbody>
+    </table>
+    <div class="totals">
+      <p><strong>Total Cost Incl GST:</strong> ${formatCurrency(totals.totalCost)}</p>
+      <p><strong>Subtotal Ex GST:</strong> ${formatCurrency(totals.subtotalRetail)}</p>
+      <p><strong>GST:</strong> ${formatCurrency(totals.gst)}</p>
+      <p><strong>Total Incl GST:</strong> ${formatCurrency(totals.total)}</p>
     </div>
   `;
 }
@@ -2118,6 +2283,7 @@ function buildInvoicePrintMarkup(invoice) {
     <p><strong>Customer:</strong> ${escapeHtml(invoice.customerName || "-")}</p>
     <p><strong>Phone:</strong> ${escapeHtml(invoice.customerPhone || "-")}</p>
     <p><strong>Address:</strong> ${escapeHtml(invoice.customerAddress || "-")}</p>
+    <p><strong>Email:</strong> ${escapeHtml(invoice.customerEmail || "-")}</p>
     <p><strong>Quote Number:</strong> ${escapeHtml(invoice.sourceQuoteNumber || "-")}</p>
     <p><strong>Invoice Date:</strong> ${escapeHtml(invoice.invoiceDate || "-")}</p>
     <p><strong>Due Date:</strong> ${escapeHtml(invoice.dueDate || "-")}</p>
@@ -2269,6 +2435,142 @@ async function sharePdfDocument(title, bodyMarkup) {
 
   downloadBlob(blob, filename);
   return { mode: "download" };
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = String(reader.result || "");
+      const [, base64 = ""] = result.split(",");
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error || new Error("Unable to encode attachment."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function requestSendDocument(payload) {
+  const response = await fetch(getSendDocumentEndpoint(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Send request failed with status ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function buildQuoteEmailContent() {
+  const summary = buildOrderSummaryText({
+    grandTotal: parseCurrency(els.grandTotal.textContent)
+  });
+  const subject = `${state.customer.quoteNumber || "Quote"} from Eastern Home Service`;
+  const text = [
+    `Hi ${summary.customerName},`,
+    "",
+    "Thank you for your enquiry with Eastern Home Service.",
+    "",
+    `${summary.quoteNumber} is attached as a PDF.`,
+    `Order summary: ${summary.productSummary}`,
+    `Total incl. GST: ${summary.totalText}`,
+    "",
+    "Please let us know if you would like to proceed.",
+    "",
+    "Kind regards,",
+    "Eastern Home Service"
+  ].join("\n");
+  const html = `
+    <p>Hi ${escapeHtml(summary.customerName)},</p>
+    <p>Thank you for your enquiry with Eastern Home Service.</p>
+    <p><strong>${escapeHtml(summary.quoteNumber)}</strong> is attached as a PDF.</p>
+    <p>Order summary: ${escapeHtml(summary.productSummary)}<br>Total incl. GST: ${escapeHtml(summary.totalText)}</p>
+    <p>Please let us know if you would like to proceed.</p>
+    <p>Kind regards,<br>Eastern Home Service</p>
+  `;
+
+  return { subject, text, html };
+}
+
+function buildCleaningQuoteEmailContent() {
+  const totals = calculateCleaningTotals();
+  const subject = `${state.customer.quoteNumber || "Cleaning Quote"} from Eastern Home Service`;
+  const text = [
+    `Hi ${state.customer.name || "there"},`,
+    "",
+    "Thank you for your enquiry with Eastern Home Service.",
+    "",
+    `Quote ${state.customer.quoteNumber || ""} is attached as a PDF.`,
+    `Service: ${totals.base.detail}`,
+    `Total incl. GST: ${formatCurrency(totals.total)}`,
+    "",
+    "Please let us know if you would like to proceed.",
+    "",
+    "Kind regards,",
+    "Eastern Home Service"
+  ].join("\n");
+  const html = `
+    <p>Hi ${escapeHtml(state.customer.name || "there")},</p>
+    <p>Thank you for your enquiry with Eastern Home Service.</p>
+    <p><strong>Quote ${escapeHtml(state.customer.quoteNumber || "-")}</strong> is attached as a PDF.</p>
+    <p>Service: ${escapeHtml(totals.base.detail)}<br>Total incl. GST: ${escapeHtml(formatCurrency(totals.total))}</p>
+    <p>Please let us know if you would like to proceed.</p>
+    <p>Kind regards,<br>Eastern Home Service</p>
+  `;
+
+  return { subject, text, html };
+}
+
+function buildInvoiceEmailContent(invoice) {
+  const totals = calculateInvoiceTotals(invoice);
+  const subject = `Invoice ${invoice.invoiceNumber} from Eastern Home Service`;
+  const text = [
+    `Hi ${invoice.customerName || "there"},`,
+    "",
+    `Invoice ${invoice.invoiceNumber} is attached as a PDF.`,
+    `Amount due: ${formatCurrency(totals.amountDue)}`,
+    `Due date: ${invoice.dueDate || "-"}`,
+    "",
+    "Please contact us if you need anything else.",
+    "",
+    "Kind regards,",
+    "Eastern Home Service"
+  ].join("\n");
+  const html = `
+    <p>Hi ${escapeHtml(invoice.customerName || "there")},</p>
+    <p><strong>Invoice ${escapeHtml(invoice.invoiceNumber)}</strong> is attached as a PDF.</p>
+    <p>Amount due: ${escapeHtml(formatCurrency(totals.amountDue))}<br>Due date: ${escapeHtml(invoice.dueDate || "-")}</p>
+    <p>Please contact us if you need anything else.</p>
+    <p>Kind regards,<br>Eastern Home Service</p>
+  `;
+
+  return { subject, text, html };
+}
+
+async function sendPdfEmail({ to, subject, bodyMarkup, fileTitle, html, text }) {
+  const pdfBlob = await buildPdfBlob(fileTitle, bodyMarkup);
+  const attachmentContent = await blobToBase64(pdfBlob);
+
+  return requestSendDocument({
+    to,
+    subject,
+    html,
+    text,
+    attachment: {
+      filename: getPdfFilename(fileTitle),
+      content: attachmentContent
+    }
+  });
 }
 
 function setInvoiceValue(field, value) {
@@ -2439,6 +2741,7 @@ function renderInvoiceEditor(invoice) {
   els.invoiceCustomerName.value = fallbackInvoice.customerName;
   els.invoiceCustomerPhone.value = fallbackInvoice.customerPhone;
   els.invoiceCustomerAddress.value = fallbackInvoice.customerAddress;
+  els.invoiceCustomerEmail.value = fallbackInvoice.customerEmail || "";
   els.invoiceReference.value = fallbackInvoice.sourceQuoteNumber;
   els.invoiceDate.value = fallbackInvoice.invoiceDate;
   els.invoiceDueDate.value = fallbackInvoice.dueDate;
@@ -3083,6 +3386,118 @@ async function copyText(text, label) {
   }
 }
 
+async function sendCurrentBlindCurtainQuote() {
+  if (!state.lines.length && !state.curtainLines.length) {
+    els.copyFeedback.textContent = "Add at least one blind, curtain, or sheer item before sending the quote.";
+    return;
+  }
+
+  const recipient = String(state.customer.email || "").trim();
+  if (!isValidEmail(recipient)) {
+    els.copyFeedback.textContent = "Enter a valid customer email before sending the quote.";
+    return;
+  }
+
+  ensureQuoteNumber();
+  hydrateInputs();
+  const existingRecord = findRecordByQuoteNumber("blinds-curtains", state.customer.quoteNumber);
+  const snapshot = createRecordSnapshot();
+  const record = applySendMetadata({
+    ...(existingRecord || snapshot),
+    ...snapshot,
+    id: existingRecord?.id || snapshot.id
+  }, recipient);
+  const emailContent = buildQuoteEmailContent();
+
+  try {
+    await sendPdfEmail({
+      to: recipient,
+      subject: emailContent.subject,
+      bodyMarkup: buildQuotePrintMarkup(),
+      fileTitle: `Quote ${state.customer.quoteNumber}`,
+      html: emailContent.html,
+      text: emailContent.text
+    });
+    await saveQuoteRecord(record);
+    els.copyFeedback.textContent = `Quote sent to ${recipient}.`;
+  } catch (error) {
+    console.warn("Unable to send quote email.", error);
+    els.copyFeedback.textContent = error instanceof Error ? error.message : "Unable to send the quote right now.";
+  }
+}
+
+async function sendCurrentCleaningQuote() {
+  const recipient = String(state.customer.email || "").trim();
+  if (!isValidEmail(recipient)) {
+    els.cleaningFeedback.textContent = "Enter a valid customer email before sending the quote.";
+    return;
+  }
+
+  ensureQuoteNumber();
+  hydrateInputs();
+  const existingRecord = findRecordByQuoteNumber("cleaning", state.customer.quoteNumber);
+  const snapshot = createCleaningRecordSnapshot();
+  const record = applySendMetadata({
+    ...(existingRecord || snapshot),
+    ...snapshot,
+    id: existingRecord?.id || snapshot.id
+  }, recipient);
+  const emailContent = buildCleaningQuoteEmailContent();
+
+  try {
+    await sendPdfEmail({
+      to: recipient,
+      subject: emailContent.subject,
+      bodyMarkup: buildCleaningQuotePrintMarkup(),
+      fileTitle: `Cleaning Quote ${state.customer.quoteNumber}`,
+      html: emailContent.html,
+      text: emailContent.text
+    });
+    await saveQuoteRecord(record);
+    els.cleaningFeedback.textContent = `Quote sent to ${recipient}.`;
+  } catch (error) {
+    console.warn("Unable to send cleaning quote email.", error);
+    els.cleaningFeedback.textContent = error instanceof Error ? error.message : "Unable to send the cleaning quote right now.";
+  }
+}
+
+async function sendSelectedInvoice() {
+  const invoice = getSelectedInvoice();
+  if (!invoice) {
+    els.invoiceFeedback.textContent = "Select an invoice first.";
+    els.savedInvoiceFeedback.textContent = "Select an invoice first.";
+    return;
+  }
+
+  const recipient = String(invoice.customerEmail || "").trim();
+  if (!isValidEmail(recipient)) {
+    els.invoiceFeedback.textContent = "Enter a valid customer email before sending the invoice.";
+    els.savedInvoiceFeedback.textContent = "Enter a valid customer email before sending the invoice.";
+    return;
+  }
+
+  const emailContent = buildInvoiceEmailContent(invoice);
+
+  try {
+    await sendPdfEmail({
+      to: recipient,
+      subject: emailContent.subject,
+      bodyMarkup: buildInvoicePrintMarkup(invoice),
+      fileTitle: `Invoice ${invoice.invoiceNumber}`,
+      html: emailContent.html,
+      text: emailContent.text
+    });
+    markInvoiceSent(invoice.id, recipient);
+    els.invoiceFeedback.textContent = `Invoice sent to ${recipient}.`;
+    els.savedInvoiceFeedback.textContent = `Invoice sent to ${recipient}.`;
+  } catch (error) {
+    console.warn("Unable to send invoice email.", error);
+    const message = error instanceof Error ? error.message : "Unable to send the invoice right now.";
+    els.invoiceFeedback.textContent = message;
+    els.savedInvoiceFeedback.textContent = message;
+  }
+}
+
 function renderAll() {
   renderBlindSummaryTable();
   renderCurtainSummaryTable();
@@ -3183,6 +3598,10 @@ function bindEvents() {
 
   els.saveCleaningQuote.addEventListener("click", async () => {
     await submitCleaningQuoteRecord();
+  });
+
+  els.sendCleaningQuote.addEventListener("click", async () => {
+    await sendCurrentCleaningQuote();
   });
 
   els.cleaningExtrasBody.addEventListener("change", (event) => {
@@ -3516,24 +3935,7 @@ function bindEvents() {
   });
 
   els.shareInvoice.addEventListener("click", async () => {
-    const invoice = getSelectedInvoice();
-    if (!invoice) {
-      els.invoiceFeedback.textContent = "Select an invoice first.";
-      return;
-    }
-
-    try {
-      const result = await sharePdfDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
-      els.invoiceFeedback.textContent = result.mode === "share"
-        ? "Invoice PDF shared."
-        : "Invoice PDF downloaded.";
-    } catch (error) {
-      console.warn("Unable to share invoice PDF.", error);
-      const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
-      els.invoiceFeedback.textContent = opened
-        ? "PDF share was unavailable, so the invoice preview was opened instead."
-        : "Unable to share or preview the invoice right now.";
-    }
+    await sendSelectedInvoice();
   });
 
   els.markInvoiceDraft.addEventListener("click", () => {
@@ -3609,24 +4011,7 @@ function bindEvents() {
   });
 
   els.savedShareInvoice.addEventListener("click", async () => {
-    const invoice = getSelectedInvoice();
-    if (!invoice) {
-      els.savedInvoiceFeedback.textContent = "Select an invoice first.";
-      return;
-    }
-
-    try {
-      const result = await sharePdfDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
-      els.savedInvoiceFeedback.textContent = result.mode === "share"
-        ? "Invoice PDF shared."
-        : "Invoice PDF downloaded.";
-    } catch (error) {
-      console.warn("Unable to share saved invoice PDF.", error);
-      const opened = openPrintDocument(`Invoice ${invoice.invoiceNumber}`, buildInvoicePrintMarkup(invoice));
-      els.savedInvoiceFeedback.textContent = opened
-        ? "PDF share was unavailable, so the invoice preview was opened instead."
-        : "Unable to share or preview the invoice right now.";
-    }
+    await sendSelectedInvoice();
   });
 
   els.invoiceListBody.addEventListener("click", (event) => {
@@ -3677,6 +4062,7 @@ function bindEvents() {
     ["customerName", els.invoiceCustomerName],
     ["customerPhone", els.invoiceCustomerPhone],
     ["customerAddress", els.invoiceCustomerAddress],
+    ["customerEmail", els.invoiceCustomerEmail],
     ["sourceQuoteNumber", els.invoiceReference],
     ["invoiceDate", els.invoiceDate],
     ["dueDate", els.invoiceDueDate],
@@ -3733,12 +4119,15 @@ function bindEvents() {
     ["name", els.customerName],
     ["phone", els.customerPhone],
     ["address", els.customerAddress],
+    ["email", els.customerEmail],
     ["name", els.airCustomerName],
     ["phone", els.airCustomerPhone],
     ["address", els.airCustomerAddress],
+    ["email", els.airCustomerEmail],
     ["name", els.cleaningCustomerName],
     ["phone", els.cleaningCustomerPhone],
-    ["address", els.cleaningCustomerAddress]
+    ["address", els.cleaningCustomerAddress],
+    ["email", els.cleaningCustomerEmail]
   ].forEach(([field, element]) => {
     element.addEventListener("input", () => {
       state.customer[field] = element.value;
@@ -3756,6 +4145,10 @@ function bindEvents() {
 
   els.submitQuote.addEventListener("click", () => {
     submitQuoteRecord();
+  });
+
+  els.sendQuote.addEventListener("click", async () => {
+    await sendCurrentBlindCurtainQuote();
   });
 
   els.copyEmail.addEventListener("click", () => {
@@ -3776,14 +4169,17 @@ function hydrateInputs() {
   els.customerName.value = state.customer.name;
   els.customerPhone.value = state.customer.phone;
   els.customerAddress.value = state.customer.address;
+  els.customerEmail.value = state.customer.email;
   els.quoteNumber.value = state.customer.quoteNumber;
   els.airCustomerName.value = state.customer.name;
   els.airCustomerPhone.value = state.customer.phone;
   els.airCustomerAddress.value = state.customer.address;
+  els.airCustomerEmail.value = state.customer.email;
   els.airQuoteNumber.value = state.customer.quoteNumber;
   els.cleaningCustomerName.value = state.customer.name;
   els.cleaningCustomerPhone.value = state.customer.phone;
   els.cleaningCustomerAddress.value = state.customer.address;
+  els.cleaningCustomerEmail.value = state.customer.email;
   els.cleaningQuoteNumber.value = state.customer.quoteNumber;
   if (els.historySearch) {
     els.historySearch.value = state.historySearch;
