@@ -168,7 +168,8 @@ const state = {
   selectedRecordId: "",
   invoices: [],
   invoiceSearch: "",
-  selectedInvoiceId: ""
+  selectedInvoiceId: "",
+  jobStages: []
 };
 
 const SECTOR_LABELS = {
@@ -178,25 +179,27 @@ const SECTOR_LABELS = {
   general: "General"
 };
 
-const JOB_STAGE_ORDER = ["quoted", "measure", "ordered", "install", "completed"];
-const JOB_STAGE_META = {
-  quoted: { label: "New Quote", shortLabel: "Quoted" },
-  measure: { label: "Measure", shortLabel: "Measure" },
-  ordered: { label: "Order", shortLabel: "Ordered" },
-  install: { label: "Install", shortLabel: "Install" },
-  completed: { label: "Done", shortLabel: "Done" }
-};
-
 const LOCAL_RECORDS_KEY = "ehs-dimension-records";
 const LOCAL_PHOTOS_KEY = "ehs-house-photos";
 const LOCAL_INVOICES_KEY = "ehs-invoices";
 const LOCAL_RECYCLE_BIN_KEY = "ehs-recycle-bin";
+const LOCAL_JOB_STAGES_KEY = "ehs-job-stages";
 const RECYCLE_RETENTION_DAYS = 15;
 
 let els = {};
 let initRecoveryAttempted = false;
 let pendingFocus = null;
 let draggedJobId = "";
+
+function getDefaultJobStages() {
+  return [
+    { id: "quoted", label: "New Quote", shortLabel: "Quoted" },
+    { id: "measure", label: "Measure", shortLabel: "Measure" },
+    { id: "ordered", label: "Order", shortLabel: "Ordered" },
+    { id: "install", label: "Install", shortLabel: "Install" },
+    { id: "completed", label: "Done", shortLabel: "Done" }
+  ];
+}
 
 function getQuoteRecordsEndpoint() {
   const { hostname } = window.location;
@@ -716,7 +719,7 @@ function formatRecordDate(value) {
 
 function getJobStage(record) {
   const recordStage = String(record?.jobStage || "").trim();
-  if (JOB_STAGE_META[recordStage]) {
+  if (state.jobStages.some((stage) => stage.id === recordStage)) {
     return recordStage;
   }
 
@@ -737,11 +740,11 @@ function getJobStage(record) {
 }
 
 function formatJobStage(stage) {
-  return JOB_STAGE_META[stage]?.shortLabel || JOB_STAGE_META.quoted.shortLabel;
+  return state.jobStages.find((item) => item.id === stage)?.shortLabel || state.jobStages[0]?.shortLabel || "Stage";
 }
 
 function updateRecordJobStage(id, nextStage) {
-  if (!JOB_STAGE_META[nextStage]) {
+  if (!state.jobStages.some((stage) => stage.id === nextStage)) {
     return;
   }
 
@@ -750,6 +753,77 @@ function updateRecordJobStage(id, nextStage) {
   ));
 
   persistRecords();
+  renderRecords();
+}
+
+function createShortStageLabel(label) {
+  const trimmed = String(label || "").trim();
+  if (!trimmed) {
+    return "Stage";
+  }
+
+  if (trimmed.length <= 10) {
+    return trimmed;
+  }
+
+  return trimmed.slice(0, 10).trim();
+}
+
+function addJobStage() {
+  const label = window.prompt("New stage name", "New Stage");
+  if (!label || !String(label).trim()) {
+    return;
+  }
+
+  state.jobStages = [
+    ...state.jobStages,
+    {
+      id: crypto.randomUUID(),
+      label: String(label).trim(),
+      shortLabel: createShortStageLabel(label)
+    }
+  ];
+  persistJobStages();
+  renderRecords();
+}
+
+function renameJobStage(stageId) {
+  const currentStage = state.jobStages.find((stage) => stage.id === stageId);
+  if (!currentStage) {
+    return;
+  }
+
+  const nextLabel = window.prompt("Edit stage name", currentStage.label);
+  if (!nextLabel || !String(nextLabel).trim()) {
+    return;
+  }
+
+  state.jobStages = state.jobStages.map((stage) => (
+    stage.id === stageId
+      ? {
+          ...stage,
+          label: String(nextLabel).trim(),
+          shortLabel: createShortStageLabel(nextLabel)
+        }
+      : stage
+  ));
+  persistJobStages();
+  renderRecords();
+}
+
+function deleteJobStage(stageId) {
+  if (state.jobStages.length <= 1) {
+    window.alert("You need to keep at least one stage.");
+    return;
+  }
+
+  const fallbackStageId = state.jobStages.find((stage) => stage.id !== stageId)?.id || state.jobStages[0]?.id || "";
+  state.records = state.records.map((record) => (
+    record.jobStage === stageId ? { ...record, jobStage: fallbackStageId } : record
+  ));
+  state.jobStages = state.jobStages.filter((stage) => stage.id !== stageId);
+  persistRecords();
+  persistJobStages();
   renderRecords();
 }
 
@@ -1156,6 +1230,7 @@ function parseStoredRecords(value) {
         lastSentAt: record.lastSentAt || "",
         lastSentTo: record.lastSentTo || "",
         sendCount: Number(record.sendCount) || 0,
+        jobStage: record.jobStage || "",
         blindCount: Number(record.blindCount) || 0,
         curtainCount: Number(record.curtainCount) || 0,
         sheerCount: Number(record.sheerCount) || 0,
@@ -1255,6 +1330,39 @@ function loadInvoices() {
 
   if (!state.selectedInvoiceId && state.invoices.length) {
     state.selectedInvoiceId = state.invoices[0].id;
+  }
+}
+
+function parseStoredJobStages(rawValue) {
+  const parsed = JSON.parse(rawValue || "[]");
+  if (!Array.isArray(parsed) || !parsed.length) {
+    return getDefaultJobStages();
+  }
+
+  const stages = parsed
+    .filter((stage) => stage && typeof stage === "object")
+    .map((stage) => ({
+      id: String(stage.id || crypto.randomUUID()),
+      label: String(stage.label || "").trim() || "New Stage",
+      shortLabel: String(stage.shortLabel || stage.label || "").trim() || "Stage"
+    }));
+
+  return stages.length ? stages : getDefaultJobStages();
+}
+
+function persistJobStages() {
+  try {
+    localStorage.setItem(LOCAL_JOB_STAGES_KEY, JSON.stringify(state.jobStages));
+  } catch (error) {
+    console.warn("Unable to persist job stages", error);
+  }
+}
+
+function loadJobStages() {
+  try {
+    state.jobStages = parseStoredJobStages(localStorage.getItem(LOCAL_JOB_STAGES_KEY));
+  } catch (error) {
+    state.jobStages = getDefaultJobStages();
   }
 }
 
@@ -3011,16 +3119,22 @@ function renderJobBoard() {
 
   els.jobBoardEmpty.style.display = "none";
 
-  JOB_STAGE_ORDER.forEach((stage) => {
-    const recordsInStage = filteredRecords.filter((record) => getJobStage(record) === stage);
+  state.jobStages.forEach((stage) => {
+    const recordsInStage = filteredRecords.filter((record) => getJobStage(record) === stage.id);
     const column = document.createElement("section");
     column.className = "job-column";
     column.innerHTML = `
       <div class="job-column-head">
-        <p>${escapeHtml(JOB_STAGE_META[stage].label)}</p>
-        <strong>${recordsInStage.length}</strong>
+        <div class="job-column-title">
+          <p>${escapeHtml(stage.label)}</p>
+          <strong>${recordsInStage.length}</strong>
+        </div>
+        <div class="job-column-tools">
+          <button class="ghost-button job-column-button" data-edit-job-stage="${stage.id}" type="button">Edit</button>
+          <button class="danger-button job-column-button" data-delete-job-stage="${stage.id}" type="button">Delete</button>
+        </div>
       </div>
-      <div class="job-column-body" data-job-stage-zone="${stage}">
+      <div class="job-column-body" data-job-stage-zone="${stage.id}">
         ${recordsInStage.length
           ? recordsInStage.map((record) => {
               return `
@@ -3039,6 +3153,16 @@ function renderJobBoard() {
     `;
     els.jobBoard.appendChild(column);
   });
+
+  const addColumn = document.createElement("button");
+  addColumn.className = "job-column job-column-add";
+  addColumn.type = "button";
+  addColumn.dataset.addJobStage = "true";
+  addColumn.innerHTML = `
+    <span>Add Stage</span>
+    <small>Create a new job column</small>
+  `;
+  els.jobBoard.appendChild(addColumn);
 }
 
 function getFilteredRecords() {
@@ -4210,6 +4334,25 @@ function bindEvents() {
   if (els.jobBoard) {
     els.jobBoard.addEventListener("click", (event) => {
       const target = event.target;
+      const addStageButton = target.closest("[data-add-job-stage]");
+      if (addStageButton) {
+        addJobStage();
+        return;
+      }
+
+      if (target.dataset.editJobStage) {
+        renameJobStage(target.dataset.editJobStage);
+        return;
+      }
+
+      if (target.dataset.deleteJobStage) {
+        if (!confirmAction("Delete this stage? Jobs in this stage will move to the first stage.")) {
+          return;
+        }
+        deleteJobStage(target.dataset.deleteJobStage);
+        return;
+      }
+
       const selectButton = target.closest("[data-select-record]");
       if (selectButton) {
         state.selectedRecordId = selectButton.dataset.selectRecord;
@@ -4630,6 +4773,7 @@ async function init() {
       return;
     }
 
+    loadJobStages();
     loadPhotos();
     await loadRecords();
     loadInvoices();

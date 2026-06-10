@@ -962,10 +962,16 @@ input[readonly] {
 }
 
 .job-column-head {
+  display: grid;
+  gap: 8px;
+}
+
+.job-column-title,
+.job-column-tools {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .job-column-head p {
@@ -985,6 +991,12 @@ input[readonly] {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   font-size: 0.82rem;
+}
+
+.job-column-button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.72rem;
 }
 
 .job-column-body {
@@ -1065,6 +1077,28 @@ input[readonly] {
 .job-stage-drop-active {
   background: rgba(49, 185, 113, 0.08);
   box-shadow: inset 0 0 0 1px rgba(49, 185, 113, 0.2);
+}
+
+.job-column-add {
+  min-width: 160px;
+  min-height: 96px;
+  display: grid;
+  gap: 6px;
+  place-content: center;
+  text-align: center;
+  cursor: pointer;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.02);
+  border-style: dashed;
+}
+
+.job-column-add span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.job-column-add small {
+  font-size: 0.76rem;
 }
 
 .records-table-wrap {
