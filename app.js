@@ -3026,20 +3026,10 @@ function renderJobBoard() {
               return `
                 <article class="job-card ${record.id === state.selectedRecordId ? "job-card-selected" : ""}" draggable="true" data-job-card="${record.id}">
                   <button class="job-card-main" data-select-record="${record.id}" type="button">
-                    <div class="job-card-top">
-                      <strong>${escapeHtml(record.quoteNumber || "-")}</strong>
-                      <span class="job-card-sector">${escapeHtml(record.sector || SECTOR_LABELS[record.recordType || "blinds-curtains"] || "General")}</span>
-                    </div>
-                    <h3>${escapeHtml(record.customerName || "Untitled Customer")}</h3>
-                    <p>${escapeHtml(record.address || "-")}</p>
-                    <div class="job-card-meta">
-                      <span>${formatRecordDate(record.submittedAt)}</span>
-                      <strong>${escapeHtml(record.totalQuote || formatCurrency(0))}</strong>
-                    </div>
+                    <strong class="job-card-ref">${escapeHtml(record.quoteNumber || "-")}</strong>
                   </button>
                   <div class="job-card-actions">
                     <span class="job-drag-hint">Drag to move</span>
-                    <button class="ghost-button table-action-button" data-create-invoice-record="${record.id}" type="button">Invoice</button>
                   </div>
                 </article>
               `;
