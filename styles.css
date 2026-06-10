@@ -943,9 +943,9 @@ input[readonly] {
 
 .job-board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(240px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(5, minmax(210px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
   align-items: start;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -953,10 +953,10 @@ input[readonly] {
 
 .job-column {
   display: grid;
-  gap: 14px;
-  min-width: 240px;
-  padding: 14px;
-  border-radius: 22px;
+  gap: 10px;
+  min-width: 210px;
+  padding: 12px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -970,7 +970,7 @@ input[readonly] {
 
 .job-column-head p {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -978,38 +978,44 @@ input[readonly] {
 
 .job-column-head strong {
   display: inline-flex;
-  min-width: 34px;
-  min-height: 34px;
+  min-width: 28px;
+  min-height: 28px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
 }
 
 .job-column-body {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+  min-height: 96px;
+  border-radius: 14px;
+  transition: background 0.18s ease, border-color 0.18s ease;
 }
 
 .job-column-empty {
-  min-height: 120px;
+  min-height: 92px;
   display: grid;
   place-items: center;
   text-align: center;
   color: var(--muted);
   border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 0.88rem;
 }
 
 .job-card {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 20px;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(20, 29, 38, 0.98), rgba(13, 20, 27, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  cursor: grab;
 }
 
 .job-card-selected {
@@ -1017,9 +1023,14 @@ input[readonly] {
   box-shadow: 0 0 0 1px rgba(49, 185, 113, 0.2);
 }
 
+.job-card-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
 .job-card-main {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   padding: 0;
   border: none;
   background: transparent;
@@ -1038,33 +1049,48 @@ input[readonly] {
 }
 
 .job-card h3 {
-  font-size: 1rem;
+  font-size: 0.94rem;
 }
 
 .job-card p,
 .job-card-meta span {
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.4;
+  font-size: 0.86rem;
 }
 
 .job-card-sector {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 4px 10px;
+  min-height: 24px;
+  padding: 3px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--navy);
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 800;
 }
 
 .job-card-actions {
   flex-wrap: wrap;
+  justify-content: space-between;
 }
 
 .job-card-actions .table-action-button {
   min-width: 0;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.job-drag-hint {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.job-stage-drop-active {
+  background: rgba(49, 185, 113, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(49, 185, 113, 0.2);
 }
 
 .records-table-wrap {

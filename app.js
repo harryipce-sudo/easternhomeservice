@@ -196,6 +196,7 @@ const RECYCLE_RETENTION_DAYS = 15;
 let els = {};
 let initRecoveryAttempted = false;
 let pendingFocus = null;
+let draggedJobId = "";
 
 function getQuoteRecordsEndpoint() {
   const { hostname } = window.location;
@@ -750,6 +751,10 @@ function updateRecordJobStage(id, nextStage) {
 
   persistRecords();
   renderRecords();
+}
+
+function setDraggedJob(id = "") {
+  draggedJobId = id;
 }
 
 function confirmAction(message) {
@@ -3015,14 +3020,11 @@ function renderJobBoard() {
         <p>${escapeHtml(JOB_STAGE_META[stage].label)}</p>
         <strong>${recordsInStage.length}</strong>
       </div>
-      <div class="job-column-body">
+      <div class="job-column-body" data-job-stage-zone="${stage}">
         ${recordsInStage.length
           ? recordsInStage.map((record) => {
-              const currentIndex = JOB_STAGE_ORDER.indexOf(stage);
-              const previousStage = JOB_STAGE_ORDER[currentIndex - 1];
-              const nextStage = JOB_STAGE_ORDER[currentIndex + 1];
               return `
-                <article class="job-card ${record.id === state.selectedRecordId ? "job-card-selected" : ""}">
+                <article class="job-card ${record.id === state.selectedRecordId ? "job-card-selected" : ""}" draggable="true" data-job-card="${record.id}">
                   <button class="job-card-main" data-select-record="${record.id}" type="button">
                     <div class="job-card-top">
                       <strong>${escapeHtml(record.quoteNumber || "-")}</strong>
@@ -3036,8 +3038,7 @@ function renderJobBoard() {
                     </div>
                   </button>
                   <div class="job-card-actions">
-                    ${previousStage ? `<button class="ghost-button table-action-button" data-job-stage-id="${record.id}" data-job-stage="${previousStage}" type="button">Back</button>` : ""}
-                    ${nextStage ? `<button class="secondary-button table-action-button" data-job-stage-id="${record.id}" data-job-stage="${nextStage}" type="button">Next</button>` : ""}
+                    <span class="job-drag-hint">Drag to move</span>
                     <button class="ghost-button table-action-button" data-create-invoice-record="${record.id}" type="button">Invoice</button>
                   </div>
                 </article>
@@ -4226,15 +4227,78 @@ function bindEvents() {
         return;
       }
 
-      if (target.dataset.jobStageId && target.dataset.jobStage) {
-        updateRecordJobStage(target.dataset.jobStageId, target.dataset.jobStage);
-        return;
-      }
-
       if (target.dataset.createInvoiceRecord) {
         const record = state.records.find((item) => item.id === target.dataset.createInvoiceRecord);
         createInvoiceFromRecord(record);
       }
+    });
+
+    els.jobBoard.addEventListener("dragstart", (event) => {
+      const card = event.target.closest("[data-job-card]");
+      if (!card) {
+        return;
+      }
+
+      setDraggedJob(card.dataset.jobCard || "");
+      card.classList.add("job-card-dragging");
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", card.dataset.jobCard || "");
+      }
+    });
+
+    els.jobBoard.addEventListener("dragend", (event) => {
+      const card = event.target.closest("[data-job-card]");
+      if (card) {
+        card.classList.remove("job-card-dragging");
+      }
+      els.jobBoard.querySelectorAll(".job-stage-drop-active").forEach((item) => {
+        item.classList.remove("job-stage-drop-active");
+      });
+      setDraggedJob("");
+    });
+
+    els.jobBoard.addEventListener("dragover", (event) => {
+      const zone = event.target.closest("[data-job-stage-zone]");
+      if (!zone || !draggedJobId) {
+        return;
+      }
+
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+      }
+      els.jobBoard.querySelectorAll(".job-stage-drop-active").forEach((item) => {
+        if (item !== zone) {
+          item.classList.remove("job-stage-drop-active");
+        }
+      });
+      zone.classList.add("job-stage-drop-active");
+    });
+
+    els.jobBoard.addEventListener("dragleave", (event) => {
+      const zone = event.target.closest("[data-job-stage-zone]");
+      if (!zone) {
+        return;
+      }
+
+      const related = event.relatedTarget;
+      if (related instanceof Node && zone.contains(related)) {
+        return;
+      }
+      zone.classList.remove("job-stage-drop-active");
+    });
+
+    els.jobBoard.addEventListener("drop", (event) => {
+      const zone = event.target.closest("[data-job-stage-zone]");
+      if (!zone || !draggedJobId) {
+        return;
+      }
+
+      event.preventDefault();
+      zone.classList.remove("job-stage-drop-active");
+      updateRecordJobStage(draggedJobId, zone.dataset.jobStageZone || "");
+      setDraggedJob("");
     });
   }
 
