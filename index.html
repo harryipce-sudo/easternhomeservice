@@ -18,14 +18,14 @@
         </div>
         <div>
           <p class="brand-name">Eastern Home Service</p>
-          <p class="brand-subtitle">Quote Builder</p>
+          <p class="brand-subtitle">Business Hub</p>
         </div>
       </div>
 
       <nav class="nav">
-        <a class="nav-item active" href="#quote-builder" data-page-link="quotes">Blinds and Curtain</a>
-        <a class="nav-item" href="#cleaning-quote" data-page-link="cleaning">Cleaning Quote</a>
-        <a class="nav-item" href="#quote-history" data-page-link="ops">Quote / Invoice</a>
+        <a class="nav-item active" href="#quote-builder" data-page-link="quotes">Quote</a>
+        <a class="nav-item" href="#quote-history" data-page-link="jobs">Job Organise</a>
+        <a class="nav-item" href="#saved-invoices" data-page-link="invoice">Invoice</a>
       </nav>
 
     </aside>
@@ -49,6 +49,7 @@
       <nav class="subnav">
         <a class="subnav-link active" href="#quote-builder" data-quote-subnav="builder">Quote Builder</a>
         <a class="subnav-link" href="#air-mode" data-quote-subnav="air">Air Mode</a>
+        <a class="subnav-link" href="#cleaning-quote" data-quote-subnav="cleaning">Cleaning Quote</a>
       </nav>
 
       <section class="panel customer-panel" id="builder-customer-panel">
@@ -360,6 +361,7 @@
         <nav class="subnav">
           <a class="subnav-link" href="#quote-builder" data-quote-subnav="builder">Quote Builder</a>
           <a class="subnav-link active" href="#air-mode" data-quote-subnav="air">Air Mode</a>
+          <a class="subnav-link" href="#cleaning-quote" data-quote-subnav="cleaning">Cleaning Quote</a>
         </nav>
 
         <section class="panel air-mode-panel">
@@ -536,6 +538,12 @@
           </div>
         </header>
 
+        <nav class="subnav">
+          <a class="subnav-link" href="#quote-builder" data-quote-subnav="builder">Quote Builder</a>
+          <a class="subnav-link" href="#air-mode" data-quote-subnav="air">Air Mode</a>
+          <a class="subnav-link active" href="#cleaning-quote" data-quote-subnav="cleaning">Cleaning Quote</a>
+        </nav>
+
         <section class="panel customer-panel">
           <div class="panel-heading">
             <div>
@@ -669,16 +677,16 @@
       <section class="app-page" id="page-history" data-page="history">
         <header class="page-header page-header-single">
           <div>
-            <p class="section-kicker">Saved Quotes</p>
-            <h1 id="quote-history">Search Quote</h1>
-            <p class="page-copy">Search saved quotes by quote number or customer details, then open the full order summary.</p>
+            <p class="section-kicker">Operations</p>
+            <h1 id="quote-history">Job Organise</h1>
+            <p class="page-copy">Organise accepted work like a simple board, then open the full quote detail when you need to action a job.</p>
           </div>
         </header>
 
         <nav class="subnav">
-          <a class="subnav-link active" href="#quote-history" data-ops-subnav="history">Search Quote</a>
-          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
-          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link active" href="#quote-history" data-ops-subnav="history">Job Board</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Invoice List</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoice Editor</a>
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
           <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
@@ -686,28 +694,34 @@
         <section class="panel records-panel" id="dimension-records">
           <div class="panel-heading">
             <div>
-              <p class="section-kicker">Quote Search</p>
-              <h2>Saved Quote List</h2>
-              <p>Click the customer detail to open the full order breakdown, dimensions, and totals.</p>
+              <p class="section-kicker">Workflow Board</p>
+              <h2>Jobs In Progress</h2>
+              <p>Move jobs across the board as you measure, order, install, and finish each job.</p>
             </div>
           </div>
+          <div class="job-board" id="job-board"></div>
+          <div class="job-board-empty record-empty" id="job-board-empty">No saved quotes available to organise yet.</div>
           <div class="records-toolbar">
             <label class="records-search-field">
-              <span>Search Quote</span>
+              <span>Search Jobs</span>
               <input id="history-search" type="search" placeholder="Search quote number, customer, phone, or address">
             </label>
           </div>
           <div class="records-layout">
             <div class="records-table-wrap">
+              <div class="summary-table-head">
+                <h3>Job Register</h3>
+                <p>Use the list to search everything quickly, then open the full detail panel.</p>
+              </div>
               <table class="quote-table records-table">
                 <thead>
                   <tr>
                     <th>Quote No.</th>
                     <th>Sector</th>
+                    <th>Stage</th>
                     <th>Customer Detail</th>
                     <th>Address</th>
                     <th>Saved</th>
-                    <th>Send Log</th>
                     <th>Total</th>
                     <th>Action</th>
                   </tr>
@@ -719,7 +733,7 @@
             <div class="records-detail-wrap">
               <div class="record-detail-card" id="record-detail">
                 <div class="record-detail-empty">
-                  Select a customer detail to view the full quote and order summary.
+                  Select a job card or customer detail to view the full quote and order summary.
                 </div>
               </div>
             </div>
@@ -731,8 +745,8 @@
         <header class="page-header">
           <div>
             <p class="section-kicker">Accounts</p>
-            <h1 id="invoice-page">Invoices</h1>
-            <p class="page-copy">Create draft invoices, convert saved quotes into invoices, and track what is paid or still due.</p>
+            <h1 id="invoice-page">Invoice Editor</h1>
+            <p class="page-copy">Create and edit invoices in a cleaner accounts workspace, then preview, send, or print them.</p>
           </div>
           <div class="header-actions">
             <button class="ghost-button" id="new-invoice" type="button">New Invoice</button>
@@ -745,9 +759,9 @@
         </header>
 
         <nav class="subnav">
-          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
-          <a class="subnav-link active" href="#invoices" data-ops-subnav="invoices">Invoices</a>
-          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Job Board</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Invoice List</a>
+          <a class="subnav-link active" href="#invoices" data-ops-subnav="invoices">Invoice Editor</a>
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
           <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
@@ -872,15 +886,15 @@
         <header class="page-header page-header-single">
           <div>
             <p class="section-kicker">Accounts</p>
-            <h1 id="saved-invoices-page">Saved Invoices</h1>
-            <p class="page-copy">Search invoices, review totals due, and open any invoice back in the editor.</p>
+            <h1 id="saved-invoices-page">Invoice List</h1>
+            <p class="page-copy">Review all invoices in one clean list, filter by customer or reference, and open any invoice in the editor.</p>
           </div>
         </header>
 
         <nav class="subnav">
-          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
-          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
-          <a class="subnav-link active" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Job Board</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoice Editor</a>
+          <a class="subnav-link active" href="#saved-invoices" data-ops-subnav="saved">Invoice List</a>
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
           <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
@@ -888,9 +902,9 @@
         <section class="panel invoice-list-panel">
           <div class="panel-heading">
             <div>
-              <p class="section-kicker">Invoice List</p>
-              <h2>Saved Invoices</h2>
-              <p>Search by invoice number, quote number, customer, or address.</p>
+              <p class="section-kicker">Accounts Register</p>
+              <h2>All Invoices</h2>
+              <p>Search by invoice number, customer, quote number, or address, then select the invoice you want to work on.</p>
             </div>
             <div class="invoice-status-actions">
               <button class="ghost-button" id="saved-preview-invoice" type="button">Preview</button>
@@ -913,13 +927,13 @@
               <thead>
                 <tr>
                   <th>Invoice No.</th>
-                  <th>Sector</th>
                   <th>Customer</th>
-                  <th>Status</th>
+                  <th>Invoice Date</th>
                   <th>Due Date</th>
-                  <th>Send Log</th>
+                  <th>Untaxed</th>
                   <th>Total</th>
                   <th>Amount Due</th>
+                  <th>Status</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -941,9 +955,9 @@
         </header>
 
         <nav class="subnav">
-          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
-          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
-          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Job Board</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Invoice List</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoice Editor</a>
           <a class="subnav-link active" href="#recycle" data-ops-subnav="recycle">Recycle</a>
           <a class="subnav-link" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>
@@ -986,9 +1000,9 @@
         </header>
 
         <nav class="subnav">
-          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Search Quote</a>
-          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoices</a>
-          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Saved Invoices</a>
+          <a class="subnav-link" href="#quote-history" data-ops-subnav="history">Job Board</a>
+          <a class="subnav-link" href="#saved-invoices" data-ops-subnav="saved">Invoice List</a>
+          <a class="subnav-link" href="#invoices" data-ops-subnav="invoices">Invoice Editor</a>
           <a class="subnav-link" href="#recycle" data-ops-subnav="recycle">Recycle</a>
           <a class="subnav-link active" href="#settings" data-ops-subnav="settings">Settings</a>
         </nav>

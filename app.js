@@ -178,6 +178,15 @@ const SECTOR_LABELS = {
   general: "General"
 };
 
+const JOB_STAGE_ORDER = ["quoted", "measure", "ordered", "install", "completed"];
+const JOB_STAGE_META = {
+  quoted: { label: "New Quote", shortLabel: "Quoted" },
+  measure: { label: "Measure", shortLabel: "Measure" },
+  ordered: { label: "Order", shortLabel: "Ordered" },
+  install: { label: "Install", shortLabel: "Install" },
+  completed: { label: "Done", shortLabel: "Done" }
+};
+
 const LOCAL_RECORDS_KEY = "ehs-dimension-records";
 const LOCAL_PHOTOS_KEY = "ehs-house-photos";
 const LOCAL_INVOICES_KEY = "ehs-invoices";
@@ -320,6 +329,8 @@ function cacheElements() {
     cleaningProfit: document.querySelector("#cleaning-profit"),
     cleaningProfitPercent: document.querySelector("#cleaning-profit-percent"),
     historySearch: document.querySelector("#history-search"),
+    jobBoard: document.querySelector("#job-board"),
+    jobBoardEmpty: document.querySelector("#job-board-empty"),
     recordsTableBody: document.querySelector("#records-table-body"),
     recordDetail: document.querySelector("#record-detail"),
     recordEmpty: document.querySelector("#record-empty"),
@@ -617,7 +628,11 @@ function getActivePageFromHash(hash = window.location.hash) {
 
 function syncQuoteSubnav() {
   const currentHash = window.location.hash || "#quote-builder";
-  const subnavView = currentHash === "#air-mode" ? "air" : "builder";
+  const subnavView = currentHash === "#air-mode"
+    ? "air"
+    : currentHash === "#cleaning-quote"
+      ? "cleaning"
+      : "builder";
 
   els.quoteSubnavLinks.forEach((item) => {
     item.classList.toggle("active", item.dataset.quoteSubnav === subnavView);
@@ -650,10 +665,10 @@ function syncPageNavigation() {
 
   els.navItems.forEach((item) => {
     const href = item.getAttribute("href");
-    const isQuotesMain = (activePage === "builder" || activePage === "airMode") && href === "#quote-builder";
-    const isQuoteInvoiceMain = ["history", "invoices", "savedInvoices", "recycle", "settings"].includes(activePage) && href === "#quote-history";
-    const isCleaningMain = activePage === "cleaning" && href === "#cleaning-quote";
-    item.classList.toggle("active", isQuotesMain || isQuoteInvoiceMain || isCleaningMain);
+    const isQuoteMain = ["builder", "airMode", "cleaning"].includes(activePage) && href === "#quote-builder";
+    const isJobsMain = activePage === "history" && href === "#quote-history";
+    const isInvoiceMain = ["invoices", "savedInvoices", "recycle", "settings"].includes(activePage) && href === "#saved-invoices";
+    item.classList.toggle("active", isQuoteMain || isJobsMain || isInvoiceMain);
   });
 
   syncQuoteSubnav();
@@ -696,6 +711,45 @@ function formatRecordDate(value) {
     month: "short",
     year: "numeric"
   });
+}
+
+function getJobStage(record) {
+  const recordStage = String(record?.jobStage || "").trim();
+  if (JOB_STAGE_META[recordStage]) {
+    return recordStage;
+  }
+
+  const matchingInvoice = state.invoices.find((invoice) => (
+    String(invoice.sourceQuoteNumber || "").trim() &&
+    String(invoice.sourceQuoteNumber || "").trim() === String(record?.quoteNumber || "").trim()
+  ));
+
+  if (matchingInvoice?.status === "paid") {
+    return "completed";
+  }
+
+  if (matchingInvoice) {
+    return "install";
+  }
+
+  return "quoted";
+}
+
+function formatJobStage(stage) {
+  return JOB_STAGE_META[stage]?.shortLabel || JOB_STAGE_META.quoted.shortLabel;
+}
+
+function updateRecordJobStage(id, nextStage) {
+  if (!JOB_STAGE_META[nextStage]) {
+    return;
+  }
+
+  state.records = state.records.map((record) => (
+    record.id === id ? { ...record, jobStage: nextStage } : record
+  ));
+
+  persistRecords();
+  renderRecords();
 }
 
 function confirmAction(message) {
@@ -2890,13 +2944,13 @@ function renderInvoices() {
     row.className = invoice.id === state.selectedInvoiceId ? "records-row is-selected" : "records-row";
     row.innerHTML = `
       <td data-label="Invoice No."><button class="record-link-button" data-select-invoice="${invoice.id}" type="button"><strong>${escapeHtml(invoice.invoiceNumber)}</strong></button></td>
-      <td data-label="Sector">${escapeHtml(invoice.sector || "General")}</td>
       <td data-label="Customer">${escapeHtml(invoice.customerName || "-")}</td>
-      <td data-label="Status"><span class="invoice-status-pill status-${invoice.status}">${formatInvoiceStatus(invoice.status)}</span></td>
+      <td data-label="Invoice Date">${formatRecordDate(invoice.invoiceDate)}</td>
       <td data-label="Due Date">${formatRecordDate(invoice.dueDate)}</td>
-      <td data-label="Send Log">${escapeHtml(formatSendLog(invoice))}</td>
+      <td data-label="Untaxed">${formatCurrency(totals.subtotal)}</td>
       <td data-label="Total">${formatCurrency(totals.total)}</td>
       <td data-label="Amount Due">${formatCurrency(totals.amountDue)}</td>
+      <td data-label="Status"><span class="invoice-status-pill status-${invoice.status}">${formatInvoiceStatus(invoice.status)}</span></td>
       <td data-label="Action" class="table-actions-cell">
         <button class="secondary-button table-action-button" data-edit-invoice="${invoice.id}" type="button">Edit</button>
         <button class="danger-button table-action-button" data-delete-invoice="${invoice.id}" type="button">Delete</button>
@@ -2935,6 +2989,65 @@ function renderRecycleBin() {
     els.recycleListBody.appendChild(row);
   });
 
+}
+
+function renderJobBoard() {
+  if (!els.jobBoard || !els.jobBoardEmpty) {
+    return;
+  }
+
+  const filteredRecords = getFilteredRecords();
+  els.jobBoard.innerHTML = "";
+
+  if (!filteredRecords.length) {
+    els.jobBoardEmpty.style.display = "grid";
+    return;
+  }
+
+  els.jobBoardEmpty.style.display = "none";
+
+  JOB_STAGE_ORDER.forEach((stage) => {
+    const recordsInStage = filteredRecords.filter((record) => getJobStage(record) === stage);
+    const column = document.createElement("section");
+    column.className = "job-column";
+    column.innerHTML = `
+      <div class="job-column-head">
+        <p>${escapeHtml(JOB_STAGE_META[stage].label)}</p>
+        <strong>${recordsInStage.length}</strong>
+      </div>
+      <div class="job-column-body">
+        ${recordsInStage.length
+          ? recordsInStage.map((record) => {
+              const currentIndex = JOB_STAGE_ORDER.indexOf(stage);
+              const previousStage = JOB_STAGE_ORDER[currentIndex - 1];
+              const nextStage = JOB_STAGE_ORDER[currentIndex + 1];
+              return `
+                <article class="job-card ${record.id === state.selectedRecordId ? "job-card-selected" : ""}">
+                  <button class="job-card-main" data-select-record="${record.id}" type="button">
+                    <div class="job-card-top">
+                      <strong>${escapeHtml(record.quoteNumber || "-")}</strong>
+                      <span class="job-card-sector">${escapeHtml(record.sector || SECTOR_LABELS[record.recordType || "blinds-curtains"] || "General")}</span>
+                    </div>
+                    <h3>${escapeHtml(record.customerName || "Untitled Customer")}</h3>
+                    <p>${escapeHtml(record.address || "-")}</p>
+                    <div class="job-card-meta">
+                      <span>${formatRecordDate(record.submittedAt)}</span>
+                      <strong>${escapeHtml(record.totalQuote || formatCurrency(0))}</strong>
+                    </div>
+                  </button>
+                  <div class="job-card-actions">
+                    ${previousStage ? `<button class="ghost-button table-action-button" data-job-stage-id="${record.id}" data-job-stage="${previousStage}" type="button">Back</button>` : ""}
+                    ${nextStage ? `<button class="secondary-button table-action-button" data-job-stage-id="${record.id}" data-job-stage="${nextStage}" type="button">Next</button>` : ""}
+                    <button class="ghost-button table-action-button" data-create-invoice-record="${record.id}" type="button">Invoice</button>
+                  </div>
+                </article>
+              `;
+            }).join("")
+          : '<div class="job-column-empty">No jobs in this stage.</div>'}
+      </div>
+    `;
+    els.jobBoard.appendChild(column);
+  });
 }
 
 function getFilteredRecords() {
@@ -3172,6 +3285,7 @@ function renderRecordDetail(record) {
 function renderRecords() {
   const filteredRecords = getFilteredRecords();
   els.recordsTableBody.innerHTML = "";
+  renderJobBoard();
 
   if (!filteredRecords.length) {
     els.recordEmpty.style.display = "grid";
@@ -3186,11 +3300,13 @@ function renderRecords() {
   }
 
   filteredRecords.forEach((record) => {
+    const stage = getJobStage(record);
     const row = document.createElement("tr");
     row.className = record.id === state.selectedRecordId ? "records-row is-selected" : "records-row";
     row.innerHTML = `
       <td data-label="Quote No.">${escapeHtml(record.quoteNumber)}</td>
       <td data-label="Sector">${escapeHtml(record.sector || SECTOR_LABELS[record.recordType || "blinds-curtains"] || "General")}</td>
+      <td data-label="Stage"><span class="invoice-status-pill job-stage-pill stage-${stage}">${escapeHtml(formatJobStage(stage))}</span></td>
       <td data-label="Customer Detail">
         <button class="record-link-button" data-select-record="${record.id}" type="button">
           <strong>${escapeHtml(record.customerName)}</strong>
@@ -3199,9 +3315,9 @@ function renderRecords() {
       </td>
       <td data-label="Address">${escapeHtml(record.address)}</td>
       <td data-label="Saved">${formatRecordDate(record.submittedAt)}</td>
-      <td data-label="Send Log">${escapeHtml(formatSendLog(record))}</td>
       <td data-label="Total">${escapeHtml(record.totalQuote)}</td>
-      <td data-label="Action">
+      <td data-label="Action" class="table-actions-cell">
+        <button class="secondary-button table-action-button" data-create-invoice-record="${record.id}" type="button">Invoice</button>
         <button class="danger-button table-action-button" data-delete-record="${record.id}" type="button">Delete</button>
       </td>
     `;
@@ -4086,6 +4202,12 @@ function bindEvents() {
       return;
     }
 
+    if (target.dataset.createInvoiceRecord) {
+      const record = state.records.find((item) => item.id === target.dataset.createInvoiceRecord);
+      createInvoiceFromRecord(record);
+      return;
+    }
+
     if (target.dataset.deleteRecord) {
       if (!confirmAction("Move this quote to recycle? You can recover it within 15 days.")) {
         return;
@@ -4093,6 +4215,28 @@ function bindEvents() {
       deleteRecord(target.dataset.deleteRecord);
     }
   });
+
+  if (els.jobBoard) {
+    els.jobBoard.addEventListener("click", (event) => {
+      const target = event.target;
+      const selectButton = target.closest("[data-select-record]");
+      if (selectButton) {
+        state.selectedRecordId = selectButton.dataset.selectRecord;
+        renderRecords();
+        return;
+      }
+
+      if (target.dataset.jobStageId && target.dataset.jobStage) {
+        updateRecordJobStage(target.dataset.jobStageId, target.dataset.jobStage);
+        return;
+      }
+
+      if (target.dataset.createInvoiceRecord) {
+        const record = state.records.find((item) => item.id === target.dataset.createInvoiceRecord);
+        createInvoiceFromRecord(record);
+      }
+    });
+  }
 
   els.recordDetail.addEventListener("click", (event) => {
     const target = event.target;
