@@ -66,16 +66,16 @@
 };
 
 const CURTAIN_MATERIALS = {
-  Begonia: { price: 40.99, colors: ["Sand", "Silver", "Taupe", "Tea", "Pewter", "Charcoal", "Ink"] },
-  Camellia: { price: 46.99, colors: ["White", "Sand", "Silver", "Taupe", "Tea", "Black"] },
-  Daisy: { price: 49.99, colors: ["Sand", "Duck Egg", "Taupe", "Tea", "Charcoal", "Almond"] },
-  Erica: { price: 34.99, colors: ["White", "Sand", "Taupe", "Granite", "Pewter"] },
-  Freesia: { price: 42.99, colors: ["White", "Sand", "Taupe", "Duck Egg", "Granite", "Pewter", "Mist"] },
-  Gardenia: { price: 34.99, colors: ["White", "Ivory", "Silver"] },
-  Iris: { price: 34.99, colors: ["White", "Pewter", "Charcoal", "Black"] },
-  Jasmine: { price: 34.99, colors: ["Ivory", "Pewter", "Charcoal"] },
-  Kalmia: { price: 26.99, colors: ["White", "Ivory", "Silver", "Pewter", "Slate"] },
-  Lewesia: { price: 26.99, colors: ["White", "Silver", "Pewter", "Slate"] }
+  Begonia: { price: 40.99, type: "curtain", colors: ["Sand", "Silver", "Taupe", "Tea", "Pewter", "Charcoal", "Ink"] },
+  Camellia: { price: 46.99, type: "curtain", colors: ["White", "Sand", "Silver", "Taupe", "Tea", "Black"] },
+  Daisy: { price: 49.99, type: "curtain", colors: ["Sand", "Duck Egg", "Taupe", "Tea", "Charcoal", "Almond"] },
+  Erica: { price: 34.99, type: "curtain", colors: ["White", "Sand", "Taupe", "Granite", "Pewter"] },
+  Freesia: { price: 42.99, type: "curtain", colors: ["White", "Sand", "Taupe", "Duck Egg", "Granite", "Pewter", "Mist"] },
+  Gardenia: { price: 34.99, type: "sheer", colors: ["White", "Ivory", "Silver"] },
+  Iris: { price: 34.99, type: "sheer", colors: ["White", "Pewter", "Charcoal", "Black"] },
+  Jasmine: { price: 34.99, type: "sheer", colors: ["Ivory", "Pewter", "Charcoal"] },
+  Kalmia: { price: 26.99, type: "sheer", colors: ["White", "Ivory", "Silver", "Pewter", "Slate"] },
+  Lewesia: { price: 26.99, type: "sheer", colors: ["White", "Silver", "Pewter", "Slate"] }
 };
 
 const SERVICE_TYPES = [
@@ -996,6 +996,28 @@ function curtainColorOptions(materialName, selectedColor) {
     .join("");
 }
 
+function getMaterialsForProduct(product = "curtain") {
+  return Object.entries(CURTAIN_MATERIALS)
+    .filter(([, material]) => material.type === product)
+    .sort(([, a], [, b]) => a.price - b.price);
+}
+
+function buildMaterialOptions(product = "curtain", selectedMaterial = "") {
+  const materials = getMaterialsForProduct(product);
+  return materials
+    .map(([materialName, material]) => `
+      <option value="${materialName}" ${selectedMaterial === materialName ? "selected" : ""}>
+        ${materialName} (${material.price.toFixed(2)}/m)
+      </option>
+    `)
+    .join("");
+}
+
+function getDefaultMaterialForProduct(product = "curtain") {
+  const materials = getMaterialsForProduct(product);
+  return materials[0]?.[0] || "Begonia";
+}
+
 function renderBlindSummaryTable() {
   els.summaryBlindsBody.innerHTML = "";
 
@@ -1076,7 +1098,7 @@ function renderCurtainSummaryTable() {
       <td data-label="Location"><input data-curtain-id="${line.id}" data-curtain-field="location" type="text" value="${line.location}" placeholder="Master bedroom"></td>
       <td data-label="Material">
         <select data-curtain-id="${line.id}" data-curtain-field="material">
-          ${Object.keys(CURTAIN_MATERIALS).map((material) => `<option value="${material}" ${line.material === material ? "selected" : ""}>${material}</option>`).join("")}
+          ${buildMaterialOptions(line.product, line.material)}
         </select>
       </td>
       <td data-label="Color">
@@ -1587,7 +1609,8 @@ function createRecordSnapshot() {
 }
 
 function populateAirCurtainColors(selectedColor = "") {
-  const materialName = els.airCurtainMaterial.value || "Begonia";
+  const product = els.airProductType.value === "sheer" ? "sheer" : "curtain";
+  const materialName = els.airCurtainMaterial.value || getDefaultMaterialForProduct(product);
   const material = CURTAIN_MATERIALS[materialName];
   if (!material) {
     return;
@@ -1602,11 +1625,23 @@ function populateAirCurtainColors(selectedColor = "") {
   }
 }
 
+function populateAirCurtainMaterials(selectedMaterial = "") {
+  const product = els.airProductType.value === "sheer" ? "sheer" : "curtain";
+  const defaultMaterial = getDefaultMaterialForProduct(product);
+  const materialName = getMaterialsForProduct(product).some(([name]) => name === selectedMaterial)
+    ? selectedMaterial
+    : defaultMaterial;
+
+  els.airCurtainMaterial.innerHTML = buildMaterialOptions(product, materialName);
+  els.airCurtainMaterial.value = materialName;
+}
+
 function updateAirModeFields() {
   const isBlind = els.airProductType.value === "blind";
   els.airBlindFields.style.display = isBlind ? "block" : "none";
   els.airCurtainFields.style.display = isBlind ? "none" : "block";
   if (!isBlind) {
+    populateAirCurtainMaterials(els.airCurtainMaterial.value);
     populateAirCurtainColors(els.airCurtainColor.value);
   }
 }
@@ -1617,8 +1652,8 @@ function clearAirModeForm() {
   els.airBlindService.value = "supply-install";
   els.airBlindWidth.value = "";
   els.airBlindHeight.value = "";
-  els.airCurtainMaterial.value = "Begonia";
-  populateAirCurtainColors("Sand");
+  populateAirCurtainMaterials();
+  populateAirCurtainColors();
   els.airCurtainWidth.value = "";
   els.airCurtainDrop.value = "";
   els.airCurtainFoldRate.value = "2.3";
@@ -3488,6 +3523,12 @@ function setCurtainValue(id, field, value) {
         : value
     };
 
+    if (field === "product") {
+      const nextMaterial = getDefaultMaterialForProduct(value);
+      next.material = nextMaterial;
+      next.color = CURTAIN_MATERIALS[nextMaterial].colors[0];
+    }
+
     if (field === "material") {
       next.color = CURTAIN_MATERIALS[value].colors[0];
     }
@@ -4778,9 +4819,7 @@ async function init() {
     await loadRecords();
     loadInvoices();
     loadRecycleBin();
-    els.airCurtainMaterial.innerHTML = Object.keys(CURTAIN_MATERIALS)
-      .map((material) => `<option value="${material}" ${material === "Begonia" ? "selected" : ""}>${material}</option>`)
-      .join("");
+    populateAirCurtainMaterials();
     clearAirModeForm();
     state.lines = [];
     state.curtainLines = [];
