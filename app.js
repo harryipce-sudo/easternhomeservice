@@ -273,9 +273,11 @@ function cacheElements() {
     photoEmpty: document.querySelector("#photo-empty"),
     photoCount: document.querySelector("#photo-count"),
     materialsCostTotal: document.querySelector("#materials-cost-total"),
-    curtainCostTotal: document.querySelector("#curtain-cost-total"),
     blindRetailTotal: document.querySelector("#blind-retail-total"),
-    curtainRetailTotal: document.querySelector("#curtain-retail-total"),
+    curtainFabricCostTotal: document.querySelector("#curtain-fabric-cost-total"),
+    curtainFabricRetailTotal: document.querySelector("#curtain-fabric-retail-total"),
+    curtainTrackCostTotal: document.querySelector("#curtain-track-cost-total"),
+    curtainTrackRetailTotal: document.querySelector("#curtain-track-retail-total"),
     installCostTotal: document.querySelector("#install-cost-total"),
     installRetailTotal: document.querySelector("#install-retail-total"),
     costExGstTotal: document.querySelector("#cost-ex-gst-total"),
@@ -3593,16 +3595,27 @@ function updateSummary() {
 
   const curtainTotals = state.curtainLines.reduce((acc, line) => {
     const computed = calculateCurtainLine(line);
+    const fabricRetailExGst = computed.fabricCost * (1 + state.settings.curtainMarkup / 100);
+    const trackRetailExGst = computed.trackCost * (1 + state.settings.curtainMarkup / 100);
+
+    acc.fabricCostTotal += computed.fabricCost;
+    acc.trackCostTotal += computed.trackCost;
     acc.curtainCostTotal += computed.costExGst;
     acc.curtainCostGstTotal += computed.costWithGst;
+    acc.fabricRetailTotal += fabricRetailExGst;
+    acc.trackRetailTotal += trackRetailExGst;
     acc.supplyRetailTotal += computed.retailExGst;
     acc.subtotalExGst += computed.retailExGst;
     acc.gstTotal += computed.gst;
     acc.grandTotal += computed.lineTotal;
     return acc;
   }, {
+    fabricCostTotal: 0,
+    trackCostTotal: 0,
     curtainCostTotal: 0,
     curtainCostGstTotal: 0,
+    fabricRetailTotal: 0,
+    trackRetailTotal: 0,
     supplyRetailTotal: 0,
     subtotalExGst: 0,
     gstTotal: 0,
@@ -3615,9 +3628,11 @@ function updateSummary() {
   const costExGstTotal = blindTotals.materialsCostTotal + blindTotals.installCostTotal + curtainTotals.curtainCostTotal;
 
   els.materialsCostTotal.textContent = formatCurrency(blindTotals.materialsCostTotal);
-  els.curtainCostTotal.textContent = formatCurrency(curtainTotals.curtainCostTotal);
   els.blindRetailTotal.textContent = formatCurrency(blindTotals.supplyRetailTotal + blindTotals.installRetailTotal + blindTotals.gstTotal);
-  els.curtainRetailTotal.textContent = formatCurrency(curtainTotals.grandTotal);
+  els.curtainFabricCostTotal.textContent = formatCurrency(curtainTotals.fabricCostTotal);
+  els.curtainFabricRetailTotal.textContent = formatCurrency(curtainTotals.fabricRetailTotal * (1 + state.gstRate));
+  els.curtainTrackCostTotal.textContent = formatCurrency(curtainTotals.trackCostTotal);
+  els.curtainTrackRetailTotal.textContent = formatCurrency(curtainTotals.trackRetailTotal * (1 + state.gstRate));
   els.installCostTotal.textContent = formatCurrency(blindTotals.installCostTotal);
   els.installRetailTotal.textContent = formatCurrency(blindTotals.installRetailTotal);
   els.costExGstTotal.textContent = formatCurrency(costExGstTotal);
