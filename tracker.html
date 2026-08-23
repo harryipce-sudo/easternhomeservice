@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eastern Home Service | Job Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./tracker.css">
+</head>
+<body>
+  <div class="tracker-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html"><span class="brand-mark">EH</span><span>Eastern Home<br>Service</span></a>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-link active" data-view="jobs">Jobs</button>
+        <button class="nav-link" data-view="calendar">Calendar</button>
+        <button class="nav-link" data-view="clients">Clients</button>
+        <button class="nav-link" data-view="quotes">Quotes</button>
+        <button class="nav-link" data-view="invoices">Invoices</button>
+        <button class="nav-link" data-view="tasks">Tasks</button>
+        <button class="nav-link" data-view="reports">Reports</button>
+        <button class="nav-link" data-view="settings">Settings</button>
+      </nav>
+      <div class="sync-state" id="sync-state"><span></span> Syncing shared data</div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div><h1 id="page-title">Jobs</h1><p id="page-description">All work in one shared job register.</p></div>
+        <div class="top-actions"><button class="quiet-button" id="refresh-button">Refresh</button><button class="primary-button" id="add-job">Add job</button></div>
+      </header>
+
+      <section class="view active" id="view-jobs">
+        <div class="toolbar">
+          <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search job no., client, address or detail"></label>
+          <select id="filter-status" aria-label="Filter by status"><option value="">All statuses</option><option value="quoted">Quoted</option><option value="confirmed">Confirmed</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option></select>
+          <select id="filter-payment" aria-label="Filter by payment"><option value="">All payments</option><option value="pending">Payment: Pending</option><option value="paid">Payment: Paid</option></select>
+          <select id="sort" aria-label="Sort jobs"><option value="newest">Sort: Newest</option><option value="address">Sort: Address</option><option value="quote-high">Sort: Quote high to low</option><option value="status">Sort: Status</option></select>
+          <div class="view-switch" aria-label="Jobs layout"><button class="switch-button" data-layout="table" type="button">Register</button><button class="switch-button active" data-layout="board" type="button">Board</button></div>
+        </div>
+        <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span></div>
+        <div class="jobs-layout" id="table-layout"><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job details</th><th>Quotation</th><th>Markup</th><th>Status</th><th>Payment</th><th>Referral</th><th>Invoice no.</th><th>Invoice date</th></tr></thead><tbody id="jobs-body"></tbody></table></div><div class="empty" id="jobs-empty">No jobs match these filters.</div></div></div>
+        <div class="jobs-layout active" id="board-layout"><div class="job-board" id="job-board"></div></div>
+      </section>
+
+      <section class="view" id="view-calendar"><div class="section-head"><h2>Calendar</h2><p>Scheduled jobs from your shared job register.</p></div><div class="calendar-grid" id="calendar-grid"></div></section>
+      <section class="view" id="view-clients"><div class="section-head"><h2>Clients</h2><p>Clients are created automatically from saved quotes.</p></div><div class="client-list" id="client-list"></div></section>
+      <section class="view" id="view-tasks"><div class="section-head"><h2>Tasks</h2><p>Keep the next actions visible for every active job.</p></div><div class="task-list" id="task-list"></div></section>
+      <section class="view" id="view-reports"><div class="section-head"><h2>Reports</h2><p>Live totals calculated from the shared register.</p></div><div class="report-grid" id="report-grid"></div></section>
+      <section class="view" id="view-quotes"><div class="section-head"><h2>Quotes</h2><p>Every quote in the shared job register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Quotation</th><th>Status</th></tr></thead><tbody id="quotes-body"></tbody></table></div></div></section>
+      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
+      <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div></section>
+    </main>
+
+    <aside class="detail-drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-head"><div><p>JOB DETAILS</p><h2 id="drawer-title">New job</h2></div><button class="icon-button" id="close-drawer" aria-label="Close">×</button></div>
+      <form id="job-form">
+        <input id="record-id" type="hidden">
+        <label>Job no.<input id="job-number" required placeholder="J-0001"></label>
+        <label>Client<input id="job-client" placeholder="Client name"></label>
+        <label>Address<textarea id="job-address" rows="2" required></textarea></label>
+        <label>Job details<textarea id="job-detail" rows="3"></textarea></label>
+        <div class="two-col"><label>Quotation<input id="job-quote" type="number" min="0" step="0.01"></label><label>Markup %<input id="job-markup" type="number" min="0" step="0.1"></label></div>
+        <div class="two-col"><label>Status<select id="job-status"><option value="quoted">Quoted</option><option value="confirmed">Confirmed</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option></select></label><label>Payment<select id="job-payment"><option value="pending">Pending</option><option value="paid">Paid</option></select></label></div>
+        <label>Referral payment status<select id="job-referral"><option value="pending">Pending</option><option value="paid">Paid</option><option value="not-applicable">Not applicable</option></select></label>
+        <label>Invoice no.<input id="job-invoice"></label><label>Invoice date<input id="job-invoice-date" type="date"></label><label>Scheduled date<input id="job-scheduled-date" type="date"></label>
+        <div class="drawer-actions"><button class="quiet-button" type="button" id="cancel-edit">Cancel</button><button class="primary-button" type="submit">Save changes</button></div>
+      </form>
+    </aside>
+  </div>
+  <script src="./tracker.js"></script>
+</body>
+</html>

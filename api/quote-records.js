@@ -69,6 +69,11 @@ function mapRecordToRow(record) {
     lastSentAt: record.lastSentAt || "",
     lastSentTo: record.lastSentTo || "",
     sendCount: Number(record.sendCount) || 0,
+    // Job-tracker fields stay inside the existing JSON payload so no database
+    // migration is needed. This also makes edits available to every device
+    // through the same quote_records API.
+    jobStage: record.jobStage || "quoted",
+    job: record.job && typeof record.job === "object" ? record.job : {},
     blindItems,
     curtainItems,
     cleaningSummary: record.cleaningSummary && typeof record.cleaningSummary === "object" ? record.cleaningSummary : null
@@ -109,6 +114,8 @@ function mapRowToRecord(row) {
     lastSentAt: payload.lastSentAt || "",
     lastSentTo: payload.lastSentTo || "",
     sendCount: Number(payload.sendCount) || 0,
+    jobStage: payload.jobStage || "quoted",
+    job: payload.job && typeof payload.job === "object" ? payload.job : {},
     blindCount: Number(row.blind_count) || 0,
     curtainCount: Number(row.curtain_count) || 0,
     sheerCount: Number(row.sheer_count) || 0,
