@@ -21,7 +21,9 @@
     .board-card-top { font-size:11px; line-height:1.35; align-items:flex-start; }
     .board-card-content { padding:9px 10px; }
     .board-card-detail { font-size:12px; min-height:0; }
-    .board-invoiced .board-dropzone { max-height:none; overflow:visible; }
+    .board-invoiced .board-dropzone { min-height:320px; max-height:calc(100vh - 290px); overflow-y:auto; }
+    .lane-scroll-controls { display:flex; justify-content:center; gap:7px; padding:8px 10px 0; }
+    .lane-scroll-button { width:31px; height:27px; border:1px solid #b9dcc4; border-radius:5px; background:#fff; color:#18733b; font:700 16px/1 Inter,Arial,sans-serif; cursor:pointer; }
     @media(max-width:1100px) { .job-board { grid-template-columns:repeat(6,190px); overflow-x:auto; } }
   </style>
 </head>
