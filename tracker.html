@@ -27,6 +27,20 @@
 </head>
 <body>
   <div class="tracker-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Tracker navigation">
+      <a class="brand" href="./index.html"><span class="brand-mark">EH</span><span>Eastern Home<br>Service</span></a>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-link active" data-view="jobs">Jobs</button>
+        <button class="nav-link" data-view="calendar">Calendar</button>
+        <button class="nav-link" data-view="clients">Clients</button>
+        <button class="nav-link" data-view="quotes">Quotes</button>
+        <button class="nav-link" data-view="invoices">Invoices</button>
+        <button class="nav-link" data-view="tasks">Tasks</button>
+        <button class="nav-link" data-view="reports">Reports</button>
+        <button class="nav-link" data-view="settings">Settings</button>
+      </nav>
+    </aside>
+    <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Show sidebar">›</button>
     <main class="workspace">
       <header class="topbar">
         <div><h1 id="page-title">Jobs</h1><p id="page-description">All work in one shared job register.</p></div>
