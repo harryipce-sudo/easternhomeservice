@@ -30,6 +30,8 @@
     .card-menu button:hover { background:#edf4ff; color:#125fb8; }
     .card-menu button.card-menu-danger { color:#b42318; }
     .card-menu button.card-menu-danger:hover { background:#fff1f0; color:#b42318; }
+    .tag.unpaid { background:#fff0ed; color:#bd392b; }
+    .payment-toggle { border:0; cursor:pointer; font:600 12px Inter,Arial,sans-serif; }
     .card-menu-label { margin:5px 8px 2px; color:#718096; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
     .card-menu-divider { height:1px; margin:4px 3px; background:#e2e8f0; }
     .board-dropzone { flex:1; min-height:0; max-height:none; overflow-y:auto; grid-auto-rows:max-content; }
@@ -91,7 +93,7 @@
         <label>Address<textarea id="job-address" rows="2" required></textarea></label>
         <label>Job details<textarea id="job-detail" rows="3"></textarea></label>
         <div class="two-col"><label>Quotation<input id="job-quote" type="number" min="0" step="0.01"></label><label>Markup %<input id="job-markup" type="number" min="0" step="0.1"></label></div>
-        <div class="two-col"><label>Status<select id="job-status"><option value="quoted">Quoted</option><option value="confirmed">Confirmed</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="invoiced">Invoiced</option><option value="follow_up">Follow up</option></select></label><label>Payment<select id="job-payment"><option value="pending">Pending</option><option value="paid">Paid</option></select></label></div>
+        <div class="two-col"><label>Status<select id="job-status"><option value="quoted">Quoted</option><option value="confirmed">Confirmed</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="invoiced">Invoiced</option><option value="follow_up">Follow up</option></select></label><label>Payment<select id="job-payment"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></label></div>
         <label>Referral payment status<select id="job-referral"><option value="pending">Pending</option><option value="paid">Paid</option><option value="not-applicable">Not applicable</option></select></label>
         <label>Invoice no.<input id="job-invoice"></label><label>Invoice date<input id="job-invoice-date" type="date"></label><label>Scheduled date<input id="job-scheduled-date" type="date"></label>
         <div class="drawer-actions"><button class="quiet-button" type="button" id="cancel-edit">Cancel</button><button class="primary-button" type="submit">Save changes</button></div>
