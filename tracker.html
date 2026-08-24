@@ -24,6 +24,12 @@
     .board-card-content { padding:9px 10px; }
     .board-card.drop-before { box-shadow:0 -4px 0 #1769d2, 0 2px 5px rgba(13,32,51,.09); }
     .board-card.drop-after { box-shadow:0 4px 0 #1769d2, 0 2px 5px rgba(13,32,51,.09); }
+    .card-menu { position:fixed; z-index:20; display:none; width:210px; padding:6px; border:1px solid #cfd8e3; border-radius:9px; background:#fff; box-shadow:0 12px 28px rgba(12,30,49,.2); }
+    .card-menu.open { display:grid; gap:2px; }
+    .card-menu button { width:100%; border:0; border-radius:6px; padding:9px 10px; background:transparent; color:#1d2b3d; text-align:left; font:500 13px Inter,Arial,sans-serif; cursor:pointer; }
+    .card-menu button:hover { background:#edf4ff; color:#125fb8; }
+    .card-menu-label { margin:5px 8px 2px; color:#718096; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+    .card-menu-divider { height:1px; margin:4px 3px; background:#e2e8f0; }
     .board-dropzone { flex:1; min-height:0; max-height:none; overflow-y:auto; grid-auto-rows:max-content; }
     .board-dropzone::-webkit-scrollbar { width:13px; }
     .board-dropzone::-webkit-scrollbar-track { background:#2a2a2a; border-radius:8px; }
@@ -89,6 +95,17 @@
         <div class="drawer-actions"><button class="quiet-button" type="button" id="cancel-edit">Cancel</button><button class="primary-button" type="submit">Save changes</button></div>
       </form>
     </aside>
+    <div class="card-menu" id="card-menu" role="menu" aria-label="Card actions">
+      <button type="button" data-card-menu-action="edit">✎ Edit job</button>
+      <div class="card-menu-divider"></div>
+      <div class="card-menu-label">Move to board</div>
+      <button type="button" data-card-menu-stage="quoted">Quotes</button>
+      <button type="button" data-card-menu-stage="confirmed">Confirmed</button>
+      <button type="button" data-card-menu-stage="scheduled">Scheduled</button>
+      <button type="button" data-card-menu-stage="completed">Completed</button>
+      <button type="button" data-card-menu-stage="invoiced">Invoiced</button>
+      <button type="button" data-card-menu-stage="follow_up">Follow up</button>
+    </div>
   </div>
   <script src="./tracker.js?v=20260824-9"></script>
 </body>

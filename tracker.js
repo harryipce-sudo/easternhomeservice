@@ -51,6 +51,19 @@ async function placeJob(id, status, index) {
     console.warn(error);
   }
 }
+function closeCardMenu() { const menu = $("#card-menu"); if (menu) menu.classList.remove("open"); state.menuJobId = null; }
+function openCardMenu(event, id) {
+  const menu = $("#card-menu");
+  state.menuJobId = id;
+  menu.classList.add("open");
+  menu.style.visibility = "hidden";
+  menu.style.left = "0px";
+  menu.style.top = "0px";
+  const bounds = menu.getBoundingClientRect();
+  menu.style.left = `${Math.min(event.clientX, window.innerWidth - bounds.width - 8)}px`;
+  menu.style.top = `${Math.min(event.clientY, window.innerHeight - bounds.height - 8)}px`;
+  menu.style.visibility = "";
+}
 function openDrawer(record = null, defaultStage = "quoted") { state.selected = record; const j = record?.job || {}; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; $("#job-client").value = record?.customerName && record.customerName !== "-" ? record.customerName : ""; $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; $("#job-detail").value = j.detail || ""; $("#job-quote").value = j.quote || ""; $("#job-markup").value = j.markup || ""; $("#job-status").value = j.status || defaultStage; $("#job-payment").value = j.payment || "pending"; $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || ""; $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
 function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[] }; const quote = Number($("#job-quote").value) || 0; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), jobStage: $("#job-status").value, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup:Number($("#job-markup").value)||0, status:$("#job-status").value, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
@@ -109,5 +122,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     placeJob(id, zone.dataset.stage, index);
   });
+  $("#job-board").addEventListener("contextmenu", (event) => {
+    const card = event.target.closest(".board-card[data-job-id]");
+    if (!card) return;
+    event.preventDefault();
+    openCardMenu(event, card.dataset.jobId);
+  });
+  $("#card-menu").addEventListener("click", (event) => {
+    const id = state.menuJobId;
+    if (!id) return;
+    const action = event.target.closest("[data-card-menu-action]");
+    const stage = event.target.closest("[data-card-menu-stage]");
+    if (action?.dataset.cardMenuAction === "edit") openDrawer(state.records.find((record) => record.id === id));
+    if (stage) placeJob(id, stage.dataset.cardMenuStage, stageJobs(state.records, stage.dataset.cardMenuStage, id).length);
+    closeCardMenu();
+  });
+  document.addEventListener("pointerdown", (event) => { if (!event.target.closest("#card-menu")) closeCardMenu(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeCardMenu(); });
   $("#job-board").addEventListener("click", (event) => { const add = event.target.closest("[data-new-job-stage]"); if (add) { openDrawer(null, add.dataset.newJobStage); return; } const card = event.target.closest(".board-card[data-job-id]"); if (card) openDrawer(state.records.find((record) => record.id === card.dataset.jobId)); });
 });
