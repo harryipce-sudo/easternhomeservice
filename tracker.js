@@ -20,7 +20,7 @@ function renderBoard() {
   const records = filtered();
   $("#job-board").innerHTML = boardStages.map((stage) => {
     const jobs = stageJobs(records, stage);
-    const cards = jobs.length ? jobs.map((record) => `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content"><p class="board-card-detail">${escapeHtml(record.job.detail || "No job detail")}</p><div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`).join("") : `<div class="board-empty">Drop card here</div>`;
+    const cards = jobs.length ? jobs.map((record) => `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`).join("") : `<div class="board-empty">Drop card here</div>`;
     return `<section class="board-column board-${stage}"><header class="board-head"><strong>${boardLabels[stage]} <span>${jobs.length}</span></strong><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
 }
