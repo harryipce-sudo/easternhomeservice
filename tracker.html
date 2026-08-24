@@ -32,6 +32,23 @@
     .card-menu button.card-menu-danger:hover { background:#fff1f0; color:#b42318; }
     .tag.unpaid { background:#fff0ed; color:#bd392b; }
     .payment-toggle { border:0; cursor:pointer; font:600 12px Inter,Arial,sans-serif; }
+    .invoice-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+    .invoice-metric { border:1px solid #dce3eb; border-radius:10px; padding:14px 16px; background:#fff; }
+    .invoice-metric.unpaid { border-left:4px solid #bd392b; }
+    .invoice-metric.paid { border-left:4px solid #226528; }
+    .invoice-metric span { display:block; color:#637083; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+    .invoice-metric strong { display:block; margin-top:5px; font-size:22px; color:#142033; }
+    .invoice-metric b { display:block; margin-top:2px; font-size:13px; }
+    .invoice-metric.unpaid b { color:#bd392b; }
+    .invoice-metric.paid b { color:#226528; }
+    .invoice-payment-bar { grid-column:1 / -1; overflow:hidden; height:15px; border-radius:99px; background:#e9eef3; display:flex; }
+    .invoice-payment-bar span { min-width:0; transition:width .2s ease; }
+    .invoice-payment-bar .unpaid { background:#e2554c; }
+    .invoice-payment-bar .paid { background:#48a762; }
+    .invoice-bar-legend { grid-column:1 / -1; display:flex; gap:18px; color:#637083; font-size:12px; }
+    .invoice-bar-legend i { display:inline-block; width:9px; height:9px; margin-right:5px; border-radius:99px; }
+    .invoice-bar-legend .unpaid { background:#e2554c; }
+    .invoice-bar-legend .paid { background:#48a762; }
     .card-menu-label { margin:5px 8px 2px; color:#718096; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
     .card-menu-divider { height:1px; margin:4px 3px; background:#e2e8f0; }
     .board-dropzone { flex:1; min-height:0; max-height:none; overflow-y:auto; grid-auto-rows:max-content; }
@@ -40,6 +57,7 @@
     .board-dropzone::-webkit-scrollbar-thumb { background:#929292; border:3px solid #2a2a2a; border-radius:8px; }
     @media(max-width:1100px) { .job-board { grid-template-columns:repeat(6,190px); overflow-x:auto; } }
     @media(max-width:600px) { .job-board { grid-template-columns:repeat(6,calc(100vw - 36px)); gap:12px; } }
+    @media(max-width:600px) { .invoice-summary { grid-template-columns:1fr; } .invoice-payment-bar,.invoice-bar-legend { grid-column:auto; } }
   </style>
 </head>
 <body>
@@ -80,7 +98,7 @@
       <section class="view" id="view-tasks"><div class="section-head"><h2>Tasks</h2><p>Keep the next actions visible for every active job.</p></div><div class="task-list" id="task-list"></div></section>
       <section class="view" id="view-reports"><div class="section-head"><h2>Reports</h2><p>Live totals calculated from the shared register.</p></div><div class="report-grid" id="report-grid"></div></section>
       <section class="view" id="view-quotes"><div class="section-head"><h2>Quotes</h2><p>Every quote in the shared job register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Quotation</th><th>Status</th></tr></thead><tbody id="quotes-body"></tbody></table></div></div></section>
-      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
+      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
       <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div></section>
     </main>
 
