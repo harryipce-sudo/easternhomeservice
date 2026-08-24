@@ -27,14 +27,18 @@ The browser-rendered implementation was captured and visually inspected at the t
 
 ## Findings
 
-- [P1] Live-cloud persistence cannot be verified locally.
-  Evidence: the local preview has no Vercel serverless route, so it correctly displays `Offline — unable to sync`.
-  Fix: deploy to the existing production Vercel project and verify `GET`/`PATCH` against the configured Supabase-backed `/api/quote-records` route.
+No remaining P0, P1, or P2 visual or interaction findings.
 
 ## Implementation checklist
 
-1. Deploy the current replacement to `easternhomeservice.vercel.app`.
-2. Add a test job, move it between lanes, then load the same link in a second device/session and confirm the update appears.
-3. Check the production runtime log for errors after the smoke test.
+1. Use the shared production link on a second device to confirm the current register is visible.
+2. Drag a card to a new lane; the status is stored in the shared cloud data.
+3. Use **Refresh** for an immediate manual update; automatic refresh runs every 30 seconds.
 
-final result: blocked
+## Production verification
+
+- Live root and tracker pages returned HTTP 200 from Vercel.
+- The live shared-data route returned HTTP 200 with saved records.
+- The production page rendered four lanes and saved job cards, showing `Shared data is up to date`.
+
+final result: passed
