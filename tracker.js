@@ -5,7 +5,7 @@ const currency = (value) => new Intl.NumberFormat("en-AU", { style: "currency", 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
 const normalise = (record) => {
   const job = record.job && typeof record.job === "object" ? record.job : {};
-  return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, status: job.status || record.jobStage || "quoted", payment: job.payment || "pending", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
+  return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, status: job.status || record.jobStage || "quoted", payment: job.payment || "pending", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", archived: job.archived === true, boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
 };
 async function request(path = "", options = {}) { const response = await fetch(`${API}${path}`, { headers: { "Content-Type":"application/json", ...(options.headers || {}) }, ...options }); if (!response.ok) throw new Error(await response.text()); return response.status === 204 ? null : response.json(); }
 async function loadRecords() { $("#sync-state").innerHTML = "<span></span> Syncing shared data"; try { state.records = (await request()).map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } }
@@ -17,7 +17,7 @@ const boardLabels = { quoted:"Quotes", confirmed:"Confirmed", scheduled:"Schedul
 function boardOrder(record) { return Number.isFinite(record.job.boardOrder) ? record.job.boardOrder : -new Date(record.submittedAt).getTime(); }
 function stageJobs(records, stage, exceptId = "") { return records.filter((record) => record.job.status === stage && record.id !== exceptId).sort((a, b) => boardOrder(a) - boardOrder(b)); }
 function renderBoard() {
-  const records = filtered();
+  const records = filtered().filter((record) => !record.job.archived);
   $("#job-board").innerHTML = boardStages.map((stage) => {
     const jobs = stageJobs(records, stage);
     const cards = jobs.length ? jobs.map((record) => `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`).join("") : `<div class="board-empty">Drop card here</div>`;
@@ -51,6 +51,43 @@ async function placeJob(id, status, index) {
     console.warn(error);
   }
 }
+async function archiveJob(id) {
+  const record = state.records.find((item) => item.id === id);
+  if (!record) return;
+  const previous = record;
+  const updated = normalise({ ...record, job: { ...record.job, archived: true } });
+  state.records = state.records.map((item) => item.id === id ? updated : item);
+  render();
+  try {
+    const saved = normalise(await request(`?id=${encodeURIComponent(id)}`, { method:"PATCH", body:JSON.stringify(updated) }));
+    state.records = state.records.map((item) => item.id === id ? saved : item);
+    render();
+  } catch (error) {
+    state.records = state.records.map((item) => item.id === id ? previous : item);
+    render();
+    window.alert("The card could not be archived. Please try again.");
+    console.warn(error);
+  }
+}
+async function copyJob(id) {
+  const original = state.records.find((item) => item.id === id);
+  if (!original) return;
+  const stage = original.job.status;
+  const jobs = stageJobs(state.records, stage);
+  const position = jobs.findIndex((item) => item.id === id);
+  const next = jobs[position + 1];
+  const order = next ? (boardOrder(original) + boardOrder(next)) / 2 : boardOrder(original) + 1;
+  const number = original.job.number ? `${original.job.number} copy` : "Copy of job";
+  const copied = normalise({ ...original, id:crypto.randomUUID(), submittedAt:new Date().toISOString(), quoteNumber:number, job:{ ...original.job, number, archived:false, boardOrder:order } });
+  try {
+    const saved = normalise(await request("", { method:"POST", body:JSON.stringify(copied) }));
+    state.records = [saved, ...state.records];
+    render();
+  } catch (error) {
+    window.alert("The card could not be copied. Please try again.");
+    console.warn(error);
+  }
+}
 function closeCardMenu() { const menu = $("#card-menu"); if (menu) menu.classList.remove("open"); state.menuJobId = null; }
 function openCardMenu(event, id) {
   const menu = $("#card-menu");
@@ -66,7 +103,7 @@ function openCardMenu(event, id) {
 }
 function openDrawer(record = null, defaultStage = "quoted") { state.selected = record; const j = record?.job || {}; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; $("#job-client").value = record?.customerName && record.customerName !== "-" ? record.customerName : ""; $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; $("#job-detail").value = j.detail || ""; $("#job-quote").value = j.quote || ""; $("#job-markup").value = j.markup || ""; $("#job-status").value = j.status || defaultStage; $("#job-payment").value = j.payment || "pending"; $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || ""; $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
-function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[] }; const quote = Number($("#job-quote").value) || 0; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), jobStage: $("#job-status").value, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup:Number($("#job-markup").value)||0, status:$("#job-status").value, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
+function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[] }; const quote = Number($("#job-quote").value) || 0; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), jobStage: $("#job-status").value, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup:Number($("#job-markup").value)||0, status:$("#job-status").value, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, archived: state.selected?.job?.archived === true, boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
 async function saveJob(event) { event.preventDefault(); const record = formRecord(); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; closeDrawer(); render(); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
 function renderQuotes() { $("#quotes-body").innerHTML = state.records.map((record) => `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(record.job.number)}</td><td>${escapeHtml(record.address)}</td><td>${escapeHtml(record.job.detail || "—")}</td><td>${currency(record.job.quote)}</td><td>${tag(record.job.status)}</td></tr>`).join("") || `<tr><td colspan="5">No saved quotes yet.</td></tr>`; $("#invoices-body").innerHTML = state.records.filter((record) => record.job.invoiceNumber || record.job.status === "completed").map((record) => `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(record.job.invoiceNumber || "—")}</td><td>${escapeHtml(record.job.number)}</td><td>${escapeHtml(record.address)}</td><td>${escapeHtml(record.job.invoiceDate || "—")}</td><td>${tag(record.job.payment)}</td><td>${currency(record.job.quote)}</td></tr>`).join("") || `<tr><td colspan="6">No invoices recorded yet.</td></tr>`; }
 function setView(view) { state.view = view; document.querySelectorAll(".nav-link[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view)); document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active", section.id === `view-${view}`)); const labels = { jobs:["Job Board","All work in one shared job register."],calendar:["Calendar","Scheduled jobs from the shared register."],clients:["Clients","All clients from saved quotes."],quotes:["Quotes","Every quote in the shared register."],invoices:["Invoices","Completed or invoiced jobs from the shared register."],tasks:["Tasks","The next actions for active jobs."],reports:["Reports","Live job and payment summaries."],settings:["Settings","Shared tracker settings."] }; $("#page-title").textContent = labels[view][0]; $("#page-description").textContent = labels[view][1]; $("#add-job").style.display = view === "jobs" ? "inline-block" : "none"; if (view === "quotes" || view === "invoices") renderQuotes(); }
@@ -134,6 +171,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const action = event.target.closest("[data-card-menu-action]");
     const stage = event.target.closest("[data-card-menu-stage]");
     if (action?.dataset.cardMenuAction === "edit") openDrawer(state.records.find((record) => record.id === id));
+    if (action?.dataset.cardMenuAction === "copy") copyJob(id);
+    if (action?.dataset.cardMenuAction === "archive") archiveJob(id);
     if (stage) placeJob(id, stage.dataset.cardMenuStage, stageJobs(state.records, stage.dataset.cardMenuStage, id).length);
     closeCardMenu();
   });
