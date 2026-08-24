@@ -13,15 +13,17 @@
     .board-invoiced .board-head strong, .board-invoiced .lane-add { color:#18733b; }
     .board-follow_up { background:#fff8ef; border-color:#edd4aa; }
     .board-follow_up .board-head strong, .board-follow_up .lane-add { color:#a95b00; }
-    .board-invoiced .board-dropzone { max-height:640px; overflow-y:auto; }
+    /* Every lane grows to the bottom of the screen. Its own card area scrolls only
+       after the cards need more space than the lane provides. */
+    .board-invoiced .board-dropzone { flex:1; min-height:0; max-height:none; overflow-y:auto; }
     .job-board { grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; overflow-x:visible; }
-    .board-column { min-width:0; min-height:520px; }
+    .board-column { min-width:0; min-height:0; height:calc(100vh - 185px); }
     .board-head { padding:12px 11px 8px; }
     .board-head strong { font-size:13px; }
     .board-card-top { font-size:11px; line-height:1.35; align-items:flex-start; }
     .board-card-content { padding:9px 10px; }
     .board-card-detail { font-size:12px; min-height:0; }
-    .board-dropzone { min-height:320px; max-height:calc(100vh - 290px); overflow-y:auto; }
+    .board-dropzone { flex:1; min-height:0; max-height:none; overflow-y:auto; }
     .board-invoiced .board-card { min-height:155px; }
     .board-invoiced .board-card-top { font-size:12px; }
     .board-invoiced .board-card-content { padding:13px 12px; }
