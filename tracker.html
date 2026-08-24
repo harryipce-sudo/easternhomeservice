@@ -22,10 +22,6 @@
     .board-card-content { padding:9px 10px; }
     .board-card-detail { font-size:12px; min-height:0; }
     .board-invoiced .board-dropzone { max-height:500px; }
-    .lane-controls { position:relative; }
-    .lane-panel { position:absolute; right:0; top:48px; z-index:4; width:160px; padding:10px; border:1px solid #cfd8e3; border-radius:8px; background:#fff; box-shadow:0 8px 22px rgba(13,32,51,.16); }
-    .lane-panel label { display:block; padding:5px 0; font-size:12px; font-weight:500; }
-    .lane-show-all { width:100%; margin-top:7px; padding:7px 8px; border:1px solid #0d5ec9; border-radius:5px; color:#0d5ec9; background:#fff; font-size:12px; font-weight:700; cursor:pointer; }
     @media(max-width:1100px) { .job-board { grid-template-columns:repeat(6,190px); overflow-x:auto; } }
   </style>
 </head>
@@ -55,11 +51,8 @@
       <section class="view active" id="view-jobs">
         <div class="toolbar">
           <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search job no., client, address or detail"></label>
-          <select id="filter-status" aria-label="Filter by status"><option value="">All statuses</option><option value="quoted">Quoted</option><option value="confirmed">Confirmed</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="invoiced">Invoiced</option><option value="follow_up">Follow up</option></select>
-          <select id="filter-payment" aria-label="Filter by payment"><option value="">All payments</option><option value="pending">Payment: Pending</option><option value="paid">Payment: Paid</option></select>
           <select id="sort" aria-label="Sort jobs"><option value="newest">Sort: Newest</option><option value="address">Sort: Address</option><option value="quote-high">Sort: Quote high to low</option><option value="status">Sort: Status</option></select>
           <div class="view-switch" aria-label="Jobs layout"><button class="switch-button" data-layout="table" type="button">Register</button><button class="switch-button active" data-layout="board" type="button">Board</button></div>
-          <div class="lane-controls"><button class="quiet-button" id="lane-toggle" type="button">Hide / show lanes</button><div class="lane-panel" id="lane-panel" hidden></div></div>
         </div>
         <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span></div>
         <div class="jobs-layout" id="table-layout"><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job details</th><th>Quotation</th><th>Markup</th><th>Status</th><th>Payment</th><th>Referral</th><th>Invoice no.</th><th>Invoice date</th></tr></thead><tbody id="jobs-body"></tbody></table></div><div class="empty" id="jobs-empty">No jobs match these filters.</div></div></div>
