@@ -14,6 +14,18 @@
     .board-follow_up { background:#fff8ef; border-color:#edd4aa; }
     .board-follow_up .board-head strong, .board-follow_up .lane-add { color:#a95b00; }
     .board-invoiced .board-dropzone { max-height:640px; overflow-y:auto; }
+    .job-board { grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; overflow-x:visible; }
+    .board-column { min-width:0; min-height:520px; }
+    .board-head { padding:12px 11px 8px; }
+    .board-head strong { font-size:13px; }
+    .board-card-top { font-size:11px; line-height:1.35; align-items:flex-start; }
+    .board-card-content { padding:9px 10px; }
+    .board-card-detail { font-size:12px; min-height:0; }
+    .board-invoiced .board-dropzone { max-height:500px; }
+    .lane-controls { position:relative; }
+    .lane-panel { position:absolute; right:0; top:48px; z-index:4; width:160px; padding:10px; border:1px solid #cfd8e3; border-radius:8px; background:#fff; box-shadow:0 8px 22px rgba(13,32,51,.16); }
+    .lane-panel label { display:block; padding:5px 0; font-size:12px; font-weight:500; }
+    @media(max-width:1100px) { .job-board { grid-template-columns:repeat(6,190px); overflow-x:auto; } }
   </style>
 </head>
 <body>
@@ -46,6 +58,7 @@
           <select id="filter-payment" aria-label="Filter by payment"><option value="">All payments</option><option value="pending">Payment: Pending</option><option value="paid">Payment: Paid</option></select>
           <select id="sort" aria-label="Sort jobs"><option value="newest">Sort: Newest</option><option value="address">Sort: Address</option><option value="quote-high">Sort: Quote high to low</option><option value="status">Sort: Status</option></select>
           <div class="view-switch" aria-label="Jobs layout"><button class="switch-button" data-layout="table" type="button">Register</button><button class="switch-button active" data-layout="board" type="button">Board</button></div>
+          <div class="lane-controls"><button class="quiet-button" id="lane-toggle" type="button">Hide / show lanes</button><div class="lane-panel" id="lane-panel" hidden></div></div>
         </div>
         <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span></div>
         <div class="jobs-layout" id="table-layout"><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job details</th><th>Quotation</th><th>Markup</th><th>Status</th><th>Payment</th><th>Referral</th><th>Invoice no.</th><th>Invoice date</th></tr></thead><tbody id="jobs-body"></tbody></table></div><div class="empty" id="jobs-empty">No jobs match these filters.</div></div></div>
