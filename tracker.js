@@ -135,7 +135,8 @@ async function saveJob(event) { event.preventDefault(); const record = formRecor
 function renderQuotes() {
   const records = activeRecords();
   $("#quotes-body").innerHTML = records.map((record) => `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(record.job.number)}</td><td>${escapeHtml(record.address)}</td><td>${escapeHtml(record.job.detail || "—")}</td><td>${currency(record.job.quote)}</td><td>${tag(record.job.status)}</td></tr>`).join("") || `<tr><td colspan="5">No saved quotes yet.</td></tr>`;
-  const invoices = records.filter((record) => record.job.invoiceNumber || record.job.status === "completed" || record.job.status === "invoiced").sort((a, b) => Number(a.job.payment === "paid") - Number(b.job.payment === "paid"));
+  // Keep archived cards out of the invoice register as well as the board.
+  const invoices = records.filter((record) => !record.job.archived && (record.job.invoiceNumber || record.job.status === "completed" || record.job.status === "invoiced")).sort((a, b) => Number(a.job.payment === "paid") - Number(b.job.payment === "paid"));
   const unpaid = invoices.filter((record) => record.job.payment !== "paid");
   const paid = invoices.filter((record) => record.job.payment === "paid");
   const unpaidTotal = unpaid.reduce((sum, record) => sum + record.job.quote, 0);
