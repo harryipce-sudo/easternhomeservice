@@ -30,6 +30,12 @@
     .card-menu button:hover { background:#edf4ff; color:#125fb8; }
     .card-menu button.card-menu-danger { color:#b42318; }
     .card-menu button.card-menu-danger:hover { background:#fff1f0; color:#b42318; }
+    .payment-date-modal { position:fixed; inset:0; z-index:30; display:none; place-items:center; padding:20px; background:rgba(12,30,49,.32); }
+    .payment-date-modal.open { display:grid; }
+    .payment-date-dialog { width:min(100%,360px); padding:22px; border-radius:12px; background:#fff; box-shadow:0 18px 48px rgba(12,30,49,.28); }
+    .payment-date-dialog h3 { margin:0; font-size:18px; }
+    .payment-date-dialog p { margin:6px 0 16px; color:#637083; font-size:13px; }
+    .payment-date-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
     .tag.unpaid { background:#fff0ed; color:#bd392b; }
     .payment-toggle { border:0; cursor:pointer; font:600 12px Inter,Arial,sans-serif; }
     .invoice-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
@@ -98,7 +104,7 @@
       <section class="view" id="view-tasks"><div class="section-head"><h2>Tasks</h2><p>Keep the next actions visible for every active job.</p></div><div class="task-list" id="task-list"></div></section>
       <section class="view" id="view-reports"><div class="section-head"><h2>Reports</h2><p>Live totals calculated from the shared register.</p></div><div class="report-grid" id="report-grid"></div></section>
       <section class="view" id="view-quotes"><div class="section-head"><h2>Quotes</h2><p>Every quote in the shared job register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Quotation</th><th>Status</th></tr></thead><tbody id="quotes-body"></tbody></table></div></div></section>
-      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
+      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Pay date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
       <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div></section>
     </main>
 
@@ -131,7 +137,10 @@
       <div class="card-menu-divider"></div>
       <button class="card-menu-danger" type="button" data-card-menu-action="archive">▣ Archive card</button>
     </div>
+    <div class="payment-date-modal" id="payment-date-modal" role="dialog" aria-modal="true" aria-labelledby="payment-date-title">
+      <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
+    </div>
   </div>
-  <script src="./tracker.js?v=20260824-9"></script>
+  <script src="./tracker.js?v=20260825-1"></script>
 </body>
 </html>
