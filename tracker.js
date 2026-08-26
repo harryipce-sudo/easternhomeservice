@@ -27,6 +27,14 @@ const cardDate = (value) => {
 };
 function boardOrder(record) { return Number.isFinite(record.job.boardOrder) ? record.job.boardOrder : -new Date(record.submittedAt).getTime(); }
 function stageJobs(records, stage, exceptId = "") { return records.filter((record) => record.job.status === stage && record.id !== exceptId).sort((a, b) => boardOrder(a) - boardOrder(b)); }
+function laneDropTarget(zone, clientY, movingId = "", movingGroupKey = "") {
+  const cards = [...zone.querySelectorAll(":scope > .board-card[data-job-id], :scope > .board-group-card[data-group-key]")]
+    .filter((card) => card.dataset.jobId !== movingId && card.dataset.groupKey !== movingGroupKey);
+  const target = cards.find((card) => clientY < card.getBoundingClientRect().top + card.getBoundingClientRect().height / 2) || cards.at(-1);
+  if (!target) return { stage: zone.dataset.stage, jobId:"", groupKey:"", after:true };
+  const bounds = target.getBoundingClientRect();
+  return { stage: zone.dataset.stage, jobId: target.dataset.jobId || "", groupKey: target.dataset.groupKey || "", after: clientY >= bounds.top + bounds.height / 2 };
+}
 function addressGroupKey(address) {
   return String(address || "").toLowerCase()
     .replace(/^\s*(for|lot)\s+/, "")
@@ -305,18 +313,14 @@ document.addEventListener("DOMContentLoaded", () => {
     event.preventDefault();
     zone.classList.add("drag-over");
     document.querySelectorAll(".drop-before,.drop-after").forEach((element) => element.classList.remove("drop-before", "drop-after"));
-    let target = event.target.closest(".board-card[data-job-id], .board-group-card[data-group-key]");
-    const topLevelCards = [...zone.querySelectorAll(":scope > .board-card[data-job-id], :scope > .board-group-card[data-group-key]")];
-    if (!target) {
-      const candidates = topLevelCards.filter((card) => card.dataset.jobId !== state.draggingId && card.dataset.groupKey !== state.draggingGroupKey);
-      target = candidates.find((card) => event.clientY < card.getBoundingClientRect().top + card.getBoundingClientRect().height / 2) || candidates.at(-1) || null;
-    }
-    const isDraggedGroup = target?.dataset.groupKey && target.dataset.groupKey === state.draggingGroupKey;
-    if (target && target.dataset.jobId !== state.draggingId && !isDraggedGroup) {
-      const bounds = target.getBoundingClientRect();
-      const after = event.clientY >= bounds.top + bounds.height / 2;
-      state.dropTarget = { stage: zone.dataset.stage, jobId: target.dataset.jobId || "", groupKey: target.dataset.groupKey || "", after };
-      target.classList.add(after ? "drop-after" : "drop-before");
+    state.dropTarget = laneDropTarget(zone, event.clientY, state.draggingId, state.draggingGroupKey);
+    const target = state.dropTarget.jobId
+      ? zone.querySelector(`:scope > .board-card[data-job-id="${CSS.escape(state.dropTarget.jobId)}"]`)
+      : state.dropTarget.groupKey
+        ? zone.querySelector(`:scope > .board-group-card[data-group-key="${CSS.escape(state.dropTarget.groupKey)}"]`)
+        : null;
+    if (target) {
+      target.classList.add(state.dropTarget.after ? "drop-after" : "drop-before");
     }
   });
   $("#job-board").addEventListener("dragleave", (event) => {
@@ -330,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
     zone.classList.remove("drag-over");
     const groupKey = event.dataTransfer.getData("application/x-tracker-group") || state.draggingGroupKey;
     const id = event.dataTransfer.getData("text/plain") || state.draggingId;
-    const dropTarget = state.dropTarget?.stage === zone.dataset.stage ? state.dropTarget : { jobId:"", groupKey:"", after:true };
+    const dropTarget = laneDropTarget(zone, event.clientY, id, groupKey);
     if (groupKey) {
       const sourceStage = state.draggingGroupStage || "invoiced";
       const movingIds = new Set(stageJobs(state.records, sourceStage).filter((record) => record.job.groupKey === groupKey).map((record) => record.id));
