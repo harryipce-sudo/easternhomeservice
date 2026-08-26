@@ -54,6 +54,13 @@
     .invoice-metric b { display:block; margin-top:2px; font-size:13px; }
     .invoice-metric.unpaid b { color:#bd392b; }
     .invoice-metric.paid b { color:#226528; }
+    .invoice-review-list { display:grid; gap:8px; margin:0 0 16px; }
+    .invoice-review-notice { display:flex; align-items:flex-start; gap:9px; padding:10px 12px; border:1px solid #f0c36e; border-radius:8px; background:#fff8e9; color:#6d4700; font-size:13px; }
+    .invoice-review-notice strong { display:block; margin-bottom:2px; }
+    .invoice-review-badge { display:inline-block; margin-top:4px; padding:3px 6px; border-radius:4px; background:#fff0ed; color:#b42318; font-size:11px; font-weight:700; }
+    #invoices-body tr.invoice-review-missing { background:#fff4f2; }
+    #invoices-body tr.invoice-review-duplicate { background:#fff9e9; }
+    #invoices-body tr.invoice-review-odoo { background:#fff4f2; }
     .invoice-payment-bar { grid-column:1 / -1; overflow:hidden; height:15px; border-radius:99px; background:#e9eef3; display:flex; }
     .invoice-payment-bar span { min-width:0; transition:width .2s ease; }
     .invoice-payment-bar .unpaid { background:#e2554c; }
@@ -111,7 +118,7 @@
       <section class="view" id="view-tasks"><div class="section-head"><h2>Tasks</h2><p>Keep the next actions visible for every active job.</p></div><div class="task-list" id="task-list"></div></section>
       <section class="view" id="view-reports"><div class="section-head"><h2>Reports</h2><p>Live totals calculated from the shared register.</p></div><div class="report-grid" id="report-grid"></div></section>
       <section class="view" id="view-quotes"><div class="section-head"><h2>Quotes</h2><p>Every quote in the shared job register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Quotation</th><th>Status</th></tr></thead><tbody id="quotes-body"></tbody></table></div></div></section>
-      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Pay date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
+      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="invoice-review-list" id="invoice-review-list" aria-live="polite"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Pay date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
       <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div></section>
     </main>
 
