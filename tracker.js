@@ -301,15 +301,18 @@ document.addEventListener("DOMContentLoaded", () => {
     event.preventDefault();
     zone.classList.add("drag-over");
     document.querySelectorAll(".drop-before,.drop-after").forEach((element) => element.classList.remove("drop-before", "drop-after"));
-    const target = event.target.closest(".board-card[data-job-id], .board-group-card[data-group-key]");
+    let target = event.target.closest(".board-card[data-job-id], .board-group-card[data-group-key]");
+    const topLevelCards = [...zone.querySelectorAll(":scope > .board-card[data-job-id], :scope > .board-group-card[data-group-key]")];
+    if (!target) {
+      const candidates = topLevelCards.filter((card) => card.dataset.jobId !== state.draggingId && card.dataset.groupKey !== state.draggingGroupKey);
+      target = candidates.find((card) => event.clientY < card.getBoundingClientRect().top + card.getBoundingClientRect().height / 2) || candidates.at(-1) || null;
+    }
     const isDraggedGroup = target?.dataset.groupKey && target.dataset.groupKey === state.draggingGroupKey;
     if (target && target.dataset.jobId !== state.draggingId && !isDraggedGroup) {
       const bounds = target.getBoundingClientRect();
       const after = event.clientY >= bounds.top + bounds.height / 2;
       state.dropTarget = { stage: zone.dataset.stage, jobId: target.dataset.jobId || "", groupKey: target.dataset.groupKey || "", after };
       target.classList.add(after ? "drop-after" : "drop-before");
-    } else {
-      state.dropTarget = { stage: zone.dataset.stage, jobId: "", groupKey: "", after: true };
     }
   });
   $("#job-board").addEventListener("dragleave", (event) => {
