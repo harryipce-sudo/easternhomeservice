@@ -23,7 +23,8 @@
     .board-card-top { font-size:11px; line-height:1.35; align-items:flex-start; }
     .board-card-content { padding:9px 10px; }
     .board-card-date { display:inline-block; margin:0 0 8px; padding:3px 7px; border-radius:5px; background:#ffe1df; color:#b42318; font-size:12px; font-weight:600; }
-    .board-group-card { overflow:hidden; border:2px solid #17733b; border-radius:8px; background:#fff; box-shadow:0 2px 6px rgba(13,32,51,.12); cursor:context-menu; }
+    .board-group-card { overflow:hidden; border:2px solid #17733b; border-radius:8px; background:#fff; box-shadow:0 2px 6px rgba(13,32,51,.12); cursor:grab; }
+    .board-group-card.dragging { opacity:.5; cursor:grabbing; }
     .board-group-card .board-card-top { background:#0b5630; }
     .group-count { display:inline-flex; align-items:center; border-radius:999px; padding:2px 6px; background:#d9f1df; color:#12592b; font-size:11px; white-space:nowrap; }
     .board-group-card small { display:block; margin-top:8px; color:#637083; font-size:11px; }
@@ -133,6 +134,7 @@
       <button type="button" data-card-menu-action="edit">✎ Edit job</button>
       <button type="button" data-card-menu-action="copy">⧉ Copy card</button>
       <button type="button" id="group-menu-toggle" data-card-menu-action="toggle-group" hidden>▾ Expand group</button>
+      <button type="button" id="group-menu-ungroup" data-card-menu-action="ungroup" hidden>⊘ Ungroup cards</button>
       <div class="card-menu-divider"></div>
       <div class="card-menu-label">Move to board</div>
       <button type="button" data-card-menu-stage="quoted">Quotes</button>

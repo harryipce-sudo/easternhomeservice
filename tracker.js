@@ -56,7 +56,7 @@ function renderGroupedCards(jobs) {
     if (items[0].id !== record.id) return;
     const expanded = state.expandedGroups.has(key);
     const total = items.reduce((sum, item) => sum + item.job.quote, 0);
-    cards.push(`<article class="board-group-card" data-group-key="${escapeHtml(key)}"><div class="board-card-top"><span>${escapeHtml(record.address)}</span><span class="group-count">${items.length} cards</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Total</span><strong>${currency(total)}</strong></div><small>Right-click to ${expanded ? "collapse" : "expand"}</small></div></article>`);
+    cards.push(`<article class="board-group-card" draggable="true" data-group-key="${escapeHtml(key)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address)}</span><span class="group-count">${items.length} cards</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Total</span><strong>${currency(total)}</strong></div><small>Drag to move all cards · Right-click to ${expanded ? "collapse, ungroup or move" : "expand, ungroup or move"}</small></div></article>`);
     if (expanded) cards.push(`<div class="board-group-children">${items.map((item) => renderCard(item, { hideDate:true })).join("")}</div>`);
   });
   return cards.join("");
@@ -102,6 +102,55 @@ async function placeJob(id, status, index) {
     state.records = state.records.map((item) => previous.find((previousItem) => previousItem.id === item.id) || item);
     render();
     window.alert("The job could not be moved in the shared tracker. Please try again.");
+    console.warn(error);
+  }
+}
+async function placeGroup(groupKey, status, index) {
+  const group = stageJobs(state.records, "invoiced").filter((record) => record.job.groupKey === groupKey);
+  if (group.length < 2) return;
+  const groupIds = new Set(group.map((record) => record.id));
+  const jobs = stageJobs(state.records, status).filter((record) => !groupIds.has(record.id));
+  const before = jobs[index - 1];
+  const after = jobs[index];
+  const startOrder = before && after ? (boardOrder(before) + boardOrder(after)) / 2 : before ? boardOrder(before) + 1 : after ? boardOrder(after) - 1 : -Date.now();
+  const updated = group.map((record, position) => normalise({
+    ...record,
+    jobStage: status,
+    job: { ...record.job, status, groupKey: status === "invoiced" ? groupKey : "", boardOrder: startOrder + position / 1000 }
+  }));
+  const updatedIds = new Set(updated.map((record) => record.id));
+  const previous = state.records.filter((record) => updatedIds.has(record.id));
+  state.records = state.records.map((record) => updated.find((item) => item.id === record.id) || record);
+  if (status !== "invoiced") state.expandedGroups.delete(groupKey);
+  render();
+  try {
+    const saved = await Promise.all(updated.map(async (record) => normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }))));
+    state.records = state.records.map((record) => saved.find((item) => item.id === record.id) || record);
+    render();
+  } catch (error) {
+    state.records = state.records.map((record) => previous.find((item) => item.id === record.id) || record);
+    render();
+    window.alert("The grouped cards could not be moved in the shared tracker. Please try again.");
+    console.warn(error);
+  }
+}
+async function ungroupCards(groupKey) {
+  const group = stageJobs(state.records, "invoiced").filter((record) => record.job.groupKey === groupKey);
+  if (group.length < 2) return;
+  const updated = group.map((record) => normalise({ ...record, job:{ ...record.job, groupKey:"" } }));
+  const updatedIds = new Set(updated.map((record) => record.id));
+  const previous = state.records.filter((record) => updatedIds.has(record.id));
+  state.records = state.records.map((record) => updated.find((item) => item.id === record.id) || record);
+  state.expandedGroups.delete(groupKey);
+  render();
+  try {
+    const saved = await Promise.all(updated.map(async (record) => normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }))));
+    state.records = state.records.map((record) => saved.find((item) => item.id === record.id) || record);
+    render();
+  } catch (error) {
+    state.records = state.records.map((record) => previous.find((item) => item.id === record.id) || record);
+    render();
+    window.alert("The cards could not be ungrouped in the shared tracker. Please try again.");
     console.warn(error);
   }
 }
@@ -168,6 +217,7 @@ function openCardMenu(event, id) {
   const menu = $("#card-menu");
   state.menuJobId = id;
   $("#group-menu-toggle").hidden = true;
+  $("#group-menu-ungroup").hidden = true;
   menu.classList.add("open");
   menu.style.visibility = "hidden";
   menu.style.left = "0px";
@@ -182,6 +232,7 @@ function openGroupMenu(event, key) {
   state.menuJobId = null;
   state.menuGroupKey = key;
   $("#group-menu-toggle").hidden = false;
+  $("#group-menu-ungroup").hidden = false;
   $("#group-menu-toggle").textContent = state.expandedGroups.has(key) ? "▴ Collapse group" : "▾ Expand group";
   menu.classList.add("open");
   menu.style.visibility = "hidden";
@@ -222,6 +273,14 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#board-layout").classList.toggle("active", state.layout === "board");
   }));
   $("#job-board").addEventListener("dragstart", (event) => {
+    const group = event.target.closest(".board-group-card[data-group-key]");
+    if (group) {
+      state.draggingGroupKey = group.dataset.groupKey;
+      group.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("application/x-tracker-group", group.dataset.groupKey);
+      return;
+    }
     const card = event.target.closest("[data-job-id]");
     if (!card) return;
     state.draggingId = card.dataset.jobId;
@@ -231,7 +290,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#job-board").addEventListener("dragend", () => {
     state.draggingId = null;
-    document.querySelectorAll(".drag-over,.drop-before,.drop-after").forEach((element) => element.classList.remove("drag-over", "drop-before", "drop-after"));
+    state.draggingGroupKey = null;
+    document.querySelectorAll(".dragging,.drag-over,.drop-before,.drop-after").forEach((element) => element.classList.remove("dragging", "drag-over", "drop-before", "drop-after"));
   });
   $("#job-board").addEventListener("dragover", (event) => {
     const zone = event.target.closest("[data-stage]");
@@ -254,7 +314,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!zone) return;
     event.preventDefault();
     zone.classList.remove("drag-over");
-    const id = event.dataTransfer.getData("text/plain");
+    const groupKey = event.dataTransfer.getData("application/x-tracker-group") || state.draggingGroupKey;
+    const id = event.dataTransfer.getData("text/plain") || state.draggingId;
+    if (groupKey) {
+      placeGroup(groupKey, zone.dataset.stage, zone.querySelectorAll(".board-card[data-job-id]").length);
+      return;
+    }
+    if (!id) return;
     const cards = [...zone.querySelectorAll(".board-card[data-job-id]")].filter((card) => card.dataset.jobId !== id);
     const target = event.target.closest(".board-card[data-job-id]");
     let index = cards.length;
@@ -286,6 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
       state.expandedGroups.has(groupKey) ? state.expandedGroups.delete(groupKey) : state.expandedGroups.add(groupKey);
       render();
     }
+    if (action?.dataset.cardMenuAction === "ungroup" && groupKey) ungroupCards(groupKey);
     if (id && action?.dataset.cardMenuAction === "edit") openDrawer(state.records.find((record) => record.id === id));
     if (id && action?.dataset.cardMenuAction === "copy") copyJob(id);
     if (id && action?.dataset.cardMenuAction === "archive") archiveJob(id);
