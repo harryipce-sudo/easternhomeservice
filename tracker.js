@@ -299,10 +299,11 @@ document.addEventListener("DOMContentLoaded", () => {
     event.preventDefault();
     zone.classList.add("drag-over");
     document.querySelectorAll(".drop-before,.drop-after").forEach((element) => element.classList.remove("drop-before", "drop-after"));
-    const card = event.target.closest(".board-card[data-job-id]");
-    if (card && card.dataset.jobId !== state.draggingId) {
-      const bounds = card.getBoundingClientRect();
-      card.classList.add(event.clientY < bounds.top + bounds.height / 2 ? "drop-before" : "drop-after");
+    const target = event.target.closest(".board-card[data-job-id], .board-group-card[data-group-key]");
+    const isDraggedGroup = target?.dataset.groupKey && target.dataset.groupKey === state.draggingGroupKey;
+    if (target && target.dataset.jobId !== state.draggingId && !isDraggedGroup) {
+      const bounds = target.getBoundingClientRect();
+      target.classList.add(event.clientY < bounds.top + bounds.height / 2 ? "drop-before" : "drop-after");
     }
   });
   $("#job-board").addEventListener("dragleave", (event) => {
@@ -317,7 +318,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const groupKey = event.dataTransfer.getData("application/x-tracker-group") || state.draggingGroupKey;
     const id = event.dataTransfer.getData("text/plain") || state.draggingId;
     if (groupKey) {
-      placeGroup(groupKey, zone.dataset.stage, zone.querySelectorAll(".board-card[data-job-id]").length);
+      const movingIds = new Set(stageJobs(state.records, "invoiced").filter((record) => record.job.groupKey === groupKey).map((record) => record.id));
+      const jobs = stageJobs(state.records, zone.dataset.stage).filter((record) => !movingIds.has(record.id));
+      const target = event.target.closest(".board-card[data-job-id], .board-group-card[data-group-key]");
+      let index = jobs.length;
+      if (target?.dataset.jobId) {
+        const targetIndex = jobs.findIndex((record) => record.id === target.dataset.jobId);
+        const bounds = target.getBoundingClientRect();
+        index = targetIndex + (event.clientY >= bounds.top + bounds.height / 2 ? 1 : 0);
+      } else if (target?.dataset.groupKey) {
+        const targetGroup = stageJobs(state.records, zone.dataset.stage).filter((record) => record.job.groupKey === target.dataset.groupKey && !movingIds.has(record.id));
+        const targetIndex = jobs.findIndex((record) => record.id === targetGroup[0]?.id);
+        const bounds = target.getBoundingClientRect();
+        index = targetIndex + (event.clientY >= bounds.top + bounds.height / 2 ? targetGroup.length : 0);
+      }
+      placeGroup(groupKey, zone.dataset.stage, Math.max(0, index));
       return;
     }
     if (!id) return;
