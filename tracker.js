@@ -1,11 +1,11 @@
 const API = "./api/quote-records";
-const state = { records: [], search: "", sort: "newest", view: "jobs", layout: "board", selected: null, drawerStage: "quoted" };
+const state = { records: [], search: "", sort: "newest", view: "jobs", layout: "board", selected: null, drawerStage: "quoted", expandedGroups: new Set() };
 const $ = (selector) => document.querySelector(selector);
 const currency = (value) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value) || 0);
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
 const normalise = (record) => {
   const job = record.job && typeof record.job === "object" ? record.job : {};
-  return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", archived: job.archived === true, boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
+  return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", archived: job.archived === true, groupKey: job.groupKey || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
 };
 async function request(path = "", options = {}) { const response = await fetch(`${API}${path}`, { headers: { "Content-Type":"application/json", ...(options.headers || {}) }, ...options }); if (!response.ok) throw new Error(await response.text()); return response.status === 204 ? null : response.json(); }
 async function loadRecords() { $("#sync-state").innerHTML = "<span></span> Syncing shared data"; try { state.records = (await request()).map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } }
@@ -24,11 +24,45 @@ const cardDate = (value) => {
 };
 function boardOrder(record) { return Number.isFinite(record.job.boardOrder) ? record.job.boardOrder : -new Date(record.submittedAt).getTime(); }
 function stageJobs(records, stage, exceptId = "") { return records.filter((record) => record.job.status === stage && record.id !== exceptId).sort((a, b) => boardOrder(a) - boardOrder(b)); }
+function addressGroupKey(address) {
+  return String(address || "").toLowerCase()
+    .replace(/^\s*(for|lot)\s+/, "")
+    .replace(/\bstreet\b/g, "st").replace(/\broad\b/g, "rd").replace(/\bboulevard\b/g, "bvd").replace(/\bavenue\b/g, "ave").replace(/\bplace\b/g, "pl").replace(/\bdrive\b/g, "dr")
+    .replace(/\bvic\b/g, "").replace(/\baustralia\b/g, "").replace(/[^a-z0-9]/g, "");
+}
+function renderCard(record, { hideDate = false } = {}) {
+  return `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content">${record.job.scheduledDate && !hideDate ? `<span class="board-card-date">◷ ${escapeHtml(cardDate(record.job.scheduledDate))}</span>` : ""}<div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`;
+}
+function renderGroupedCards(jobs) {
+  const groups = new Map();
+  jobs.forEach((record) => {
+    const key = record.job.groupKey;
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  });
+  const groupedIds = new Set([...groups.values()].filter((items) => items.length > 1).flat().map((record) => record.id));
+  const cards = [];
+  jobs.forEach((record) => {
+    if (!groupedIds.has(record.id)) {
+      cards.push(renderCard(record));
+      return;
+    }
+    const key = record.job.groupKey;
+    const items = groups.get(key);
+    if (items[0].id !== record.id) return;
+    const expanded = state.expandedGroups.has(key);
+    const total = items.reduce((sum, item) => sum + item.job.quote, 0);
+    cards.push(`<article class="board-group-card" data-group-key="${escapeHtml(key)}"><div class="board-card-top"><span>${escapeHtml(record.address)}</span><span class="group-count">${items.length} cards</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Total</span><strong>${currency(total)}</strong></div><small>Right-click to ${expanded ? "collapse" : "expand"}</small></div></article>`);
+    if (expanded) cards.push(`<div class="board-group-children">${items.map((item) => renderCard(item, { hideDate:true })).join("")}</div>`);
+  });
+  return cards.join("");
+}
 function renderBoard() {
   const records = boardRecords();
   $("#job-board").innerHTML = boardStages.map((stage) => {
     const jobs = stageJobs(records, stage);
-    const cards = jobs.length ? jobs.map((record) => `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content">${record.job.scheduledDate ? `<span class="board-card-date">◷ ${escapeHtml(cardDate(record.job.scheduledDate))}</span>` : ""}<div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`).join("") : `<div class="board-empty">Drop card here</div>`;
+    const cards = jobs.length ? (stage === "invoiced" ? renderGroupedCards(jobs) : jobs.map((record) => renderCard(record)).join("")) : `<div class="board-empty">Drop card here</div>`;
     return `<section class="board-column board-${stage}"><header class="board-head"><strong>${boardLabels[stage]} <span>${jobs.length}</span></strong><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
 }
@@ -44,16 +78,23 @@ async function placeJob(id, status, index) {
   const before = jobs[index - 1];
   const after = jobs[index];
   const order = before && after ? (boardOrder(before) + boardOrder(after)) / 2 : before ? boardOrder(before) + 1 : after ? boardOrder(after) - 1 : -Date.now();
-  const previous = record;
-  const updated = normalise({ ...record, jobStage: status, job: { ...record.job, status, boardOrder: order } });
-  state.records = state.records.map((item) => item.id === id ? updated : item);
+  const matchingAddressCards = status === "invoiced" && record.job.status !== "invoiced"
+    ? jobs.filter((item) => addressGroupKey(item.address) === addressGroupKey(record.address))
+    : [];
+  const shouldGroup = matchingAddressCards.length > 0 && window.confirm(`There ${matchingAddressCards.length === 1 ? "is" : "are"} ${matchingAddressCards.length} Invoiced card${matchingAddressCards.length === 1 ? "" : "s"} for this address. Group this job with ${matchingAddressCards.length === 1 ? "it" : "them"}?\n\nChoose Cancel to keep it as an individual card.`);
+  const groupKey = shouldGroup ? addressGroupKey(record.address) : (status === "invoiced" ? record.job.groupKey || "" : "");
+  const relatedUpdates = shouldGroup ? matchingAddressCards.filter((item) => item.job.groupKey !== groupKey).map((item) => normalise({ ...item, job:{ ...item.job, groupKey } })) : [];
+  const previous = state.records.filter((item) => item.id === id || relatedUpdates.some((updatedItem) => updatedItem.id === item.id));
+  const updated = normalise({ ...record, jobStage: status, job: { ...record.job, status, groupKey, boardOrder: order } });
+  state.records = state.records.map((item) => item.id === id ? updated : relatedUpdates.find((related) => related.id === item.id) || item);
   render();
   try {
     const saved = normalise(await request(`?id=${encodeURIComponent(id)}`, { method:"PATCH", body:JSON.stringify(updated) }));
-    state.records = state.records.map((item) => item.id === id ? saved : item);
+    const groupedSaves = await Promise.all(relatedUpdates.map(async (related) => normalise(await request(`?id=${encodeURIComponent(related.id)}`, { method:"PATCH", body:JSON.stringify(related) }))));
+    state.records = state.records.map((item) => item.id === id ? saved : groupedSaves.find((grouped) => grouped.id === item.id) || item);
     render();
   } catch (error) {
-    state.records = state.records.map((item) => item.id === id ? previous : item);
+    state.records = state.records.map((item) => previous.find((previousItem) => previousItem.id === item.id) || item);
     render();
     window.alert("The job could not be moved in the shared tracker. Please try again.");
     console.warn(error);
@@ -117,10 +158,26 @@ async function setPayment(id, payment, paymentDate = "") {
 function closePaymentDateModal() { $("#payment-date-modal").classList.remove("open"); state.paymentRecordId = null; }
 function openPaymentDateModal(id) { const record = state.records.find((item) => item.id === id); if (!record) return; state.paymentRecordId = id; $("#payment-date").value = record.job.paymentDate || ""; $("#payment-date-modal").classList.add("open"); $("#payment-date").focus(); }
 function togglePayment(id) { const record = state.records.find((item) => item.id === id); if (!record) return; if (record.job.payment === "paid") { setPayment(id, "unpaid", record.job.paymentDate || ""); return; } openPaymentDateModal(id); }
-function closeCardMenu() { const menu = $("#card-menu"); if (menu) menu.classList.remove("open"); state.menuJobId = null; }
+function closeCardMenu() { const menu = $("#card-menu"); if (menu) menu.classList.remove("open"); state.menuJobId = null; state.menuGroupKey = null; }
 function openCardMenu(event, id) {
   const menu = $("#card-menu");
   state.menuJobId = id;
+  $("#group-menu-toggle").hidden = true;
+  menu.classList.add("open");
+  menu.style.visibility = "hidden";
+  menu.style.left = "0px";
+  menu.style.top = "0px";
+  const bounds = menu.getBoundingClientRect();
+  menu.style.left = `${Math.min(event.clientX, window.innerWidth - bounds.width - 8)}px`;
+  menu.style.top = `${Math.min(event.clientY, window.innerHeight - bounds.height - 8)}px`;
+  menu.style.visibility = "";
+}
+function openGroupMenu(event, key) {
+  const menu = $("#card-menu");
+  state.menuJobId = null;
+  state.menuGroupKey = key;
+  $("#group-menu-toggle").hidden = false;
+  $("#group-menu-toggle").textContent = state.expandedGroups.has(key) ? "▴ Collapse group" : "▾ Expand group";
   menu.classList.add("open");
   menu.style.visibility = "hidden";
   menu.style.left = "0px";
@@ -135,7 +192,7 @@ function updateMarkupAmount() { const quote = Number($("#job-quote").value) || 0
 function updateMarkupPercentage() { const quote = Number($("#job-quote").value) || 0; const amount = Math.max(0, Number($("#job-markup-amount").value) || 0); const percentage = quote > amount && amount > 0 ? (amount / (quote - amount)) * 100 : 0; $("#job-markup").value = percentage.toFixed(1); }
 function openDrawer(record = null, defaultStage = "quoted") { state.selected = record; const j = record?.job || {}; state.drawerStage = j.status || defaultStage; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; $("#job-client").value = record?.customerName && record.customerName !== "-" ? record.customerName : ""; $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; $("#job-detail").value = j.detail || ""; $("#job-quote").value = j.quote || ""; $("#job-markup").value = j.markup ?? 50; updateMarkupAmount(); $("#job-payment").value = j.payment === "paid" ? "paid" : "unpaid"; $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || nextInvoiceNumber(); $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
-function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[] }; const quote = Number($("#job-quote").value) || 0; const status = state.selected?.job?.status || state.drawerStage || "quoted"; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), jobStage: status, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup:Number($("#job-markup").value)||0, status, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim() || nextInvoiceNumber(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, archived: state.selected?.job?.archived === true, boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
+function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[] }; const quote = Number($("#job-quote").value) || 0; const status = state.selected?.job?.status || state.drawerStage || "quoted"; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), jobStage: status, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup:Number($("#job-markup").value)||0, status, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim() || nextInvoiceNumber(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, archived: state.selected?.job?.archived === true, groupKey: state.selected?.job?.groupKey || "", boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
 async function saveJob(event) { event.preventDefault(); const record = formRecord(); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; closeDrawer(); render(); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
 function renderQuotes() {
   const records = activeRecords();
@@ -204,6 +261,12 @@ document.addEventListener("DOMContentLoaded", () => {
     placeJob(id, zone.dataset.stage, index);
   });
   $("#job-board").addEventListener("contextmenu", (event) => {
+    const group = event.target.closest(".board-group-card[data-group-key]");
+    if (group) {
+      event.preventDefault();
+      openGroupMenu(event, group.dataset.groupKey);
+      return;
+    }
     const card = event.target.closest(".board-card[data-job-id]");
     if (!card) return;
     event.preventDefault();
@@ -211,13 +274,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#card-menu").addEventListener("click", (event) => {
     const id = state.menuJobId;
-    if (!id) return;
+    const groupKey = state.menuGroupKey;
     const action = event.target.closest("[data-card-menu-action]");
     const stage = event.target.closest("[data-card-menu-stage]");
-    if (action?.dataset.cardMenuAction === "edit") openDrawer(state.records.find((record) => record.id === id));
-    if (action?.dataset.cardMenuAction === "copy") copyJob(id);
-    if (action?.dataset.cardMenuAction === "archive") archiveJob(id);
-    if (stage) placeJob(id, stage.dataset.cardMenuStage, stageJobs(state.records, stage.dataset.cardMenuStage, id).length);
+    if (action?.dataset.cardMenuAction === "toggle-group" && groupKey) {
+      state.expandedGroups.has(groupKey) ? state.expandedGroups.delete(groupKey) : state.expandedGroups.add(groupKey);
+      render();
+    }
+    if (id && action?.dataset.cardMenuAction === "edit") openDrawer(state.records.find((record) => record.id === id));
+    if (id && action?.dataset.cardMenuAction === "copy") copyJob(id);
+    if (id && action?.dataset.cardMenuAction === "archive") archiveJob(id);
+    if (id && stage) placeJob(id, stage.dataset.cardMenuStage, stageJobs(state.records, stage.dataset.cardMenuStage, id).length);
     closeCardMenu();
   });
   document.addEventListener("pointerdown", (event) => { if (!event.target.closest("#card-menu")) closeCardMenu(); });
