@@ -17,13 +17,18 @@ function paymentButton(record) { const value = record.job.payment === "paid" ? "
 function renderJobs() { const items = filtered(); const boardItems = boardRecords(items); $("#jobs-body").innerHTML = items.map((record) => { const j = record.job; return `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(j.number)}</td><td class="address">${escapeHtml(record.address)}</td><td class="detail">${escapeHtml(j.detail || "—")}</td><td class="money">${currency(j.quote)}</td><td>${j.markup ? `${j.markup}%` : "—"}</td><td>${tag(j.status)}</td><td>${tag(j.payment)}</td><td>${tag(j.referral)}</td><td>${escapeHtml(j.invoiceNumber || "—")}</td><td>${escapeHtml(j.invoiceDate || "—")}</td></tr>`; }).join(""); $("#jobs-empty").style.display = items.length ? "none" : "block"; $("#result-count").textContent = `${boardItems.length} job${boardItems.length === 1 ? "" : "s"}`; $("#quote-total").textContent = currency(boardItems.filter((record) => record.job.status === "quoted").reduce((sum, record) => sum + record.job.quote, 0)); $("#invoice-total").textContent = currency(boardItems.filter((record) => record.job.status === "invoiced").reduce((sum, record) => sum + record.job.quote, 0)); }
 const boardStages = ["quoted", "confirmed", "scheduled", "completed", "invoiced", "follow_up"];
 const boardLabels = { quoted:"Quotes", confirmed:"Confirmed", scheduled:"Scheduled", completed:"Completed", invoiced:"Invoiced", follow_up:"Follow up" };
+const cardDate = (value) => {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-AU", { day:"numeric", month:"short" }).format(date);
+};
 function boardOrder(record) { return Number.isFinite(record.job.boardOrder) ? record.job.boardOrder : -new Date(record.submittedAt).getTime(); }
 function stageJobs(records, stage, exceptId = "") { return records.filter((record) => record.job.status === stage && record.id !== exceptId).sort((a, b) => boardOrder(a) - boardOrder(b)); }
 function renderBoard() {
   const records = boardRecords();
   $("#job-board").innerHTML = boardStages.map((stage) => {
     const jobs = stageJobs(records, stage);
-    const cards = jobs.length ? jobs.map((record) => `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`).join("") : `<div class="board-empty">Drop card here</div>`;
+    const cards = jobs.length ? jobs.map((record) => `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content">${record.job.scheduledDate ? `<span class="board-card-date">◷ ${escapeHtml(cardDate(record.job.scheduledDate))}</span>` : ""}<div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`).join("") : `<div class="board-empty">Drop card here</div>`;
     return `<section class="board-column board-${stage}"><header class="board-head"><strong>${boardLabels[stage]} <span>${jobs.length}</span></strong><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
 }
