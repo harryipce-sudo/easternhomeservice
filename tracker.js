@@ -33,10 +33,11 @@ function addressGroupKey(address) {
     .replace(/\bstreet\b/g, "st").replace(/\broad\b/g, "rd").replace(/\bboulevard\b/g, "bvd").replace(/\bavenue\b/g, "ave").replace(/\bplace\b/g, "pl").replace(/\bdrive\b/g, "dr")
     .replace(/\bvic\b/g, "").replace(/\baustralia\b/g, "").replace(/[^a-z0-9]/g, "");
 }
+const groupScope = (stage, key) => `${stage}::${key}`;
 function renderCard(record, { hideDate = false } = {}) {
   return `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content">${record.job.scheduledDate && !hideDate ? `<span class="board-card-date">◷ ${escapeHtml(cardDate(record.job.scheduledDate))}</span>` : ""}<div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div></div></article>`;
 }
-function renderGroupedCards(jobs) {
+function renderGroupedCards(jobs, stage) {
   const groups = new Map();
   jobs.forEach((record) => {
     const key = record.job.groupKey;
@@ -54,9 +55,9 @@ function renderGroupedCards(jobs) {
     const key = record.job.groupKey;
     const items = groups.get(key);
     if (items[0].id !== record.id) return;
-    const expanded = state.expandedGroups.has(key);
+    const expanded = state.expandedGroups.has(groupScope(stage, key));
     const total = items.reduce((sum, item) => sum + item.job.quote, 0);
-    cards.push(`<article class="board-group-card" draggable="true" data-group-key="${escapeHtml(key)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address)}</span><span class="group-count">${items.length} cards</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Total</span><strong>${currency(total)}</strong></div><small>Drag to move all cards · Right-click to ${expanded ? "collapse, ungroup or move" : "expand, ungroup or move"}</small></div></article>`);
+    cards.push(`<article class="board-group-card" draggable="true" data-group-key="${escapeHtml(key)}" data-group-stage="${escapeHtml(stage)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address)}</span><span class="group-count">${items.length} cards</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Total</span><strong>${currency(total)}</strong></div><small>Drag to move all cards · Right-click to ${expanded ? "collapse, ungroup or move" : "expand, ungroup or move"}</small></div></article>`);
     if (expanded) cards.push(`<div class="board-group-children">${items.map((item) => renderCard(item, { hideDate:true })).join("")}</div>`);
   });
   return cards.join("");
@@ -66,7 +67,7 @@ function renderBoard() {
   const records = boardRecords();
   $("#job-board").innerHTML = boardStages.map((stage) => {
     const jobs = stageJobs(records, stage);
-    const cards = jobs.length ? (stage === "invoiced" ? renderGroupedCards(jobs) : jobs.map((record) => renderCard(record)).join("")) : `<div class="board-empty">Drop card here</div>`;
+    const cards = jobs.length ? renderGroupedCards(jobs, stage) : `<div class="board-empty">Drop card here</div>`;
     return `<section class="board-column board-${stage}"><header class="board-head"><strong>${boardLabels[stage]} <span>${jobs.length}</span></strong><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
   document.querySelectorAll(".board-dropzone").forEach((zone) => { zone.scrollTop = scrollPositions.get(zone.dataset.stage) || 0; });
@@ -83,11 +84,11 @@ async function placeJob(id, status, index) {
   const before = jobs[index - 1];
   const after = jobs[index];
   const order = before && after ? (boardOrder(before) + boardOrder(after)) / 2 : before ? boardOrder(before) + 1 : after ? boardOrder(after) - 1 : -Date.now();
-  const matchingAddressCards = status === "invoiced" && record.job.status !== "invoiced"
+  const matchingAddressCards = record.job.status !== status
     ? jobs.filter((item) => addressGroupKey(item.address) === addressGroupKey(record.address))
     : [];
-  const shouldGroup = matchingAddressCards.length > 0 && window.confirm(`There ${matchingAddressCards.length === 1 ? "is" : "are"} ${matchingAddressCards.length} Invoiced card${matchingAddressCards.length === 1 ? "" : "s"} for this address. Group this job with ${matchingAddressCards.length === 1 ? "it" : "them"}?\n\nChoose Cancel to keep it as an individual card.`);
-  const groupKey = shouldGroup ? addressGroupKey(record.address) : (status === "invoiced" ? record.job.groupKey || "" : "");
+  const shouldGroup = matchingAddressCards.length > 0 && window.confirm(`There ${matchingAddressCards.length === 1 ? "is" : "are"} ${matchingAddressCards.length} card${matchingAddressCards.length === 1 ? "" : "s"} for this address in ${boardLabels[status]}. Group this job with ${matchingAddressCards.length === 1 ? "it" : "them"}?\n\nChoose Cancel to keep it as an individual card.`);
+  const groupKey = shouldGroup ? addressGroupKey(record.address) : (status === record.job.status ? record.job.groupKey || "" : "");
   const relatedUpdates = shouldGroup ? matchingAddressCards.filter((item) => item.job.groupKey !== groupKey).map((item) => normalise({ ...item, job:{ ...item.job, groupKey } })) : [];
   const previous = state.records.filter((item) => item.id === id || relatedUpdates.some((updatedItem) => updatedItem.id === item.id));
   const updated = normalise({ ...record, jobStage: status, job: { ...record.job, status, groupKey, boardOrder: order } });
@@ -105,8 +106,8 @@ async function placeJob(id, status, index) {
     console.warn(error);
   }
 }
-async function placeGroup(groupKey, status, index) {
-  const group = stageJobs(state.records, "invoiced").filter((record) => record.job.groupKey === groupKey);
+async function placeGroup(groupKey, sourceStage, status, index) {
+  const group = stageJobs(state.records, sourceStage).filter((record) => record.job.groupKey === groupKey);
   if (group.length < 2) return;
   const groupIds = new Set(group.map((record) => record.id));
   const jobs = stageJobs(state.records, status).filter((record) => !groupIds.has(record.id));
@@ -116,12 +117,12 @@ async function placeGroup(groupKey, status, index) {
   const updated = group.map((record, position) => normalise({
     ...record,
     jobStage: status,
-    job: { ...record.job, status, groupKey: status === "invoiced" ? groupKey : "", boardOrder: startOrder + position / 1000 }
+    job: { ...record.job, status, groupKey, boardOrder: startOrder + position / 1000 }
   }));
   const updatedIds = new Set(updated.map((record) => record.id));
   const previous = state.records.filter((record) => updatedIds.has(record.id));
   state.records = state.records.map((record) => updated.find((item) => item.id === record.id) || record);
-  if (status !== "invoiced") state.expandedGroups.delete(groupKey);
+  if (status !== sourceStage) state.expandedGroups.delete(groupScope(sourceStage, groupKey));
   render();
   try {
     const saved = await Promise.all(updated.map(async (record) => normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }))));
@@ -134,14 +135,14 @@ async function placeGroup(groupKey, status, index) {
     console.warn(error);
   }
 }
-async function ungroupCards(groupKey) {
-  const group = stageJobs(state.records, "invoiced").filter((record) => record.job.groupKey === groupKey);
+async function ungroupCards(groupKey, stage) {
+  const group = stageJobs(state.records, stage).filter((record) => record.job.groupKey === groupKey);
   if (group.length < 2) return;
   const updated = group.map((record) => normalise({ ...record, job:{ ...record.job, groupKey:"" } }));
   const updatedIds = new Set(updated.map((record) => record.id));
   const previous = state.records.filter((record) => updatedIds.has(record.id));
   state.records = state.records.map((record) => updated.find((item) => item.id === record.id) || record);
-  state.expandedGroups.delete(groupKey);
+  state.expandedGroups.delete(groupScope(stage, groupKey));
   render();
   try {
     const saved = await Promise.all(updated.map(async (record) => normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }))));
@@ -212,7 +213,7 @@ async function setPayment(id, payment, paymentDate = "") {
 function closePaymentDateModal() { $("#payment-date-modal").classList.remove("open"); state.paymentRecordId = null; }
 function openPaymentDateModal(id) { const record = state.records.find((item) => item.id === id); if (!record) return; state.paymentRecordId = id; $("#payment-date").value = record.job.paymentDate || ""; $("#payment-date-modal").classList.add("open"); $("#payment-date").focus(); }
 function togglePayment(id) { const record = state.records.find((item) => item.id === id); if (!record) return; if (record.job.payment === "paid") { setPayment(id, "unpaid", record.job.paymentDate || ""); return; } openPaymentDateModal(id); }
-function closeCardMenu() { const menu = $("#card-menu"); if (menu) menu.classList.remove("open"); state.menuJobId = null; state.menuGroupKey = null; }
+function closeCardMenu() { const menu = $("#card-menu"); if (menu) menu.classList.remove("open"); state.menuJobId = null; state.menuGroupKey = null; state.menuGroupStage = null; }
 function openCardMenu(event, id) {
   const menu = $("#card-menu");
   state.menuJobId = id;
@@ -227,13 +228,14 @@ function openCardMenu(event, id) {
   menu.style.top = `${Math.min(event.clientY, window.innerHeight - bounds.height - 8)}px`;
   menu.style.visibility = "";
 }
-function openGroupMenu(event, key) {
+function openGroupMenu(event, key, stage) {
   const menu = $("#card-menu");
   state.menuJobId = null;
   state.menuGroupKey = key;
+  state.menuGroupStage = stage;
   $("#group-menu-toggle").hidden = false;
   $("#group-menu-ungroup").hidden = false;
-  $("#group-menu-toggle").textContent = state.expandedGroups.has(key) ? "▴ Collapse group" : "▾ Expand group";
+  $("#group-menu-toggle").textContent = state.expandedGroups.has(groupScope(stage, key)) ? "▴ Collapse group" : "▾ Expand group";
   menu.classList.add("open");
   menu.style.visibility = "hidden";
   menu.style.left = "0px";
@@ -277,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const group = event.target.closest(".board-group-card[data-group-key]");
     if (group) {
       state.draggingGroupKey = group.dataset.groupKey;
+      state.draggingGroupStage = group.dataset.groupStage;
       group.classList.add("dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("application/x-tracker-group", group.dataset.groupKey);
@@ -292,6 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#job-board").addEventListener("dragend", () => {
     state.draggingId = null;
     state.draggingGroupKey = null;
+    state.draggingGroupStage = null;
     state.dropTarget = null;
     document.querySelectorAll(".dragging,.drag-over,.drop-before,.drop-after").forEach((element) => element.classList.remove("dragging", "drag-over", "drop-before", "drop-after"));
   });
@@ -328,7 +332,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const id = event.dataTransfer.getData("text/plain") || state.draggingId;
     const dropTarget = state.dropTarget?.stage === zone.dataset.stage ? state.dropTarget : { jobId:"", groupKey:"", after:true };
     if (groupKey) {
-      const movingIds = new Set(stageJobs(state.records, "invoiced").filter((record) => record.job.groupKey === groupKey).map((record) => record.id));
+      const sourceStage = state.draggingGroupStage || "invoiced";
+      const movingIds = new Set(stageJobs(state.records, sourceStage).filter((record) => record.job.groupKey === groupKey).map((record) => record.id));
       const jobs = stageJobs(state.records, zone.dataset.stage).filter((record) => !movingIds.has(record.id));
       let index = jobs.length;
       if (dropTarget.jobId) {
@@ -339,7 +344,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetIndex = jobs.findIndex((record) => record.id === targetGroup[0]?.id);
         index = targetIndex + (dropTarget.after ? targetGroup.length : 0);
       }
-      placeGroup(groupKey, zone.dataset.stage, Math.max(0, index));
+      if (sourceStage === zone.dataset.stage && !dropTarget.jobId && !dropTarget.groupKey) return;
+      placeGroup(groupKey, sourceStage, zone.dataset.stage, Math.max(0, index));
       return;
     }
     if (!id) return;
@@ -359,7 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const group = event.target.closest(".board-group-card[data-group-key]");
     if (group) {
       event.preventDefault();
-      openGroupMenu(event, group.dataset.groupKey);
+      openGroupMenu(event, group.dataset.groupKey, group.dataset.groupStage);
       return;
     }
     const card = event.target.closest(".board-card[data-job-id]");
@@ -370,13 +376,15 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#card-menu").addEventListener("click", (event) => {
     const id = state.menuJobId;
     const groupKey = state.menuGroupKey;
+    const groupStage = state.menuGroupStage;
     const action = event.target.closest("[data-card-menu-action]");
     const stage = event.target.closest("[data-card-menu-stage]");
     if (action?.dataset.cardMenuAction === "toggle-group" && groupKey) {
-      state.expandedGroups.has(groupKey) ? state.expandedGroups.delete(groupKey) : state.expandedGroups.add(groupKey);
+      const scope = groupScope(groupStage, groupKey);
+      state.expandedGroups.has(scope) ? state.expandedGroups.delete(scope) : state.expandedGroups.add(scope);
       render();
     }
-    if (action?.dataset.cardMenuAction === "ungroup" && groupKey) ungroupCards(groupKey);
+    if (action?.dataset.cardMenuAction === "ungroup" && groupKey && groupStage) ungroupCards(groupKey, groupStage);
     if (id && action?.dataset.cardMenuAction === "edit") openDrawer(state.records.find((record) => record.id === id));
     if (id && action?.dataset.cardMenuAction === "copy") copyJob(id);
     if (id && action?.dataset.cardMenuAction === "archive") archiveJob(id);
