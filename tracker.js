@@ -273,6 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#board-layout").classList.toggle("active", state.layout === "board");
   }));
   $("#job-board").addEventListener("dragstart", (event) => {
+    state.dropTarget = null;
     const group = event.target.closest(".board-group-card[data-group-key]");
     if (group) {
       state.draggingGroupKey = group.dataset.groupKey;
@@ -291,6 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#job-board").addEventListener("dragend", () => {
     state.draggingId = null;
     state.draggingGroupKey = null;
+    state.dropTarget = null;
     document.querySelectorAll(".dragging,.drag-over,.drop-before,.drop-after").forEach((element) => element.classList.remove("dragging", "drag-over", "drop-before", "drop-after"));
   });
   $("#job-board").addEventListener("dragover", (event) => {
@@ -303,7 +305,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const isDraggedGroup = target?.dataset.groupKey && target.dataset.groupKey === state.draggingGroupKey;
     if (target && target.dataset.jobId !== state.draggingId && !isDraggedGroup) {
       const bounds = target.getBoundingClientRect();
-      target.classList.add(event.clientY < bounds.top + bounds.height / 2 ? "drop-before" : "drop-after");
+      const after = event.clientY >= bounds.top + bounds.height / 2;
+      state.dropTarget = { stage: zone.dataset.stage, jobId: target.dataset.jobId || "", groupKey: target.dataset.groupKey || "", after };
+      target.classList.add(after ? "drop-after" : "drop-before");
+    } else {
+      state.dropTarget = { stage: zone.dataset.stage, jobId: "", groupKey: "", after: true };
     }
   });
   $("#job-board").addEventListener("dragleave", (event) => {
@@ -317,34 +323,34 @@ document.addEventListener("DOMContentLoaded", () => {
     zone.classList.remove("drag-over");
     const groupKey = event.dataTransfer.getData("application/x-tracker-group") || state.draggingGroupKey;
     const id = event.dataTransfer.getData("text/plain") || state.draggingId;
+    const dropTarget = state.dropTarget?.stage === zone.dataset.stage ? state.dropTarget : { jobId:"", groupKey:"", after:true };
     if (groupKey) {
       const movingIds = new Set(stageJobs(state.records, "invoiced").filter((record) => record.job.groupKey === groupKey).map((record) => record.id));
       const jobs = stageJobs(state.records, zone.dataset.stage).filter((record) => !movingIds.has(record.id));
-      const target = event.target.closest(".board-card[data-job-id], .board-group-card[data-group-key]");
       let index = jobs.length;
-      if (target?.dataset.jobId) {
-        const targetIndex = jobs.findIndex((record) => record.id === target.dataset.jobId);
-        const bounds = target.getBoundingClientRect();
-        index = targetIndex + (event.clientY >= bounds.top + bounds.height / 2 ? 1 : 0);
-      } else if (target?.dataset.groupKey) {
-        const targetGroup = stageJobs(state.records, zone.dataset.stage).filter((record) => record.job.groupKey === target.dataset.groupKey && !movingIds.has(record.id));
+      if (dropTarget.jobId) {
+        const targetIndex = jobs.findIndex((record) => record.id === dropTarget.jobId);
+        index = targetIndex + (dropTarget.after ? 1 : 0);
+      } else if (dropTarget.groupKey) {
+        const targetGroup = stageJobs(state.records, zone.dataset.stage).filter((record) => record.job.groupKey === dropTarget.groupKey && !movingIds.has(record.id));
         const targetIndex = jobs.findIndex((record) => record.id === targetGroup[0]?.id);
-        const bounds = target.getBoundingClientRect();
-        index = targetIndex + (event.clientY >= bounds.top + bounds.height / 2 ? targetGroup.length : 0);
+        index = targetIndex + (dropTarget.after ? targetGroup.length : 0);
       }
       placeGroup(groupKey, zone.dataset.stage, Math.max(0, index));
       return;
     }
     if (!id) return;
-    const cards = [...zone.querySelectorAll(".board-card[data-job-id]")].filter((card) => card.dataset.jobId !== id);
-    const target = event.target.closest(".board-card[data-job-id]");
-    let index = cards.length;
-    if (target && target.dataset.jobId !== id) {
-      const targetIndex = cards.indexOf(target);
-      const bounds = target.getBoundingClientRect();
-      index = targetIndex + (event.clientY >= bounds.top + bounds.height / 2 ? 1 : 0);
+    const jobs = stageJobs(state.records, zone.dataset.stage, id);
+    let index = jobs.length;
+    if (dropTarget.jobId && dropTarget.jobId !== id) {
+      const targetIndex = jobs.findIndex((record) => record.id === dropTarget.jobId);
+      index = targetIndex + (dropTarget.after ? 1 : 0);
+    } else if (dropTarget.groupKey) {
+      const targetGroup = jobs.filter((record) => record.job.groupKey === dropTarget.groupKey);
+      const targetIndex = jobs.findIndex((record) => record.id === targetGroup[0]?.id);
+      index = targetIndex + (dropTarget.after ? targetGroup.length : 0);
     }
-    placeJob(id, zone.dataset.stage, index);
+    placeJob(id, zone.dataset.stage, Math.max(0, index));
   });
   $("#job-board").addEventListener("contextmenu", (event) => {
     const group = event.target.closest(".board-group-card[data-group-key]");
