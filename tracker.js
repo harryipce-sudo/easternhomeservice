@@ -13,6 +13,7 @@ const normalise = (record) => {
 async function request(path = "", options = {}) { const response = await fetch(`${API}${path}`, { headers: { "Content-Type":"application/json", ...(options.headers || {}) }, ...options }); if (!response.ok) throw new Error(await response.text()); return response.status === 204 ? null : response.json(); }
 async function loadRecords() { $("#sync-state").innerHTML = "<span></span> Syncing shared data"; try { state.records = (await request()).map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } }
 function activeRecords() { return state.records.filter((record) => !record.job.archived); }
+function invoicedRecords(records = activeRecords()) { return records.filter((record) => record.job.status === "invoiced"); }
 function filtered() { const term = state.search.trim().toLowerCase(); const items = activeRecords().filter((record) => { const j = record.job; return !term || [j.number,record.customerName,record.address,j.detail].some((value) => String(value || "").toLowerCase().includes(term)); }); return items.sort((a,b) => state.sort === "address" ? String(a.address).localeCompare(String(b.address)) : state.sort === "quote-high" ? b.job.quote-a.job.quote : state.sort === "status" ? a.job.status.localeCompare(b.job.status) : new Date(b.submittedAt)-new Date(a.submittedAt)); }
 function boardRecords(records = filtered()) { return records.filter((record) => !(record.job.status === "invoiced" && record.job.payment === "paid")); }
 function tag(value) { const label = value === "not-applicable" ? "Not applicable" : value.charAt(0).toUpperCase() + value.slice(1); return `<span class="tag ${escapeHtml(value)}">${escapeHtml(label)}</span>`; }
@@ -264,7 +265,9 @@ function renderQuotes() {
   const records = activeRecords();
   $("#quotes-body").innerHTML = records.map((record) => `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(record.job.number)}</td><td>${escapeHtml(record.address)}</td><td>${escapeHtml(record.job.detail || "—")}</td><td>${currency(record.job.quote)}</td><td>${tag(record.job.status)}</td></tr>`).join("") || `<tr><td colspan="5">No saved quotes yet.</td></tr>`;
   // Keep archived cards out of the invoice register as well as the board.
-  const invoices = records.filter((record) => !record.job.archived && (record.job.invoiceNumber || record.job.status === "completed" || record.job.status === "invoiced")).sort((a, b) => Number(a.job.payment === "paid") - Number(b.job.payment === "paid"));
+  // The invoice register mirrors the Invoiced board. Paid jobs remain in this
+  // register for history, but leave the board as soon as they are marked paid.
+  const invoices = invoicedRecords(records).sort((a, b) => Number(a.job.payment === "paid") - Number(b.job.payment === "paid"));
   const unpaid = invoices.filter((record) => record.job.payment !== "paid");
   const paid = invoices.filter((record) => record.job.payment === "paid");
   const unpaidTotal = unpaid.reduce((sum, record) => sum + record.job.quote, 0);
