@@ -133,7 +133,7 @@
         <label>Address<textarea id="job-address" rows="2" required></textarea></label>
         <label>Job details<textarea id="job-detail" rows="5"></textarea></label>
         <div class="three-col gst-row"><label>Quotation (ex. GST)<input id="job-quote" type="number" min="0" step="0.01"></label><label>GST (10%)<input id="job-gst" type="number" readonly aria-label="GST amount"></label><label>Total (inc. GST)<input id="job-total" type="number" readonly aria-label="Total amount"></label></div>
-        <div class="three-col"><label>Markup %<input id="job-markup" type="number" min="0" step="0.1" value="50"></label><label>Markup $<input id="job-markup-amount" type="number" min="0" step="0.01" aria-label="Markup amount"></label></div>
+        <div class="three-col gst-row"><label>Markup %<input id="job-markup" type="number" min="0" step="0.1" value="50"></label><label>Markup $ (inc. GST)<input id="job-markup-amount" type="number" min="0" step="0.01" aria-label="Markup amount including GST"></label><label>Markup GST (10%)<input id="job-markup-gst" type="number" readonly aria-label="Markup GST amount"></label></div>
         <label>Payment<select id="job-payment"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></label>
         <label>Referral payment status<select id="job-referral"><option value="pending">Pending</option><option value="paid">Paid</option><option value="not-applicable">Not applicable</option></select></label>
         <label>Invoice no.<input id="job-invoice"></label><label>Invoice date<input id="job-invoice-date" type="date"></label><label>Scheduled date<input id="job-scheduled-date" type="date"></label>
