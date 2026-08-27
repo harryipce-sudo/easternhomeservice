@@ -87,6 +87,7 @@
       <nav class="side-nav" aria-label="Main navigation">
         <button class="nav-link active" data-view="jobs">Jobs</button>
         <button class="nav-link" data-view="invoices">Invoices</button>
+        <button class="nav-link" data-view="archive">Archive</button>
         <button class="nav-link" data-view="calendar">Calendar</button>
         <button class="nav-link" data-view="clients">Clients</button>
         <button class="nav-link" data-view="quotes">Quotes</button>
@@ -119,6 +120,7 @@
       <section class="view" id="view-reports"><div class="section-head"><h2>Reports</h2><p>Live totals calculated from the shared register.</p></div><div class="report-grid" id="report-grid"></div></section>
       <section class="view" id="view-quotes"><div class="section-head"><h2>Quotes</h2><p>Every quote in the shared job register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Quotation</th><th>Status</th></tr></thead><tbody id="quotes-body"></tbody></table></div></div></section>
       <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="invoice-review-list" id="invoice-review-list" aria-live="polite"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Pay date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
+      <section class="view" id="view-archive"><div class="section-head"><h2>Archived cards</h2><p>Archived cards are hidden from the boards and invoices. Restore a card to return it to its original column.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Column</th><th>Quotation</th><th></th></tr></thead><tbody id="archive-body"></tbody></table></div></div></section>
       <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div></section>
     </main>
 
