@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./tracker.css?v=20260828-board-controls">
+  <link rel="stylesheet" href="./tracker.css?v=20260828-all-board-drag">
   <style>
     .board-invoiced { background:#f4faf6; border-color:#b9dcc4; }
     .board-invoiced .board-head strong, .board-invoiced .lane-add { color:#18733b; }
@@ -147,13 +147,7 @@
       <button type="button" id="group-menu-ungroup" data-card-menu-action="ungroup" hidden>⊘ Ungroup cards</button>
       <div class="card-menu-divider"></div>
       <div class="card-menu-label">Move to board</div>
-      <button type="button" data-card-menu-stage="quoted">Quotes</button>
-      <button type="button" data-card-menu-stage="confirmed">Confirmed</button>
-      <button type="button" data-card-menu-stage="scheduled">Scheduled</button>
-      <button type="button" data-card-menu-stage="completed">Completed</button>
-      <button type="button" data-card-menu-stage="invoiced">Invoiced</button>
-      <button type="button" data-card-menu-stage="follow_up">Follow up</button>
-      <div id="custom-card-menu-stages"></div>
+      <div id="card-menu-stages"></div>
       <div class="card-menu-divider"></div>
       <button class="card-menu-danger" type="button" data-card-menu-action="archive">▣ Archive card</button>
     </div>
@@ -161,7 +155,7 @@
       <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
     </div>
   </div>
-  <script src="./tracker.js?v=20260828-board-drag"></script>
+  <script src="./tracker.js?v=20260828-all-board-drag"></script>
   <script>
     document.getElementById("add-board").addEventListener("click", addBoard);
     document.getElementById("job-board").addEventListener("click", (event) => {

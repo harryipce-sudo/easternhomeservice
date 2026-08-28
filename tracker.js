@@ -2,7 +2,7 @@ const API = "./api/quote-records";
 const savedView = (() => {
   try { return localStorage.getItem("tracker-view") || "jobs"; } catch { return "jobs"; }
 })();
-const state = { records: [], search: "", sort: "newest", view: savedView, layout: "board", selected: null, drawerStage: "quoted", expandedGroups: new Set(), customBoards: [], boardSettings: null };
+const state = { records: [], search: "", sort: "newest", view: savedView, layout: "board", selected: null, drawerStage: "quoted", expandedGroups: new Set(), customBoards: [], boardOrder: [], hiddenBoards: [], boardSettings: null };
 const $ = (selector) => document.querySelector(selector);
 const currency = (value) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value) || 0);
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
@@ -11,7 +11,7 @@ const normalise = (record) => {
   return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, markupStatus: job.markupStatus || (Number(job.markup) > 0 ? "included" : "not-recorded"), status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", archived: job.archived === true, groupKey: job.groupKey || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
 };
 async function request(path = "", options = {}) { const response = await fetch(`${API}${path}`, { headers: { "Content-Type":"application/json", ...(options.headers || {}) }, ...options }); if (!response.ok) throw new Error(await response.text()); return response.status === 204 ? null : response.json(); }
-async function loadRecords() { $("#sync-state").innerHTML = "<span></span> Syncing shared data"; try { const raw = await request(); state.boardSettings = raw.find((record) => record.recordType === "tracker-board-settings") || null; state.customBoards = Array.isArray(state.boardSettings?.job?.boards) ? state.boardSettings.job.boards.filter((board) => board?.id && board?.label) : []; state.customBoards.forEach((board) => { boardLabels[board.id] = board.label; }); state.records = raw.filter((record) => record.recordType !== "tracker-board-settings").map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } }
+async function loadRecords() { $("#sync-state").innerHTML = "<span></span> Syncing shared data"; try { const raw = await request(); state.boardSettings = raw.find((record) => record.recordType === "tracker-board-settings") || null; state.customBoards = Array.isArray(state.boardSettings?.job?.boards) ? state.boardSettings.job.boards.filter((board) => board?.id && board?.label) : []; state.boardOrder = Array.isArray(state.boardSettings?.job?.boardOrder) ? state.boardSettings.job.boardOrder : []; state.hiddenBoards = Array.isArray(state.boardSettings?.job?.hiddenBoards) ? state.boardSettings.job.hiddenBoards : []; state.customBoards.forEach((board) => { boardLabels[board.id] = board.label; }); state.records = raw.filter((record) => record.recordType !== "tracker-board-settings").map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } }
 function activeRecords() { return state.records.filter((record) => !record.job.archived); }
 // The invoice register follows invoice data, not the job-board lane. This keeps
 // Odoo invoices visible even while their operational job is Scheduled/Confirmed.
@@ -25,7 +25,11 @@ function markupTag(job) { return job.markupStatus === "included" ? `<span class=
 function renderJobs() { const items = filtered(); const boardItems = boardRecords(items); $("#jobs-body").innerHTML = items.map((record) => { const j = record.job; return `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(j.number)}</td><td class="address">${escapeHtml(record.address)}</td><td class="detail">${escapeHtml(j.detail || "—")}</td><td class="money">${currency(j.quote)}</td><td>${markupTag(j)}</td><td>${tag(j.status)}</td><td>${tag(j.payment)}</td><td>${tag(j.referral)}</td><td>${escapeHtml(j.invoiceNumber || "—")}</td><td>${escapeHtml(j.invoiceDate || "—")}</td></tr>`; }).join(""); $("#jobs-empty").style.display = items.length ? "none" : "block"; $("#result-count").textContent = `${boardItems.length} job${boardItems.length === 1 ? "" : "s"}`; $("#quote-total").textContent = currency(boardItems.filter((record) => record.job.status === "quoted").reduce((sum, record) => sum + record.job.quote, 0)); $("#markup-total").textContent = currency(boardItems.reduce((sum, record) => sum + markupAmountExGst(record.job), 0)); $("#invoice-total").textContent = currency(boardItems.filter((record) => record.job.status === "invoiced").reduce((sum, record) => sum + record.job.quote, 0)); }
 const baseBoardStages = ["quoted", "confirmed", "scheduled", "completed", "invoiced", "follow_up"];
 const boardLabels = { quoted:"Quotes", confirmed:"Confirmed", scheduled:"Scheduled", completed:"Completed", invoiced:"Invoiced", follow_up:"Follow up" };
-const boardStages = () => [...baseBoardStages, ...state.customBoards.map((board) => board.id)];
+const boardStages = () => {
+  const available = [...baseBoardStages.filter((stage) => !state.hiddenBoards.includes(stage)), ...state.customBoards.map((board) => board.id)];
+  const ordered = state.boardOrder.filter((stage) => available.includes(stage));
+  return [...ordered, ...available.filter((stage) => !ordered.includes(stage))];
+};
 const cardDate = (value) => {
   if (!value) return "";
   const date = new Date(`${value}T00:00:00`);
@@ -85,15 +89,12 @@ function renderBoard() {
   $("#job-board").innerHTML = stages.map((stage) => {
     const jobs = stageJobs(records, stage);
     const cards = jobs.length ? renderGroupedCards(jobs, stage) : `<div class="board-empty">Drop card here</div>`;
-    const customBoard = state.customBoards.find((board) => board.id === stage);
-    const controls = customBoard ? `<div class="board-actions"><button type="button" title="Delete board" aria-label="Delete ${escapeHtml(customBoard.label)} board" data-board-action="delete" data-board-id="${escapeHtml(stage)}">×</button></div>` : "";
-    const dragAttributes = customBoard ? ` draggable="true" data-board-drag-id="${escapeHtml(stage)}" title="Drag to move this board"` : "";
-    const grip = customBoard ? `<span class="board-drag-grip" aria-hidden="true">⠿</span>` : "";
-    return `<section class="board-column board-${stage}"><header class="board-head"><div class="board-title-row${customBoard ? " custom-board-title" : ""}"${dragAttributes}>${grip}<strong>${escapeHtml(boardLabels[stage])} <span>${jobs.length}</span></strong>${controls}</div><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
+    const controls = `<div class="board-actions"><button type="button" title="Delete board" aria-label="Delete ${escapeHtml(boardLabels[stage])} board" data-board-action="delete" data-board-id="${escapeHtml(stage)}">×</button></div>`;
+    return `<section class="board-column board-${stage}"><header class="board-head"><div class="board-title-row custom-board-title" draggable="true" data-board-drag-id="${escapeHtml(stage)}" title="Drag to move this board"><span class="board-drag-grip" aria-hidden="true">⠿</span><strong>${escapeHtml(boardLabels[stage])} <span>${jobs.length}</span></strong>${controls}</div><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
   document.querySelectorAll(".board-dropzone").forEach((zone) => { zone.scrollTop = scrollPositions.get(zone.dataset.stage) || 0; });
 }
-function renderCustomBoardTargets() { $("#custom-card-menu-stages").innerHTML = state.customBoards.map((board) => `<button type="button" data-card-menu-stage="${escapeHtml(board.id)}">${escapeHtml(board.label)}</button>`).join(""); }
+function renderBoardTargets() { $("#card-menu-stages").innerHTML = boardStages().map((stage) => `<button type="button" data-card-menu-stage="${escapeHtml(stage)}">${escapeHtml(boardLabels[stage])}</button>`).join(""); }
 async function addBoard() {
   const label = window.prompt("Board name", "New board");
   if (!label?.trim()) return;
@@ -101,8 +102,10 @@ async function addBoard() {
   const id = `custom-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "board"}-${Date.now().toString(36)}`;
   const boards = [...state.customBoards, { id, label:name }];
   const isNew = !state.boardSettings;
-  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, boards } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"-", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards } };
+  const boardOrder = [...boardStages(), id];
+  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, boards, boardOrder } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"-", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards, boardOrder, hiddenBoards:[] } };
   state.customBoards = boards;
+  state.boardOrder = boardOrder;
   state.boardSettings = settings;
   boardLabels[id] = name;
   render();
@@ -110,53 +113,67 @@ async function addBoard() {
     state.boardSettings = await request(isNew ? "" : `?id=${encodeURIComponent(settings.id)}`, { method: isNew ? "POST" : "PATCH", body:JSON.stringify(settings) });
   } catch (error) {
     state.customBoards = state.customBoards.filter((board) => board.id !== id);
+    state.boardOrder = state.boardOrder.filter((stage) => stage !== id);
     delete boardLabels[id];
     render();
     window.alert("The new board could not be saved. Please try again.");
     console.warn(error);
   }
 }
-async function saveCustomBoards(boards) {
-  const previous = state.customBoards;
-  const settings = { ...state.boardSettings, job:{ ...state.boardSettings.job, boards } };
+async function saveBoardLayout({ boards = state.customBoards, boardOrder = state.boardOrder, hiddenBoards = state.hiddenBoards } = {}) {
+  const previous = { boards:state.customBoards, boardOrder:state.boardOrder, hiddenBoards:state.hiddenBoards };
+  const settings = { ...state.boardSettings, job:{ ...state.boardSettings.job, boards, boardOrder, hiddenBoards } };
   state.customBoards = boards;
+  state.boardOrder = boardOrder;
+  state.hiddenBoards = hiddenBoards;
   state.boardSettings = settings;
   render();
   try {
     state.boardSettings = await request(`?id=${encodeURIComponent(settings.id)}`, { method:"PATCH", body:JSON.stringify(settings) });
   } catch (error) {
-    state.customBoards = previous;
-    state.boardSettings = { ...settings, job:{ ...settings.job, boards:previous } };
+    state.customBoards = previous.boards;
+    state.boardOrder = previous.boardOrder;
+    state.hiddenBoards = previous.hiddenBoards;
+    state.boardSettings = { ...settings, job:{ ...settings.job, boards:previous.boards, boardOrder:previous.boardOrder, hiddenBoards:previous.hiddenBoards } };
     render();
     window.alert("The board change could not be saved. Please try again.");
     console.warn(error);
   }
 }
 async function reorderBoard(id, targetId) {
-  const index = state.customBoards.findIndex((board) => board.id === id);
-  const targetIndex = state.customBoards.findIndex((board) => board.id === targetId);
+  const current = boardStages();
+  const index = current.indexOf(id);
+  const targetIndex = current.indexOf(targetId);
   if (index < 0 || targetIndex < 0 || index === targetIndex) return;
-  const boards = [...state.customBoards];
-  const [board] = boards.splice(index, 1);
-  boards.splice(index < targetIndex ? targetIndex - 1 : targetIndex, 0, board);
-  await saveCustomBoards(boards);
+  const [board] = current.splice(index, 1);
+  current.splice(index < targetIndex ? targetIndex - 1 : targetIndex, 0, board);
+  await saveBoardLayout({ boardOrder:current });
 }
 async function deleteBoard(id) {
-  const board = state.customBoards.find((item) => item.id === id);
-  if (!board) return;
+  const stages = boardStages();
+  if (stages.length <= 1) { window.alert("Keep at least one board in the tracker."); return; }
+  if (!stages.includes(id)) return;
+  const label = boardLabels[id] || "this";
   const cards = state.records.filter((record) => record.job.status === id);
+  const fallback = stages.find((stage) => stage !== id);
   const message = cards.length
-    ? `Delete “${board.label}”? Its ${cards.length} card${cards.length === 1 ? "" : "s"} will be moved safely to Quotes.`
-    : `Delete the empty “${board.label}” board?`;
+    ? `Delete “${label}”? Its ${cards.length} card${cards.length === 1 ? "" : "s"} will be moved safely to ${boardLabels[fallback]}.`
+    : `Delete the empty “${label}” board?`;
   if (!window.confirm(message)) return;
   const previousRecords = state.records;
-  const moved = cards.map((record, index) => normalise({ ...record, jobStage:"quoted", job:{ ...record.job, status:"quoted", groupKey:"", boardOrder:-Date.now() - index } }));
-  const boards = state.customBoards.filter((item) => item.id !== id);
-  const settings = { ...state.boardSettings, job:{ ...state.boardSettings.job, boards } };
+  const previousLayout = { boards:state.customBoards, boardOrder:state.boardOrder, hiddenBoards:state.hiddenBoards };
+  const moved = cards.map((record, index) => normalise({ ...record, jobStage:fallback, job:{ ...record.job, status:fallback, groupKey:"", boardOrder:-Date.now() - index } }));
+  const isCustom = state.customBoards.some((item) => item.id === id);
+  const boards = isCustom ? state.customBoards.filter((item) => item.id !== id) : state.customBoards;
+  const boardOrder = state.boardOrder.filter((stage) => stage !== id);
+  const hiddenBoards = isCustom ? state.hiddenBoards : [...state.hiddenBoards, id];
+  const settings = { ...state.boardSettings, job:{ ...state.boardSettings.job, boards, boardOrder, hiddenBoards } };
   state.records = state.records.map((record) => moved.find((item) => item.id === record.id) || record);
   state.customBoards = boards;
+  state.boardOrder = boardOrder;
+  state.hiddenBoards = hiddenBoards;
   state.boardSettings = settings;
-  delete boardLabels[id];
+  if (isCustom) delete boardLabels[id];
   render();
   try {
     await Promise.all([
@@ -165,9 +182,11 @@ async function deleteBoard(id) {
     ]);
   } catch (error) {
     state.records = previousRecords;
-    state.customBoards = [...state.customBoards, board];
-    state.boardSettings = { ...settings, job:{ ...settings.job, boards:[...state.customBoards] } };
-    boardLabels[id] = board.label;
+    state.customBoards = previousLayout.boards;
+    state.boardOrder = previousLayout.boardOrder;
+    state.hiddenBoards = previousLayout.hiddenBoards;
+    state.boardSettings = { ...settings, job:{ ...settings.job, boards:previousLayout.boards, boardOrder:previousLayout.boardOrder, hiddenBoards:previousLayout.hiddenBoards } };
+    if (isCustom) boardLabels[id] = label;
     render();
     window.alert("The board could not be deleted. Please try again.");
     console.warn(error);
@@ -178,7 +197,7 @@ function renderClients() { const clients = [...new Map(activeRecords().filter((r
 function renderTasks() { const active = activeRecords().filter((record) => !["completed"].includes(record.job.status)); $("#task-list").innerHTML = active.map((record) => `<article class="task-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.detail || "No job detail added")}</span><div class="task-meta"><em>${escapeHtml(record.job.status === "quoted" ? "Follow up quote" : record.job.status === "confirmed" ? "Schedule the job" : "Complete scheduled work")}</em><b>Quote ${currency(record.job.quote)}</b></div></article>`).join("") || `<div class="empty" style="display:block">No active tasks.</div>`; }
 function renderReports() { const all = activeRecords(); const paid = all.filter((record) => record.job.payment === "paid"); $("#report-grid").innerHTML = `<article class="report-card"><span>Total quotations</span><strong>${currency(all.reduce((sum, r) => sum + r.job.quote, 0))}</strong></article><article class="report-card"><span>Paid jobs</span><strong>${paid.length}</strong></article><article class="report-card"><span>Completed jobs</span><strong>${all.filter((r) => r.job.status === "completed").length}</strong></article>`; }
 function renderArchive() { const records = state.records.filter((record) => record.job.archived); $("#archive-body").innerHTML = records.map((record) => `<tr><td>${escapeHtml(record.job.number || "—")}</td><td class="address">${escapeHtml(record.address || "—")}</td><td class="detail">${escapeHtml(record.job.detail || "—")}</td><td>${tag(record.job.status)}</td><td class="money">${currency(record.job.quote)}</td><td><div class="archive-actions"><button class="quiet-button archive-restore" type="button" data-restore-card="${escapeHtml(record.id)}">Restore</button><button class="danger-button" type="button" data-delete-card="${escapeHtml(record.id)}">Permanently delete</button></div></td></tr>`).join("") || `<tr><td colspan="6" class="archive-empty">No archived cards.</td></tr>`; }
-function render() { renderJobs(); renderBoard(); renderCustomBoardTargets(); renderCalendar(); renderClients(); renderTasks(); renderReports(); renderQuotes(); renderArchive(); }
+function render() { renderJobs(); renderBoard(); renderBoardTargets(); renderCalendar(); renderClients(); renderTasks(); renderReports(); renderQuotes(); renderArchive(); }
 async function placeJob(id, status, index) {
   const record = state.records.find((item) => item.id === id);
   if (!record) return;
