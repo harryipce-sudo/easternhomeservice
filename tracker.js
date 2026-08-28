@@ -70,7 +70,8 @@ function renderGroupedCards(jobs, stage) {
     if (items[0].id !== record.id) return;
     const expanded = state.expandedGroups.has(groupScope(stage, key));
     const total = items.reduce((sum, item) => sum + item.job.quote, 0);
-    cards.push(`<article class="board-group-card" draggable="true" data-group-key="${escapeHtml(key)}" data-group-stage="${escapeHtml(stage)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address)}</span><span class="group-count">${items.length} cards</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Total</span><strong>${currency(total)}</strong></div><small>Drag to move all cards · Right-click to ${expanded ? "collapse, ungroup or move" : "expand, ungroup or move"}</small></div></article>`);
+    const totalMarkup = items.reduce((sum, item) => sum + markupAmountExGst(item.job), 0);
+    cards.push(`<article class="board-group-card" draggable="true" data-group-key="${escapeHtml(key)}" data-group-stage="${escapeHtml(stage)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address)}</span><span class="group-count">${items.length} cards</span></div><div class="board-card-content"><div class="board-card-bottom"><span>Total</span><strong>${currency(total)}</strong></div>${totalMarkup > 0 ? `<div class="board-card-bottom"><span>Markup (ex. GST)</span><strong>${currency(totalMarkup)}</strong></div>` : ""}<small>Drag to move all cards · Right-click to ${expanded ? "collapse, ungroup or move" : "expand, ungroup or move"}</small></div></article>`);
     if (expanded) cards.push(`<div class="board-group-children">${items.map((item) => renderCard(item, { hideDate:true })).join("")}</div>`);
   });
   return cards.join("");
