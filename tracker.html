@@ -161,7 +161,7 @@
       <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
     </div>
   </div>
-  <script src="./tracker.js?v=20260828-boards"></script>
+  <script src="./tracker.js?v=20260828-board-drag"></script>
   <script>
     document.getElementById("add-board").addEventListener("click", addBoard);
     document.getElementById("job-board").addEventListener("click", (event) => {
@@ -169,7 +169,36 @@
       if (!control) return;
       event.stopPropagation();
       if (control.dataset.boardAction === "delete") deleteBoard(control.dataset.boardId);
-      else moveBoard(control.dataset.boardId, control.dataset.boardAction === "left" ? -1 : 1);
+    });
+    let draggedBoardId = "";
+    const boardHost = document.getElementById("job-board");
+    boardHost.addEventListener("dragstart", (event) => {
+      const heading = event.target.closest("[data-board-drag-id]");
+      if (!heading || event.target.closest(".board-actions")) return;
+      draggedBoardId = heading.dataset.boardDragId;
+      heading.classList.add("dragging-board");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggedBoardId);
+    });
+    boardHost.addEventListener("dragover", (event) => {
+      const heading = event.target.closest("[data-board-drag-id]");
+      if (!draggedBoardId || !heading || heading.dataset.boardDragId === draggedBoardId) return;
+      event.preventDefault();
+      heading.classList.add("board-drag-over");
+    });
+    boardHost.addEventListener("dragleave", (event) => event.target.closest("[data-board-drag-id]")?.classList.remove("board-drag-over"));
+    boardHost.addEventListener("drop", (event) => {
+      const heading = event.target.closest("[data-board-drag-id]");
+      if (!draggedBoardId || !heading) return;
+      event.preventDefault();
+      heading.classList.remove("board-drag-over");
+      const source = draggedBoardId;
+      draggedBoardId = "";
+      reorderBoard(source, heading.dataset.boardDragId);
+    });
+    boardHost.addEventListener("dragend", () => {
+      document.querySelectorAll(".custom-board-title").forEach((heading) => heading.classList.remove("dragging-board", "board-drag-over"));
+      draggedBoardId = "";
     });
   </script>
 </body>

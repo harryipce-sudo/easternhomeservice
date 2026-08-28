@@ -86,8 +86,10 @@ function renderBoard() {
     const jobs = stageJobs(records, stage);
     const cards = jobs.length ? renderGroupedCards(jobs, stage) : `<div class="board-empty">Drop card here</div>`;
     const customBoard = state.customBoards.find((board) => board.id === stage);
-    const controls = customBoard ? `<div class="board-actions"><button type="button" title="Move board left" aria-label="Move ${escapeHtml(customBoard.label)} board left" data-board-action="left" data-board-id="${escapeHtml(stage)}">←</button><button type="button" title="Move board right" aria-label="Move ${escapeHtml(customBoard.label)} board right" data-board-action="right" data-board-id="${escapeHtml(stage)}">→</button><button type="button" title="Delete board" aria-label="Delete ${escapeHtml(customBoard.label)} board" data-board-action="delete" data-board-id="${escapeHtml(stage)}">×</button></div>` : "";
-    return `<section class="board-column board-${stage}"><header class="board-head"><div class="board-title-row"><strong>${escapeHtml(boardLabels[stage])} <span>${jobs.length}</span></strong>${controls}</div><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
+    const controls = customBoard ? `<div class="board-actions"><button type="button" title="Delete board" aria-label="Delete ${escapeHtml(customBoard.label)} board" data-board-action="delete" data-board-id="${escapeHtml(stage)}">×</button></div>` : "";
+    const dragAttributes = customBoard ? ` draggable="true" data-board-drag-id="${escapeHtml(stage)}" title="Drag to move this board"` : "";
+    const grip = customBoard ? `<span class="board-drag-grip" aria-hidden="true">⠿</span>` : "";
+    return `<section class="board-column board-${stage}"><header class="board-head"><div class="board-title-row${customBoard ? " custom-board-title" : ""}"${dragAttributes}>${grip}<strong>${escapeHtml(boardLabels[stage])} <span>${jobs.length}</span></strong>${controls}</div><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
   document.querySelectorAll(".board-dropzone").forEach((zone) => { zone.scrollTop = scrollPositions.get(zone.dataset.stage) || 0; });
 }
@@ -130,12 +132,13 @@ async function saveCustomBoards(boards) {
     console.warn(error);
   }
 }
-async function moveBoard(id, direction) {
+async function reorderBoard(id, targetId) {
   const index = state.customBoards.findIndex((board) => board.id === id);
-  const nextIndex = index + direction;
-  if (index < 0 || nextIndex < 0 || nextIndex >= state.customBoards.length) return;
+  const targetIndex = state.customBoards.findIndex((board) => board.id === targetId);
+  if (index < 0 || targetIndex < 0 || index === targetIndex) return;
   const boards = [...state.customBoards];
-  [boards[index], boards[nextIndex]] = [boards[nextIndex], boards[index]];
+  const [board] = boards.splice(index, 1);
+  boards.splice(index < targetIndex ? targetIndex - 1 : targetIndex, 0, board);
   await saveCustomBoards(boards);
 }
 async function deleteBoard(id) {
