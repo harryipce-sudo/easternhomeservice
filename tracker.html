@@ -45,7 +45,7 @@
     .payment-date-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
     .tag.unpaid { background:#fff0ed; color:#bd392b; }
     .payment-toggle { border:0; cursor:pointer; font:600 12px Inter,Arial,sans-serif; }
-    .invoice-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+    .invoice-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
     .invoice-metric { border:1px solid #dce3eb; border-radius:10px; padding:14px 16px; background:#fff; }
     .invoice-metric.unpaid { border-left:4px solid #bd392b; }
     .invoice-metric.paid { border-left:4px solid #226528; }
@@ -155,7 +155,7 @@
       <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
     </div>
   </div>
-  <script src="./tracker.js?v=20260828-referral-payable"></script>
+  <script src="./tracker.js?v=20260828-unpaid-referral"></script>
   <script>
     document.getElementById("add-board").addEventListener("click", addBoard);
     document.getElementById("job-board").addEventListener("click", (event) => {
