@@ -45,7 +45,7 @@
     .payment-date-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
     .tag.unpaid { background:#fff0ed; color:#bd392b; }
     .payment-toggle { border:0; cursor:pointer; font:600 12px Inter,Arial,sans-serif; }
-    .invoice-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+    .invoice-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
     .invoice-metric { border:1px solid #dce3eb; border-radius:10px; padding:14px 16px; background:#fff; }
     .invoice-metric.unpaid { border-left:4px solid #bd392b; }
     .invoice-metric.paid { border-left:4px solid #226528; }
@@ -109,7 +109,7 @@
           <select id="sort" aria-label="Sort jobs"><option value="newest">Sort: Newest</option><option value="address">Sort: Address</option><option value="quote-high">Sort: Quote high to low</option><option value="status">Sort: Status</option></select>
           <div class="view-switch" aria-label="Jobs layout"><button class="switch-button" data-layout="table" type="button">Register</button><button class="switch-button active" data-layout="board" type="button">Board</button></div>
         </div>
-        <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span>Paid markup (ex. GST) <strong id="markup-total">$0.00</strong></span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span><button class="quiet-button" type="button" id="add-board">＋ Add board</button></div>
+        <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span hidden id="markup-total">$0.00</span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span><button class="quiet-button" type="button" id="add-board">＋ Add board</button></div>
         <div class="jobs-layout" id="table-layout"><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job details</th><th>Quotation</th><th>Markup</th><th>Status</th><th>Payment</th><th>Referral</th><th>Invoice no.</th><th>Invoice date</th></tr></thead><tbody id="jobs-body"></tbody></table></div><div class="empty" id="jobs-empty">No jobs match these filters.</div></div></div>
         <div class="jobs-layout active" id="board-layout"><div class="job-board" id="job-board"></div></div>
       </section>
@@ -119,7 +119,7 @@
       <section class="view" id="view-tasks"><div class="section-head"><h2>Tasks</h2><p>Keep the next actions visible for every active job.</p></div><div class="task-list" id="task-list"></div></section>
       <section class="view" id="view-reports"><div class="section-head"><h2>Reports</h2><p>Live totals calculated from the shared register.</p></div><div class="report-grid" id="report-grid"></div></section>
       <section class="view" id="view-quotes"><div class="section-head"><h2>Quotes</h2><p>Every quote in the shared job register.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Quotation</th><th>Status</th></tr></thead><tbody id="quotes-body"></tbody></table></div></div></section>
-      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="invoice-review-list" id="invoice-review-list" aria-live="polite"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Pay date</th><th>Payment</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
+      <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="invoice-review-list" id="invoice-review-list" aria-live="polite"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Pay date</th><th>Payment</th><th>Referral payable<br>(inc. GST)</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
       <section class="view" id="view-archive"><div class="section-head"><h2>Archived cards</h2><p>Archived cards are hidden from the boards and invoices. Restore a card to return it to its original column.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Column</th><th>Quotation</th><th></th></tr></thead><tbody id="archive-body"></tbody></table></div></div></section>
       <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div></section>
     </main>
@@ -155,7 +155,7 @@
       <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
     </div>
   </div>
-  <script src="./tracker.js?v=20260828-paid-markup"></script>
+  <script src="./tracker.js?v=20260828-referral-payable"></script>
   <script>
     document.getElementById("add-board").addEventListener("click", addBoard);
     document.getElementById("job-board").addEventListener("click", (event) => {
