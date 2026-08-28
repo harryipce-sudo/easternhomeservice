@@ -85,7 +85,9 @@ function renderBoard() {
   $("#job-board").innerHTML = stages.map((stage) => {
     const jobs = stageJobs(records, stage);
     const cards = jobs.length ? renderGroupedCards(jobs, stage) : `<div class="board-empty">Drop card here</div>`;
-    return `<section class="board-column board-${stage}"><header class="board-head"><strong>${boardLabels[stage]} <span>${jobs.length}</span></strong><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
+    const customBoard = state.customBoards.find((board) => board.id === stage);
+    const controls = customBoard ? `<div class="board-actions"><button type="button" title="Move board left" aria-label="Move ${escapeHtml(customBoard.label)} board left" data-board-action="left" data-board-id="${escapeHtml(stage)}">←</button><button type="button" title="Move board right" aria-label="Move ${escapeHtml(customBoard.label)} board right" data-board-action="right" data-board-id="${escapeHtml(stage)}">→</button><button type="button" title="Delete board" aria-label="Delete ${escapeHtml(customBoard.label)} board" data-board-action="delete" data-board-id="${escapeHtml(stage)}">×</button></div>` : "";
+    return `<section class="board-column board-${stage}"><header class="board-head"><div class="board-title-row"><strong>${escapeHtml(boardLabels[stage])} <span>${jobs.length}</span></strong>${controls}</div><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
   document.querySelectorAll(".board-dropzone").forEach((zone) => { zone.scrollTop = scrollPositions.get(zone.dataset.stage) || 0; });
 }
@@ -109,6 +111,62 @@ async function addBoard() {
     delete boardLabels[id];
     render();
     window.alert("The new board could not be saved. Please try again.");
+    console.warn(error);
+  }
+}
+async function saveCustomBoards(boards) {
+  const previous = state.customBoards;
+  const settings = { ...state.boardSettings, job:{ ...state.boardSettings.job, boards } };
+  state.customBoards = boards;
+  state.boardSettings = settings;
+  render();
+  try {
+    state.boardSettings = await request(`?id=${encodeURIComponent(settings.id)}`, { method:"PATCH", body:JSON.stringify(settings) });
+  } catch (error) {
+    state.customBoards = previous;
+    state.boardSettings = { ...settings, job:{ ...settings.job, boards:previous } };
+    render();
+    window.alert("The board change could not be saved. Please try again.");
+    console.warn(error);
+  }
+}
+async function moveBoard(id, direction) {
+  const index = state.customBoards.findIndex((board) => board.id === id);
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= state.customBoards.length) return;
+  const boards = [...state.customBoards];
+  [boards[index], boards[nextIndex]] = [boards[nextIndex], boards[index]];
+  await saveCustomBoards(boards);
+}
+async function deleteBoard(id) {
+  const board = state.customBoards.find((item) => item.id === id);
+  if (!board) return;
+  const cards = state.records.filter((record) => record.job.status === id);
+  const message = cards.length
+    ? `Delete “${board.label}”? Its ${cards.length} card${cards.length === 1 ? "" : "s"} will be moved safely to Quotes.`
+    : `Delete the empty “${board.label}” board?`;
+  if (!window.confirm(message)) return;
+  const previousRecords = state.records;
+  const moved = cards.map((record, index) => normalise({ ...record, jobStage:"quoted", job:{ ...record.job, status:"quoted", groupKey:"", boardOrder:-Date.now() - index } }));
+  const boards = state.customBoards.filter((item) => item.id !== id);
+  const settings = { ...state.boardSettings, job:{ ...state.boardSettings.job, boards } };
+  state.records = state.records.map((record) => moved.find((item) => item.id === record.id) || record);
+  state.customBoards = boards;
+  state.boardSettings = settings;
+  delete boardLabels[id];
+  render();
+  try {
+    await Promise.all([
+      ...moved.map((record) => request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) })),
+      request(`?id=${encodeURIComponent(settings.id)}`, { method:"PATCH", body:JSON.stringify(settings) })
+    ]);
+  } catch (error) {
+    state.records = previousRecords;
+    state.customBoards = [...state.customBoards, board];
+    state.boardSettings = { ...settings, job:{ ...settings.job, boards:[...state.customBoards] } };
+    boardLabels[id] = board.label;
+    render();
+    window.alert("The board could not be deleted. Please try again.");
     console.warn(error);
   }
 }

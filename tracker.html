@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./tracker.css?v=20260824-9">
+  <link rel="stylesheet" href="./tracker.css?v=20260828-board-controls">
   <style>
     .board-invoiced { background:#f4faf6; border-color:#b9dcc4; }
     .board-invoiced .board-head strong, .board-invoiced .lane-add { color:#18733b; }
@@ -162,6 +162,15 @@
     </div>
   </div>
   <script src="./tracker.js?v=20260828-boards"></script>
-  <script>document.getElementById("add-board").addEventListener("click", addBoard);</script>
+  <script>
+    document.getElementById("add-board").addEventListener("click", addBoard);
+    document.getElementById("job-board").addEventListener("click", (event) => {
+      const control = event.target.closest("[data-board-action]");
+      if (!control) return;
+      event.stopPropagation();
+      if (control.dataset.boardAction === "delete") deleteBoard(control.dataset.boardId);
+      else moveBoard(control.dataset.boardId, control.dataset.boardAction === "left" ? -1 : 1);
+    });
+  </script>
 </body>
 </html>
