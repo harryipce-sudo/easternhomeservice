@@ -16,7 +16,7 @@
     /* Every lane grows to the bottom of the screen. Its own card area scrolls only
        after the cards need more space than the lane provides. */
     .board-invoiced .board-dropzone { flex:1; min-height:0; max-height:none; overflow-y:auto; }
-    .job-board { grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; overflow-x:visible; }
+    .job-board { grid-template-columns:repeat(var(--board-count, 6),minmax(190px,1fr)); gap:10px; overflow-x:auto; }
     .board-column { min-width:0; min-height:0; height:calc(100vh - 185px); }
     .board-head { padding:12px 11px 8px; }
     .board-head strong { font-size:13px; }
@@ -75,8 +75,8 @@
     .board-dropzone::-webkit-scrollbar { width:13px; }
     .board-dropzone::-webkit-scrollbar-track { background:#2a2a2a; border-radius:8px; }
     .board-dropzone::-webkit-scrollbar-thumb { background:#929292; border:3px solid #2a2a2a; border-radius:8px; }
-    @media(max-width:1100px) { .job-board { grid-template-columns:repeat(6,190px); overflow-x:auto; } }
-    @media(max-width:600px) { .job-board { grid-template-columns:repeat(6,calc(100vw - 36px)); gap:12px; } }
+    @media(max-width:1100px) { .job-board { grid-template-columns:repeat(var(--board-count, 6),190px); overflow-x:auto; } }
+    @media(max-width:600px) { .job-board { grid-template-columns:repeat(var(--board-count, 6),calc(100vw - 36px)); gap:12px; } }
     @media(max-width:600px) { .invoice-summary { grid-template-columns:1fr; } .invoice-payment-bar,.invoice-bar-legend { grid-column:auto; } }
   </style>
 </head>
@@ -109,7 +109,7 @@
           <select id="sort" aria-label="Sort jobs"><option value="newest">Sort: Newest</option><option value="address">Sort: Address</option><option value="quote-high">Sort: Quote high to low</option><option value="status">Sort: Status</option></select>
           <div class="view-switch" aria-label="Jobs layout"><button class="switch-button" data-layout="table" type="button">Register</button><button class="switch-button active" data-layout="board" type="button">Board</button></div>
         </div>
-        <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span>Total markup (ex. GST) <strong id="markup-total">$0.00</strong></span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span></div>
+        <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span>Total markup (ex. GST) <strong id="markup-total">$0.00</strong></span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span><button class="quiet-button" type="button" id="add-board">＋ Add board</button></div>
         <div class="jobs-layout" id="table-layout"><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job details</th><th>Quotation</th><th>Markup</th><th>Status</th><th>Payment</th><th>Referral</th><th>Invoice no.</th><th>Invoice date</th></tr></thead><tbody id="jobs-body"></tbody></table></div><div class="empty" id="jobs-empty">No jobs match these filters.</div></div></div>
         <div class="jobs-layout active" id="board-layout"><div class="job-board" id="job-board"></div></div>
       </section>
@@ -153,6 +153,7 @@
       <button type="button" data-card-menu-stage="completed">Completed</button>
       <button type="button" data-card-menu-stage="invoiced">Invoiced</button>
       <button type="button" data-card-menu-stage="follow_up">Follow up</button>
+      <div id="custom-card-menu-stages"></div>
       <div class="card-menu-divider"></div>
       <button class="card-menu-danger" type="button" data-card-menu-action="archive">▣ Archive card</button>
     </div>
@@ -160,6 +161,7 @@
       <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
     </div>
   </div>
-  <script src="./tracker.js?v=20260825-1"></script>
+  <script src="./tracker.js?v=20260828-boards"></script>
+  <script>document.getElementById("add-board").addEventListener("click", addBoard);</script>
 </body>
 </html>

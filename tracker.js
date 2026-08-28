@@ -2,7 +2,7 @@ const API = "./api/quote-records";
 const savedView = (() => {
   try { return localStorage.getItem("tracker-view") || "jobs"; } catch { return "jobs"; }
 })();
-const state = { records: [], search: "", sort: "newest", view: savedView, layout: "board", selected: null, drawerStage: "quoted", expandedGroups: new Set() };
+const state = { records: [], search: "", sort: "newest", view: savedView, layout: "board", selected: null, drawerStage: "quoted", expandedGroups: new Set(), customBoards: [], boardSettings: null };
 const $ = (selector) => document.querySelector(selector);
 const currency = (value) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value) || 0);
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
@@ -11,7 +11,7 @@ const normalise = (record) => {
   return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, markupStatus: job.markupStatus || (Number(job.markup) > 0 ? "included" : "not-recorded"), status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", archived: job.archived === true, groupKey: job.groupKey || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
 };
 async function request(path = "", options = {}) { const response = await fetch(`${API}${path}`, { headers: { "Content-Type":"application/json", ...(options.headers || {}) }, ...options }); if (!response.ok) throw new Error(await response.text()); return response.status === 204 ? null : response.json(); }
-async function loadRecords() { $("#sync-state").innerHTML = "<span></span> Syncing shared data"; try { state.records = (await request()).map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } }
+async function loadRecords() { $("#sync-state").innerHTML = "<span></span> Syncing shared data"; try { const raw = await request(); state.boardSettings = raw.find((record) => record.recordType === "tracker-board-settings") || null; state.customBoards = Array.isArray(state.boardSettings?.job?.boards) ? state.boardSettings.job.boards.filter((board) => board?.id && board?.label) : []; state.customBoards.forEach((board) => { boardLabels[board.id] = board.label; }); state.records = raw.filter((record) => record.recordType !== "tracker-board-settings").map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } }
 function activeRecords() { return state.records.filter((record) => !record.job.archived); }
 // The invoice register follows invoice data, not the job-board lane. This keeps
 // Odoo invoices visible even while their operational job is Scheduled/Confirmed.
@@ -23,8 +23,9 @@ function paymentButton(record) { const value = record.job.payment === "paid" ? "
 function markupAmountExGst(job) { const total = Number(job.quote) || 0; const percentage = Number(job.markup) || 0; const subtotal = total / 1.1; return percentage > 0 ? subtotal - (subtotal / (1 + percentage / 100)) : 0; }
 function markupTag(job) { return job.markupStatus === "included" ? `<span class="markup-badge included">Markup included · ${Number(job.markup).toFixed(1)}% · ${currency(markupAmountExGst(job))} ex. GST</span>` : `<span class="markup-badge not-recorded">No markup recorded</span>`; }
 function renderJobs() { const items = filtered(); const boardItems = boardRecords(items); $("#jobs-body").innerHTML = items.map((record) => { const j = record.job; return `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(j.number)}</td><td class="address">${escapeHtml(record.address)}</td><td class="detail">${escapeHtml(j.detail || "—")}</td><td class="money">${currency(j.quote)}</td><td>${markupTag(j)}</td><td>${tag(j.status)}</td><td>${tag(j.payment)}</td><td>${tag(j.referral)}</td><td>${escapeHtml(j.invoiceNumber || "—")}</td><td>${escapeHtml(j.invoiceDate || "—")}</td></tr>`; }).join(""); $("#jobs-empty").style.display = items.length ? "none" : "block"; $("#result-count").textContent = `${boardItems.length} job${boardItems.length === 1 ? "" : "s"}`; $("#quote-total").textContent = currency(boardItems.filter((record) => record.job.status === "quoted").reduce((sum, record) => sum + record.job.quote, 0)); $("#markup-total").textContent = currency(boardItems.reduce((sum, record) => sum + markupAmountExGst(record.job), 0)); $("#invoice-total").textContent = currency(boardItems.filter((record) => record.job.status === "invoiced").reduce((sum, record) => sum + record.job.quote, 0)); }
-const boardStages = ["quoted", "confirmed", "scheduled", "completed", "invoiced", "follow_up"];
+const baseBoardStages = ["quoted", "confirmed", "scheduled", "completed", "invoiced", "follow_up"];
 const boardLabels = { quoted:"Quotes", confirmed:"Confirmed", scheduled:"Scheduled", completed:"Completed", invoiced:"Invoiced", follow_up:"Follow up" };
+const boardStages = () => [...baseBoardStages, ...state.customBoards.map((board) => board.id)];
 const cardDate = (value) => {
   if (!value) return "";
   const date = new Date(`${value}T00:00:00`);
@@ -79,19 +80,44 @@ function renderGroupedCards(jobs, stage) {
 function renderBoard() {
   const scrollPositions = new Map([...document.querySelectorAll(".board-dropzone")].map((zone) => [zone.dataset.stage, zone.scrollTop]));
   const records = boardRecords();
-  $("#job-board").innerHTML = boardStages.map((stage) => {
+  const stages = boardStages();
+  $("#job-board").style.setProperty("--board-count", stages.length);
+  $("#job-board").innerHTML = stages.map((stage) => {
     const jobs = stageJobs(records, stage);
     const cards = jobs.length ? renderGroupedCards(jobs, stage) : `<div class="board-empty">Drop card here</div>`;
     return `<section class="board-column board-${stage}"><header class="board-head"><strong>${boardLabels[stage]} <span>${jobs.length}</span></strong><button class="lane-add" type="button" data-new-job-stage="${stage}">＋ Add job</button></header><div class="board-dropzone" data-stage="${stage}">${cards}</div><button class="lane-add lane-add-bottom" type="button" data-new-job-stage="${stage}">＋ Add job</button></section>`;
   }).join("");
   document.querySelectorAll(".board-dropzone").forEach((zone) => { zone.scrollTop = scrollPositions.get(zone.dataset.stage) || 0; });
 }
+function renderCustomBoardTargets() { $("#custom-card-menu-stages").innerHTML = state.customBoards.map((board) => `<button type="button" data-card-menu-stage="${escapeHtml(board.id)}">${escapeHtml(board.label)}</button>`).join(""); }
+async function addBoard() {
+  const label = window.prompt("Board name", "New board");
+  if (!label?.trim()) return;
+  const name = label.trim().slice(0, 40);
+  const id = `custom-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "board"}-${Date.now().toString(36)}`;
+  const boards = [...state.customBoards, { id, label:name }];
+  const isNew = !state.boardSettings;
+  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, boards } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"-", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards } };
+  state.customBoards = boards;
+  state.boardSettings = settings;
+  boardLabels[id] = name;
+  render();
+  try {
+    state.boardSettings = await request(isNew ? "" : `?id=${encodeURIComponent(settings.id)}`, { method: isNew ? "POST" : "PATCH", body:JSON.stringify(settings) });
+  } catch (error) {
+    state.customBoards = state.customBoards.filter((board) => board.id !== id);
+    delete boardLabels[id];
+    render();
+    window.alert("The new board could not be saved. Please try again.");
+    console.warn(error);
+  }
+}
 function renderCalendar() { const scheduled = activeRecords().filter((record) => record.job.scheduledDate).sort((a,b) => String(a.job.scheduledDate).localeCompare(String(b.job.scheduledDate))); $("#calendar-grid").innerHTML = scheduled.length ? scheduled.map((record) => `<article class="calendar-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.scheduledDate)} · ${escapeHtml(record.job.detail || "Job scheduled")}</span></article>`).join("") : `<div class="empty" style="display:block">Add a scheduled date to a job to see it here.</div>`; }
 function renderClients() { const clients = [...new Map(activeRecords().filter((r) => r.customerName && r.customerName !== "-").map((r) => [r.customerName, r])).values()]; $("#client-list").innerHTML = clients.map((record) => `<article class="client-item"><strong>${escapeHtml(record.customerName)}</strong><span>${escapeHtml(record.phone || "No phone")} · ${escapeHtml(record.address || "No address")}</span></article>`).join("") || `<div class="empty" style="display:block">Clients will appear when quotes are saved.</div>`; }
 function renderTasks() { const active = activeRecords().filter((record) => !["completed"].includes(record.job.status)); $("#task-list").innerHTML = active.map((record) => `<article class="task-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.detail || "No job detail added")}</span><div class="task-meta"><em>${escapeHtml(record.job.status === "quoted" ? "Follow up quote" : record.job.status === "confirmed" ? "Schedule the job" : "Complete scheduled work")}</em><b>Quote ${currency(record.job.quote)}</b></div></article>`).join("") || `<div class="empty" style="display:block">No active tasks.</div>`; }
 function renderReports() { const all = activeRecords(); const paid = all.filter((record) => record.job.payment === "paid"); $("#report-grid").innerHTML = `<article class="report-card"><span>Total quotations</span><strong>${currency(all.reduce((sum, r) => sum + r.job.quote, 0))}</strong></article><article class="report-card"><span>Paid jobs</span><strong>${paid.length}</strong></article><article class="report-card"><span>Completed jobs</span><strong>${all.filter((r) => r.job.status === "completed").length}</strong></article>`; }
 function renderArchive() { const records = state.records.filter((record) => record.job.archived); $("#archive-body").innerHTML = records.map((record) => `<tr><td>${escapeHtml(record.job.number || "—")}</td><td class="address">${escapeHtml(record.address || "—")}</td><td class="detail">${escapeHtml(record.job.detail || "—")}</td><td>${tag(record.job.status)}</td><td class="money">${currency(record.job.quote)}</td><td><div class="archive-actions"><button class="quiet-button archive-restore" type="button" data-restore-card="${escapeHtml(record.id)}">Restore</button><button class="danger-button" type="button" data-delete-card="${escapeHtml(record.id)}">Permanently delete</button></div></td></tr>`).join("") || `<tr><td colspan="6" class="archive-empty">No archived cards.</td></tr>`; }
-function render() { renderJobs(); renderBoard(); renderCalendar(); renderClients(); renderTasks(); renderReports(); renderQuotes(); renderArchive(); }
+function render() { renderJobs(); renderBoard(); renderCustomBoardTargets(); renderCalendar(); renderClients(); renderTasks(); renderReports(); renderQuotes(); renderArchive(); }
 async function placeJob(id, status, index) {
   const record = state.records.find((item) => item.id === id);
   if (!record) return;
