@@ -49,11 +49,13 @@
     .invoice-metric { border:1px solid #dce3eb; border-radius:10px; padding:14px 16px; background:#fff; }
     .invoice-metric.unpaid { border-left:4px solid #bd392b; }
     .invoice-metric.paid { border-left:4px solid #226528; }
+    .invoice-metric.pending { border-left:4px solid #be7900; }
     .invoice-metric span { display:block; color:#637083; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
     .invoice-metric strong { display:block; margin-top:5px; font-size:22px; color:#142033; }
     .invoice-metric b { display:block; margin-top:2px; font-size:13px; }
     .invoice-metric.unpaid b { color:#bd392b; }
     .invoice-metric.paid b { color:#226528; }
+    .invoice-metric.pending b { color:#9a6100; }
     .invoice-review-list { display:grid; gap:8px; margin:0 0 16px; }
     .invoice-review-notice { display:flex; align-items:flex-start; gap:9px; padding:10px 12px; border:1px solid #f0c36e; border-radius:8px; background:#fff8e9; color:#6d4700; font-size:13px; }
     .invoice-review-notice strong { display:block; margin-bottom:2px; }
@@ -155,7 +157,7 @@
       <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
     </div>
   </div>
-  <script src="./tracker.js?v=20260904-markup-ex-gst"></script>
+  <script src="./tracker.js?v=20260904-pending-invoices"></script>
   <script>
     document.getElementById("add-board").addEventListener("click", addBoard);
     document.getElementById("job-board").addEventListener("click", (event) => {
