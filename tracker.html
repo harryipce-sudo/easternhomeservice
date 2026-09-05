@@ -75,6 +75,15 @@
     .invoice-bar-legend i { display:inline-block; width:9px; height:9px; margin-right:5px; border-radius:99px; }
     .invoice-bar-legend .unpaid { background:#e2554c; }
     .invoice-bar-legend .paid { background:#48a762; }
+    .profit-toolbar { display:flex; align-items:end; justify-content:space-between; gap:14px; margin-bottom:18px; }
+    .profit-toolbar label { width:190px; }
+    .profit-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+    .profit-metric { min-height:122px; padding:17px; border:1px solid #dce3eb; border-radius:11px; background:#fff; }
+    .profit-metric.income { border-left:4px solid #1769d2; }.profit-metric.referral { border-left:4px solid #b85a00; }.profit-metric.expense { border-left:4px solid #bd392b; }.profit-metric.profit { border-left:4px solid #197335; }
+    .profit-metric span { display:block; color:#637083; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }.profit-metric strong { display:block; margin-top:9px; font-size:24px; letter-spacing:-.5px; }.profit-metric small { display:block; margin-top:4px; color:#637083; font-size:12px; }
+    .profit-layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr); gap:16px; }.profit-panel { border:1px solid #dce3eb; border-radius:11px; background:#fff; padding:18px; }.profit-panel h3 { margin:0; font-size:15px; }.profit-panel > p { margin:4px 0 16px; color:#637083; font-size:13px; }
+    .profit-bars { display:grid; gap:15px; }.profit-bar-row { display:grid; grid-template-columns:130px 1fr auto; gap:10px; align-items:center; color:#425267; font-size:13px; }.profit-bar { height:10px; overflow:hidden; border-radius:99px; background:#edf1f5; }.profit-bar i { display:block; min-width:5px; height:100%; border-radius:99px; }.profit-bar .income { background:#1769d2; }.profit-bar .referral { background:#d58512; }.profit-bar .expense { background:#d94d43; }.profit-bar .profit { background:#197335; }
+    .profit-note { display:flex; gap:10px; align-items:flex-start; padding:13px; border-radius:8px; background:#f3f8f4; color:#31533b; font-size:13px; }.profit-note b { font-size:16px; }.expense-actions { display:flex; justify-content:flex-end; }.expense-delete { border:0; background:transparent; color:#bd392b; font:600 12px Inter,Arial,sans-serif; cursor:pointer; }.expense-empty { padding:28px 0 10px; color:#637083; text-align:center; font-size:13px; }
     .card-menu-label { margin:5px 8px 2px; color:#718096; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
     .card-menu-divider { height:1px; margin:4px 3px; background:#e2e8f0; }
     .board-dropzone { flex:1; min-height:0; max-height:none; overflow-y:auto; grid-auto-rows:max-content; }
@@ -83,7 +92,8 @@
     .board-dropzone::-webkit-scrollbar-thumb { background:#929292; border:3px solid #2a2a2a; border-radius:8px; }
     @media(max-width:1100px) { .job-board { grid-template-columns:repeat(var(--board-count, 6),190px); overflow-x:auto; } }
     @media(max-width:600px) { .job-board { grid-template-columns:repeat(var(--board-count, 6),calc(100vw - 36px)); gap:12px; } }
-    @media(max-width:600px) { .invoice-summary { grid-template-columns:1fr; } .invoice-payment-bar,.invoice-bar-legend { grid-column:auto; } }
+    @media(max-width:900px) { .profit-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }.profit-layout { grid-template-columns:1fr; } }
+    @media(max-width:600px) { .invoice-summary { grid-template-columns:1fr; } .invoice-payment-bar,.invoice-bar-legend { grid-column:auto; } .profit-toolbar { align-items:stretch; flex-direction:column; } .profit-toolbar label { width:100%; } .profit-metrics { grid-template-columns:1fr; } .profit-bar-row { grid-template-columns:1fr auto; } .profit-bar { grid-column:1 / -1; grid-row:2; } }
   </style>
 </head>
 <body>
@@ -93,6 +103,7 @@
       <nav class="side-nav" aria-label="Main navigation">
         <button class="nav-link active" data-view="jobs">Jobs</button>
         <button class="nav-link" data-view="invoices">Invoices</button>
+        <button class="nav-link" data-view="profit">Profit summary</button>
         <button class="nav-link" data-view="archive">Archive</button>
         <button class="nav-link" data-view="calendar">Calendar</button>
         <button class="nav-link" data-view="clients">Clients</button>
@@ -120,6 +131,7 @@
       <section class="view" id="view-calendar"><div class="section-head"><h2>Calendar</h2><p>Scheduled jobs from your shared job register.</p></div><div class="calendar-grid" id="calendar-grid"></div></section>
       <section class="view" id="view-clients"><div class="section-head"><h2>Clients</h2><p>Clients are created automatically from saved quotes.</p></div><div class="client-list" id="client-list"></div></section>
       <section class="view" id="view-invoices"><div class="section-head"><h2>Invoices</h2><p>Completed or invoiced jobs from the shared register.</p></div><div class="invoice-summary" id="invoice-summary" aria-label="Invoice payment overview"></div><div class="invoice-filter-note" id="invoice-filter-note" aria-live="polite"></div><div class="invoice-review-list" id="invoice-review-list" aria-live="polite"></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Invoice no.</th><th>Job no.</th><th>Address</th><th>Invoice date</th><th>Pay date</th><th>Payment</th><th>Referral payable<br>(inc. GST)</th><th>Quotation</th></tr></thead><tbody id="invoices-body"></tbody></table></div></div></section>
+      <section class="view" id="view-profit"><div class="section-head"><h2>Profit summary</h2><p>Paid income, referral payable and operating expenses by Australian financial year.</p></div><div class="profit-toolbar"><label>Financial year<select id="profit-fy" aria-label="Financial year"></select></label><button class="primary-button" type="button" id="add-expense">＋ Add expense</button></div><div class="profit-metrics" id="profit-metrics"></div><div class="profit-layout"><section class="profit-panel"><h3>FY breakdown</h3><p>All figures exclude GST.</p><div class="profit-bars" id="profit-bars"></div></section><section class="profit-panel"><h3>How profit is calculated</h3><p>Only paid invoices in the selected financial year are included.</p><div class="profit-note"><b>✓</b><span><strong>Net profit</strong><br>Paid income − referral payable − expenses. Add your expenses when you are ready.</span></div></section></div><section class="profit-panel" style="margin-top:16px"><h3>Expenses</h3><p>Enter operating expenses excluding GST. They are saved to this financial year.</p><div class="table-scroll"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount (ex. GST)</th><th></th></tr></thead><tbody id="expense-body"></tbody></table></div><div class="expense-empty" id="expense-empty">No expenses have been added for this financial year.</div></section></section>
       <section class="view" id="view-archive"><div class="section-head"><h2>Archived cards</h2><p>Archived cards are hidden from the boards and invoices. Restore a card to return it to its original column.</p></div><div class="table-frame"><div class="table-scroll"><table><thead><tr><th>Job no.</th><th>Address</th><th>Job detail</th><th>Column</th><th>Quotation</th><th></th></tr></thead><tbody id="archive-body"></tbody></table></div></div></section>
       <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div></section>
     </main>
@@ -154,8 +166,9 @@
     <div class="payment-date-modal" id="payment-date-modal" role="dialog" aria-modal="true" aria-labelledby="payment-date-title">
       <div class="payment-date-dialog"><h3 id="payment-date-title">Mark invoice as paid</h3><p>Add the payment date if you know it. You can leave it blank.</p><label>Pay date<input id="payment-date" type="date"></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="payment-date-cancel">Cancel</button><button class="quiet-button" type="button" id="payment-date-skip">Skip date</button><button class="primary-button" type="button" id="payment-date-save">Mark paid</button></div></div>
     </div>
+    <div class="payment-date-modal" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-title"><div class="payment-date-dialog"><h3 id="expense-title">Add expense</h3><p>Expenses are recorded excluding GST and appear in the selected financial year.</p><form id="expense-form"><label>Date<input id="expense-date" type="date" required></label><label>Category<input id="expense-category" required placeholder="e.g. Materials, vehicle, insurance"></label><label>Description<input id="expense-description" placeholder="Optional note"></label><label>Amount (ex. GST)<input id="expense-amount" type="number" min="0.01" step="0.01" required></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="expense-cancel">Cancel</button><button class="primary-button" type="submit">Save expense</button></div></form></div></div>
   </div>
-  <script src="./tracker.js?v=20260905-sidebar-pages"></script>
+  <script src="./tracker.js?v=20260905-profit-summary"></script>
   <script>
     document.getElementById("add-board").addEventListener("click", addBoard);
     document.getElementById("job-board").addEventListener("click", (event) => {
