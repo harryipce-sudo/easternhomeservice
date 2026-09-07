@@ -600,4 +600,11 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#expense-cancel").addEventListener("click", closeExpenseModal);
   $("#expense-form").addEventListener("submit", addExpense);
   $("#expense-body").addEventListener("click", (event) => { const button = event.target.closest("[data-delete-expense]"); if (button) deleteExpense(button.dataset.deleteExpense); });
+
+  // Opening an invoice row shows the same job detail drawer used by the Jobs page.
+  $("#invoices-body").addEventListener("click", (event) => {
+    if (event.target.closest("[data-payment-toggle]")) return;
+    const row = event.target.closest("tr[data-id]");
+    if (row) openDrawer(state.records.find((record) => record.id === row.dataset.id));
+  });
 });
