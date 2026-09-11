@@ -627,6 +627,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-preview-date").textContent = dateForInvoice($("#invoice-date").value);
     $("#invoice-preview-due-date").textContent = dateForInvoice($("#invoice-due-date").value);
     $("#invoice-preview-terms").textContent = `${$("#invoice-terms").value || 0} days`;
+    $("#invoice-preview-terms-copy").textContent = `${$("#invoice-terms").value || 0} Days`;
     $("#invoice-preview-description").textContent = $("#invoice-description").value || "—";
     $("#invoice-preview-quantity").textContent = quantity.toFixed(quantity % 1 ? 2 : 0);
     $("#invoice-preview-unit-price").textContent = currency(unitPrice);
@@ -653,7 +654,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-description").value = invoice.description || job.detail || "";
     $("#invoice-quantity").value = invoice.quantity || 1;
     $("#invoice-unit-price").value = Number.isFinite(Number(invoice.unitPrice)) ? Number(invoice.unitPrice).toFixed(2) : (Number(job.quote || 0) / 1.1).toFixed(2);
-    $("#invoice-note").value = invoice.note || "Price includes labour and materials. Rubbish disposal is not included unless stated.";
+    $("#invoice-note").value = invoice.note || "Price including labour and materials cost. Not including rubbish disposal unless mentioned.";
     renderInvoicePreview();
     invoiceModal.classList.add("open");
   }
