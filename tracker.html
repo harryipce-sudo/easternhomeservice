@@ -126,10 +126,12 @@
     .invoice-meta span { display:block; color:#9baaa0; font-size:12px; font-weight:700; }
     .invoice-meta strong { display:block; margin-top:3px; color:#1b2636; font-size:14px; font-weight:500; }
     .invoice-meta div:last-child { display:none; }
-    .invoice-lines { width:100%; min-width:0; margin:8px 0 0; }
+    .invoice-lines { width:100%; min-width:0; margin:8px 0 0; table-layout:fixed; }
     .invoice-lines th { background:#aebdb4; color:#111; padding:9px 7px; font-size:12px; font-weight:500; }
     .invoice-lines td { padding:10px 7px; color:#162235; border-bottom:1px solid #9aa2ac; }
     .invoice-lines th:not(:first-child), .invoice-lines td:not(:first-child) { text-align:right; }
+    .invoice-lines th:first-child,.invoice-lines td:first-child { width:55%; text-align:left; white-space:normal; overflow-wrap:anywhere; word-break:break-word; line-height:1.4; }
+    .invoice-lines th:nth-child(2),.invoice-lines td:nth-child(2) { width:13%; }.invoice-lines th:nth-child(3),.invoice-lines td:nth-child(3) { width:11%; }.invoice-lines th:nth-child(4),.invoice-lines td:nth-child(4) { width:10%; }.invoice-lines th:nth-child(5),.invoice-lines td:nth-child(5) { width:11%; }
     .invoice-totals { width:265px; margin:0 0 0 auto; }
     .invoice-totals div { display:flex; justify-content:space-between; gap:16px; padding:7px 5px; border:0; }
     .invoice-totals .grand { border-bottom:1px solid #5a6572; color:#073b75; font-size:16px; font-weight:800; }
