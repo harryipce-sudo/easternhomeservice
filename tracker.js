@@ -658,8 +658,10 @@ document.addEventListener("DOMContentLoaded", () => {
     invoiceModal.classList.add("open");
   }
   invoiceFields.forEach((selector) => $(selector).addEventListener("input", renderInvoicePreview));
-  $("#invoice-date").addEventListener("change", () => { $("#invoice-due-date").value = dueDateFor($("#invoice-date").value, $("#invoice-terms").value); renderInvoicePreview(); });
-  $("#invoice-terms").addEventListener("change", () => { $("#invoice-due-date").value = dueDateFor($("#invoice-date").value, $("#invoice-terms").value); renderInvoicePreview(); });
+  const refreshDueDate = () => { $("#invoice-due-date").value = dueDateFor($("#invoice-date").value, $("#invoice-terms").value); renderInvoicePreview(); };
+  $("#invoice-date").addEventListener("change", refreshDueDate);
+  $("#invoice-terms").addEventListener("input", refreshDueDate);
+  $("#invoice-terms").addEventListener("change", refreshDueDate);
   $("#create-invoice").addEventListener("click", openInvoiceBuilder);
   $("#invoice-builder-close").addEventListener("click", closeInvoiceBuilder);
   $("#invoice-builder-cancel").addEventListener("click", closeInvoiceBuilder);
