@@ -1,44 +1,38 @@
-# Design QA — Job Tracker
+# Invoice builder design QA
 
-## Comparison target
+- Source visual truth: user-supplied `25255.pdf` (rendered page 1)
+- Implementation: `https://easternhomeservice.vercel.app/tracker.html?v=20260911-invoice-builder`
+- State: existing invoice opened from the invoice list, then **Create invoice** selected. No invoice was saved during testing.
+- Viewport: desktop browser, approximately 1260 x 710 CSS pixels.
 
-- Source visual truth: `C:\Users\Harry\AppData\Local\Temp\codex-clipboard-2333e02e-35de-4012-8b2b-55c533936d81.png`
-- Implementation: browser-rendered local root route `http://127.0.0.1:4173/` (the same entry point that will become the production root)
-- Viewport: 1280 × 720 CSS px; browser density was not overridden.
-- State: empty shared register, Board selected, four lanes visible.
+## Comparison
 
-## Full-view comparison evidence
+The live invoice preview follows the supplied A4 tax-invoice layout: business details at upper left, Eastern branding at upper right, a centred invoice title, client and two-date block, muted green table header, payment terms, totals and bank details. The newly supplied Eastern logo asset is used rather than a drawn substitute. The builder keeps its editable left-side setup panel for managing invoice information before saving or printing.
 
-The browser-rendered implementation was captured and visually inspected at the target desktop state. It has a navy left navigation, header actions, search and filters, and four coloured, labelled columns in the requested order. The local preview reports offline because the local static server does not run the production API.
+### Fidelity surfaces
 
-## Focused interaction evidence
+- Fonts and typography: Inter provides clear hierarchy for the invoice title, date labels and totals.
+- Spacing and layout rhythm: desktop layout separates editing controls from the printable invoice; the invoice remains readable on smaller screens in a single-column layout.
+- Colours and visual tokens: navy headings, muted green table header, white paper surface and soft grey secondary labels match the supplied PDF.
+- Image quality and asset fidelity: the newly supplied Eastern Home Services logo appears in the preview.
+- Copy and content: payment communication, GST line, default 30-day payment terms, editable due date, note and bank details are present.
 
-- Per-lane **Add job** opens the job detail drawer.
-- **Quotes** navigation switches to the quote register rather than returning to the removed homepage.
-- The drag/drop targets are rendered in every lane; production persistence still needs a live API smoke test.
+## Interaction checks
 
-## Required fidelity surfaces
-
-- Fonts and typography: Inter with a bold navy title and compact utility controls; close to the supplied professional tracker reference.
-- Spacing and layout rhythm: fixed 232 px sidebar, compact tool row, evenly spaced board lanes and card gutters.
-- Colours and visual tokens: navy navigation/card headers; blue, amber, blue-dashed, and green stage lanes mirror the reference hierarchy.
-- Image quality and asset fidelity: the reference contains only typographic branding and standard UI icons; no source photographic or illustrative assets are required for the tracker view.
-- Copy and content: lanes, job number, address, job detail, quote, payment, referral, search, filter, sort, calendar, clients, quotes, invoices, tasks, reports, and settings are present.
+- Opening an invoice row opens its job details, then **Create invoice** opens the invoice builder.
+- The next invoice number is populated automatically (`INV-25261` in the tested record).
+- Default payment terms are 30 days; changing the terms to 15 updated the displayed due date from 10/10/2026 to 25/09/2026.
+- GST and total calculations rendered correctly for the tested $450.00 ex-GST line: $45.00 GST and $495.00 total.
+- Print / Save PDF and Save invoice actions are available. The save action was deliberately not triggered during QA.
+- Browser console: no warnings or errors.
 
 ## Findings
 
-No remaining P0, P1, or P2 visual or interaction findings.
+No actionable P0, P1 or P2 visual issues found in the tested desktop state. Existing records without a client name will prefill the Client field as `-`; this reflects the existing tracker data and can be edited before saving the invoice.
 
-## Implementation checklist
+## Comparison history
 
-1. Use the shared production link on a second device to confirm the current register is visible.
-2. Drag a card to a new lane; the status is stored in the shared cloud data.
-3. Use **Refresh** for an immediate manual update; automatic refresh runs every 30 seconds.
-
-## Production verification
-
-- Live root and tracker pages returned HTTP 200 from Vercel.
-- The live shared-data route returned HTTP 200 with saved records.
-- The production page rendered four lanes and saved job cards, showing `Shared data is up to date`.
+1. The initial implementation did not recalculate the due date while typing a new payment-term value. The payment-term input now updates the due date immediately.
+2. The initial preview used a text-only brand. It now uses the supplied Eastern Home Services logo and the PDF's header, dates, payment terms and totals layout.
 
 final result: passed
