@@ -634,7 +634,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // The final page also contains totals, note and bank details, so reserve
     // most of its space for those closing sections.
     const finalPageCapacity = 520;
-    const middlePageCapacity = 1900;
+    const middlePageCapacity = 1350;
     const pages = [];
     const remaining = [...descriptionChunks];
     const characterCount = () => remaining.reduce((sum, chunk) => sum + chunk.length, 0);
