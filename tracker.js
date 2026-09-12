@@ -614,6 +614,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const invoiceFields = ["#invoice-client", "#invoice-address", "#invoice-number", "#invoice-date", "#invoice-due-date", "#invoice-terms", "#invoice-description", "#invoice-quantity", "#invoice-unit-price", "#invoice-note"];
   const dateForInvoice = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—";
   const dueDateFor = (date, days) => { if (!date) return ""; const value = new Date(`${date}T00:00:00`); value.setDate(value.getDate() + Math.max(0, Number(days) || 0)); return value.toISOString().slice(0,10); };
+  const splitInvoiceDescription = (text, maxLength = 260) => {
+    const chunks = [];
+    String(text || "—").split(/\r?\n+/).forEach((paragraph) => {
+      const words = paragraph.trim().split(/\s+/).filter(Boolean);
+      let chunk = "";
+      words.forEach((word) => {
+        const next = chunk ? `${chunk} ${word}` : word;
+        if (chunk && next.length > maxLength) { chunks.push(chunk); chunk = word; } else chunk = next;
+      });
+      if (chunk) chunks.push(chunk);
+    });
+    return chunks.length ? chunks : ["—"];
+  };
   const closeInvoiceBuilder = () => invoiceModal.classList.remove("open");
   function renderInvoicePreview() {
     const quantity = Math.max(0, Number($("#invoice-quantity").value) || 0);
@@ -628,10 +641,8 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-preview-due-date").textContent = dateForInvoice($("#invoice-due-date").value);
     $("#invoice-preview-terms").textContent = `${$("#invoice-terms").value || 0} days`;
     $("#invoice-preview-terms-copy").textContent = `${$("#invoice-terms").value || 0} Days`;
-    $("#invoice-preview-description").textContent = $("#invoice-description").value || "—";
-    $("#invoice-preview-quantity").textContent = quantity.toFixed(quantity % 1 ? 2 : 0);
-    $("#invoice-preview-unit-price").textContent = currency(unitPrice);
-    $("#invoice-preview-line-total").textContent = currency(subtotal);
+    const descriptionChunks = splitInvoiceDescription($("#invoice-description").value);
+    $("#invoice-lines-body").innerHTML = descriptionChunks.map((chunk, index) => `<tr${index ? ' class="invoice-description-continuation"' : ""}><td>${escapeHtml(chunk)}</td><td>${index ? "" : quantity.toFixed(quantity % 1 ? 2 : 0)}</td><td>${index ? "" : currency(unitPrice)}</td><td>${index ? "" : "10% GST"}</td><td>${index ? "" : currency(subtotal)}</td></tr>`).join("");
     $("#invoice-preview-subtotal").textContent = currency(subtotal);
     $("#invoice-preview-gst").textContent = currency(gst);
     $("#invoice-preview-total").textContent = currency(total);
