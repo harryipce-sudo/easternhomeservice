@@ -627,6 +627,32 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     return chunks.length ? chunks : ["—"];
   };
+  function renderPrintInvoicePages(descriptionChunks, quantity, unitPrice, subtotal, gst, total) {
+    const firstPageLimit = 4;
+    const finalPageLimit = 5;
+    const middlePageLimit = 10;
+    const pages = [];
+    const remaining = [...descriptionChunks];
+    pages.push({ chunks: remaining.splice(0, firstPageLimit), final: remaining.length === 0 });
+    while (remaining.length > finalPageLimit) pages.push({ chunks: remaining.splice(0, Math.min(middlePageLimit, remaining.length - finalPageLimit)), final:false });
+    if (remaining.length) pages.push({ chunks:remaining.splice(0), final:true });
+    const client = escapeHtml($("#invoice-client").value || "Client");
+    const address = escapeHtml($("#invoice-address").value || "Billing address");
+    const number = escapeHtml($("#invoice-number").value || "Draft");
+    const date = escapeHtml(dateForInvoice($("#invoice-date").value));
+    const dueDate = escapeHtml(dateForInvoice($("#invoice-due-date").value));
+    const terms = escapeHtml(`${$("#invoice-terms").value || 0} Days`);
+    const note = escapeHtml($("#invoice-note").value || "");
+    let globalChunkIndex = 0;
+    $("#invoice-print-pages").innerHTML = pages.map((page, pageIndex) => {
+      const rows = page.chunks.map((chunk) => {
+        const isFirstChunk = globalChunkIndex++ === 0;
+        return `<tr${isFirstChunk ? "" : ' class="invoice-description-continuation"'}><td>${escapeHtml(chunk)}</td><td>${isFirstChunk ? quantity.toFixed(quantity % 1 ? 2 : 0) : ""}</td><td>${isFirstChunk ? currency(unitPrice) : ""}</td><td>${isFirstChunk ? "10% GST" : ""}</td><td>${isFirstChunk ? currency(subtotal) : ""}</td></tr>`;
+      }).join("");
+      const ending = page.final ? `<div class="invoice-payment-terms">Payment terms: ${terms}</div><div class="invoice-totals"><div><span>Untaxed Amount</span><strong>${currency(subtotal)}</strong></div><div><span>GST 10%</span><strong>${currency(gst)}</strong></div><div class="grand"><span>Total</span><strong>${currency(total)}</strong></div></div><footer class="invoice-footer"><p><strong>Payment Communication: ${number}</strong></p><p><strong>Note:</strong><br>${note}</p><p><strong>Bank Detail</strong><br>SWIFT: CTBAAU2S<br>Bank Name: Commonwealth Bank<br>Account Name: Eastern Group VIC<br>BSB: 063 109<br>Account Number: 13349243 (AUD ONLY)<br>Bank Address: 28 Main Street, Box Hill, VIC 3128<br>"Please mark \"AUD only\" on bank instruction."</p></footer>` : "";
+      return `<article class="invoice-paper invoice-print-page"><header class="invoice-paper-header"><div class="invoice-company">Melbourne VIC Australia<br><strong>ABN: 67651973711</strong></div><div class="invoice-brand"><img src="./assets/eastern-home-service-logo-clean.png" alt="Eastern Home Services"></div></header><h2 class="invoice-title">Tax Invoice ${number}</h2><div class="invoice-customer"><strong>${client}</strong><br>${address}</div><div class="invoice-meta"><div><span>Invoice Date</span><strong>${date}</strong></div><div><span>Due Date</span><strong>${dueDate}</strong></div></div><table class="invoice-lines"><thead><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>${ending}<div class="invoice-page-footer"><strong>Your Home Maintenance and Service Solution</strong><br><small>Page ${pageIndex + 1} / ${pages.length}</small></div></article>`;
+    }).join("");
+  }
   const closeInvoiceBuilder = () => invoiceModal.classList.remove("open");
   function renderInvoicePreview() {
     const quantity = Math.max(0, Number($("#invoice-quantity").value) || 0);
@@ -639,7 +665,6 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-preview-address").textContent = $("#invoice-address").value || "Billing address";
     $("#invoice-preview-date").textContent = dateForInvoice($("#invoice-date").value);
     $("#invoice-preview-due-date").textContent = dateForInvoice($("#invoice-due-date").value);
-    $("#invoice-preview-terms").textContent = `${$("#invoice-terms").value || 0} days`;
     $("#invoice-preview-terms-copy").textContent = `${$("#invoice-terms").value || 0} Days`;
     const descriptionChunks = splitInvoiceDescription($("#invoice-description").value);
     $("#invoice-lines-body").innerHTML = descriptionChunks.map((chunk, index) => `<tr${index ? ' class="invoice-description-continuation"' : ""}><td>${escapeHtml(chunk)}</td><td>${index ? "" : quantity.toFixed(quantity % 1 ? 2 : 0)}</td><td>${index ? "" : currency(unitPrice)}</td><td>${index ? "" : "10% GST"}</td><td>${index ? "" : currency(subtotal)}</td></tr>`).join("");
@@ -648,6 +673,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-preview-total").textContent = currency(total);
     $("#invoice-preview-reference").textContent = $("#invoice-number").value || "—";
     $("#invoice-preview-note").textContent = $("#invoice-note").value || "";
+    renderPrintInvoicePages(descriptionChunks, quantity, unitPrice, subtotal, gst, total);
   }
   function openInvoiceBuilder() {
     if (!state.selected) { window.alert("Save the job first, then create its invoice."); return; }
