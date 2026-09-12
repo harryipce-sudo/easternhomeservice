@@ -640,7 +640,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // These are measured pixel heights for the printed description column,
     // not character counts. This keeps paragraphs inside their printed page.
     const firstPageCapacity = 500;
-    const finalPageCapacity = 400;
+    const finalPageCapacity = 200;
     const middlePageCapacity = 720;
     const pages = [];
     const remaining = descriptionChunks.map((text) => ({ text, height:measureDescriptionHeight(text) }));
@@ -671,7 +671,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const dueDate = escapeHtml(dateForInvoice($("#invoice-due-date").value));
     const terms = escapeHtml(`${$("#invoice-terms").value || 0} Days`);
     const note = escapeHtml($("#invoice-note").value || "");
-    $("#invoice-print-pages").innerHTML = pages.map((page, pageIndex) => {
+    const renderPages = () => {
+      $("#invoice-print-pages").innerHTML = pages.map((page, pageIndex) => {
       const isFirstPage = pageIndex === 0;
       const description = page.chunks.map(escapeHtml).join("<br><br>");
       const rows = `<tr class="invoice-print-content-row"><td>${description}</td><td>${isFirstPage ? quantity.toFixed(quantity % 1 ? 2 : 0) : ""}</td><td>${isFirstPage ? currency(unitPrice) : ""}</td><td>${isFirstPage ? "10% GST" : ""}</td><td>${isFirstPage ? currency(subtotal) : ""}</td></tr>`;
@@ -679,7 +680,26 @@ document.addEventListener("DOMContentLoaded", () => {
       const pageHeader = isFirstPage ? `<header class="invoice-paper-header"><div class="invoice-company">Melbourne VIC Australia<br><strong>ABN: 67651973711</strong></div><div class="invoice-brand"><img src="./assets/eastern-home-service-logo-clean.png" alt="Eastern Home Services"></div></header><h2 class="invoice-title">Tax Invoice ${number}</h2><div class="invoice-customer"><strong>${client}</strong><br>${address}</div><div class="invoice-meta"><div><span>Invoice Date</span><strong>${date}</strong></div><div><span>Due Date</span><strong>${dueDate}</strong></div></div>` : `<header class="invoice-paper-header"><div class="invoice-company">Melbourne VIC Australia<br><strong>ABN: 67651973711</strong></div><div class="invoice-brand"><img src="./assets/eastern-home-service-logo-clean.png" alt="Eastern Home Services"></div></header>`;
       const table = isFirstPage ? `<table class="invoice-lines invoice-print-grid"><thead><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>` : `<table class="invoice-lines invoice-print-grid invoice-continuation-lines"><tbody>${rows}</tbody></table>`;
       return `<article class="invoice-paper invoice-print-page${isFirstPage ? "" : " invoice-print-continuation"}${page.final ? " invoice-print-final" : ""}">${pageHeader}${table}${ending}<div class="invoice-page-footer"><strong>Your Home Maintenance and Service Solution</strong><br><small>Page ${pageIndex + 1} / ${pages.length}</small></div></article>`;
-    }).join("");
+      }).join("");
+    };
+    for (let attempt = 0; attempt < descriptionChunks.length * 3; attempt += 1) {
+      renderPages();
+      const printPages = [...document.querySelectorAll("#invoice-print-pages .invoice-print-page")];
+      const overflowIndex = printPages.findIndex((element, index) => pages[index].chunks.length && element.scrollHeight > element.clientHeight + 1);
+      if (overflowIndex === -1) break;
+      const overflowingPage = pages[overflowIndex];
+      if (overflowingPage.final) {
+        const movedChunk = overflowingPage.chunks.shift();
+        if (!movedChunk) break;
+        pages.splice(overflowIndex, 0, { chunks:[movedChunk], final:false });
+      } else {
+        const movedChunk = overflowingPage.chunks.pop();
+        if (!movedChunk) break;
+        if (pages[overflowIndex + 1]) pages[overflowIndex + 1].chunks.unshift(movedChunk);
+        else { overflowingPage.final = true; pages.push({ chunks:[movedChunk], final:true }); }
+      }
+    }
+    renderPages();
   }
   const closeInvoiceBuilder = () => invoiceModal.classList.remove("open");
   function renderInvoicePreview() {
