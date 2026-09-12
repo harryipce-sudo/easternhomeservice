@@ -639,9 +639,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     // These are measured pixel heights for the printed description column,
     // not character counts. This keeps paragraphs inside their printed page.
-    const firstPageCapacity = 500;
-    const finalPageCapacity = 200;
-    const middlePageCapacity = 720;
+    // Match the real usable height of the fixed A4 grids. The overflow pass
+    // below remains the final safeguard for unusual fonts or long words.
+    const firstPageCapacity = 570;
+    const finalPageCapacity = 120;
+    const middlePageCapacity = 770;
     const pages = [];
     const remaining = descriptionChunks.map((text) => ({ text, height:measureDescriptionHeight(text) }));
     const remainingHeight = () => remaining.reduce((sum, chunk) => sum + chunk.height, 0);
