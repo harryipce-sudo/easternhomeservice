@@ -633,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const firstPageCapacity = 1000;
     // The final page also contains totals, note and bank details, so reserve
     // most of its space for those closing sections.
-    const finalPageCapacity = 520;
+    const finalPageCapacity = 750;
     const middlePageCapacity = 1350;
     const pages = [];
     const remaining = [...descriptionChunks];
@@ -651,13 +651,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (characterCount() <= firstPageCapacity) pages.push({ chunks:takeForPage(firstPageCapacity), final:true });
     else {
       pages.push({ chunks:takeForPage(firstPageCapacity), final:false });
-      let pageCount = 1;
-      while ((pageCount - 1) * middlePageCapacity + finalPageCapacity < characterCount()) pageCount += 1;
-      for (let pageIndex = 1; pageIndex < pageCount; pageIndex += 1) {
-        const pagesLeft = pageCount - pageIndex + 1;
-        const capacityAfterThis = (pagesLeft - 2) * middlePageCapacity + finalPageCapacity;
-        const balancedShare = Math.ceil(characterCount() / pagesLeft);
-        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.max(balancedShare, characterCount() - capacityAfterThis))), final:false });
+      while (characterCount() > finalPageCapacity) {
+        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.max(1, characterCount() - finalPageCapacity))), final:false });
       }
       pages.push({ chunks:takeForPage(finalPageCapacity), final:true });
     }
