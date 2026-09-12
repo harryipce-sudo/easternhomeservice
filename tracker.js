@@ -655,14 +655,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const invoice = job.invoice || {};
     const isExistingInvoice = Boolean(invoice.number);
     const today = new Date().toISOString().slice(0,10);
-    const date = invoice.date || job.invoiceDate || today;
+    const date = isExistingInvoice ? (invoice.date || job.invoiceDate || today) : today;
     const terms = Number(invoice.termsDays) >= 0 ? invoice.termsDays : 30;
     $("#invoice-client").value = invoice.client || state.selected.customerName || "";
     $("#invoice-address").value = invoice.address || state.selected.address || "";
     $("#invoice-number").value = invoice.number || job.invoiceNumber || nextInvoiceNumber();
     $("#invoice-date").value = date;
     $("#invoice-terms").value = terms;
-    $("#invoice-due-date").value = invoice.dueDate || dueDateFor(date, terms);
+    $("#invoice-due-date").value = isExistingInvoice && invoice.dueDate ? invoice.dueDate : dueDateFor(date, terms);
     $("#invoice-description").value = invoice.description || job.detail || "";
     $("#invoice-quantity").value = invoice.quantity || 1;
     $("#invoice-unit-price").value = Number.isFinite(Number(invoice.unitPrice)) ? Number(invoice.unitPrice).toFixed(2) : (Number(job.quote || 0) / 1.1).toFixed(2);
