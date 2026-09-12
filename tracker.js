@@ -631,8 +631,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // Page one carries the invoice information, so it deliberately has less
     // description space. Continuation pages are description-only.
     const firstPageCapacity = 1000;
-    const finalPageCapacity = 1300;
-    const middlePageCapacity = 1500;
+    // The final page also contains totals, note and bank details, so reserve
+    // most of its space for those closing sections.
+    const finalPageCapacity = 520;
+    const middlePageCapacity = 1900;
     const pages = [];
     const remaining = [...descriptionChunks];
     const characterCount = () => remaining.reduce((sum, chunk) => sum + chunk.length, 0);
