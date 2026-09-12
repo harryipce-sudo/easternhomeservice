@@ -677,7 +677,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const unitPrice = Math.max(0, Number($("#invoice-unit-price").value) || 0);
     const total = quantity * unitPrice * 1.1;
     const invoice = { number:$("#invoice-number").value.trim(), date:$("#invoice-date").value, dueDate:$("#invoice-due-date").value, termsDays:Number($("#invoice-terms").value), client:$("#invoice-client").value.trim(), address:$("#invoice-address").value.trim(), description:$("#invoice-description").value.trim(), quantity, unitPrice, note:$("#invoice-note").value.trim(), status:"issued" };
-    const record = { ...state.selected, customerName:invoice.client || state.selected.customerName, address:invoice.address || state.selected.address, totalQuote:currency(total), subtotalExGst:currency(quantity * unitPrice), gstTotal:currency(quantity * unitPrice * .1), job:{ ...state.selected.job, detail:invoice.description || state.selected.job.detail, quote:total, status:"invoiced", invoiceNumber:invoice.number, invoiceDate:invoice.date, invoice } };
+    const record = { ...state.selected, customerName:invoice.client || state.selected.customerName, address:invoice.address || state.selected.address, totalQuote:currency(total), subtotalExGst:currency(quantity * unitPrice), gstTotal:currency(quantity * unitPrice * .1), jobStage:"invoiced", job:{ ...state.selected.job, detail:invoice.description || state.selected.job.detail, quote:total, status:"invoiced", boardOrder:-Date.now(), invoiceNumber:invoice.number, invoiceDate:invoice.date, invoice } };
     try {
       const saved = normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }));
       state.records = state.records.map((item) => item.id === saved.id ? saved : item);
