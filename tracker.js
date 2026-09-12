@@ -630,11 +630,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderPrintInvoicePages(descriptionChunks, quantity, unitPrice, subtotal, gst, total) {
     // Page one carries the invoice information, so it deliberately has less
     // description space. Continuation pages are description-only.
-    const firstPageCapacity = 1000;
+    const firstPageCapacity = 1100;
     // The final page also contains totals, note and bank details, so reserve
     // most of its space for those closing sections.
-    const finalPageCapacity = 750;
-    const middlePageCapacity = 1350;
+    const finalPageCapacity = 700;
+    const middlePageCapacity = 1800;
     const pages = [];
     const remaining = [...descriptionChunks];
     const characterCount = () => remaining.reduce((sum, chunk) => sum + chunk.length, 0);
