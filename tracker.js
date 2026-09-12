@@ -628,31 +628,38 @@ document.addEventListener("DOMContentLoaded", () => {
     return chunks.length ? chunks : ["—"];
   };
   function renderPrintInvoicePages(descriptionChunks, quantity, unitPrice, subtotal, gst, total) {
-    // Page one carries the invoice information, so it deliberately has less
-    // description space. Continuation pages are description-only.
-    const firstPageCapacity = 1100;
-    // The final page also contains totals, note and bank details, so reserve
-    // most of its space for those closing sections.
-    const finalPageCapacity = 700;
-    const middlePageCapacity = 1800;
+    const measureDescriptionHeight = (text) => {
+      const probe = document.createElement("div");
+      probe.style.cssText = "position:fixed;left:-10000px;top:0;width:95.7mm;font:12px Arial,sans-serif;font-weight:400;line-height:1.4;visibility:hidden;pointer-events:none;";
+      probe.textContent = text;
+      document.body.appendChild(probe);
+      const height = Math.ceil(probe.getBoundingClientRect().height) + 14;
+      probe.remove();
+      return Math.max(20, height);
+    };
+    // These are measured pixel heights for the printed description column,
+    // not character counts. This keeps paragraphs inside their printed page.
+    const firstPageCapacity = 500;
+    const finalPageCapacity = 400;
+    const middlePageCapacity = 720;
     const pages = [];
-    const remaining = [...descriptionChunks];
-    const characterCount = () => remaining.reduce((sum, chunk) => sum + chunk.length, 0);
+    const remaining = descriptionChunks.map((text) => ({ text, height:measureDescriptionHeight(text) }));
+    const remainingHeight = () => remaining.reduce((sum, chunk) => sum + chunk.height, 0);
     const takeForPage = (capacity) => {
       const chunks = [];
       let used = 0;
-      while (remaining.length && (!chunks.length || used + remaining[0].length <= capacity)) {
+      while (remaining.length && (!chunks.length || used + remaining[0].height <= capacity)) {
         const chunk = remaining.shift();
         chunks.push(chunk);
-        used += chunk.length;
+        used += chunk.height;
       }
-      return chunks;
+      return chunks.map((chunk) => chunk.text);
     };
-    if (characterCount() <= firstPageCapacity) pages.push({ chunks:takeForPage(firstPageCapacity), final:true });
+    if (remainingHeight() <= 300) pages.push({ chunks:takeForPage(firstPageCapacity), final:true });
     else {
       pages.push({ chunks:takeForPage(firstPageCapacity), final:false });
-      while (characterCount() > finalPageCapacity) {
-        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.max(1, characterCount() - finalPageCapacity))), final:false });
+      while (remainingHeight() > finalPageCapacity) {
+        pages.push({ chunks:takeForPage(middlePageCapacity), final:false });
       }
       pages.push({ chunks:takeForPage(finalPageCapacity), final:true });
     }
