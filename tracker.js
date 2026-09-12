@@ -699,6 +699,27 @@ document.addEventListener("DOMContentLoaded", () => {
         else { overflowingPage.final = true; pages.push({ chunks:[movedChunk], final:true }); }
       }
     }
+    for (let attempt = 0; attempt < descriptionChunks.length * 4; attempt += 1) {
+      let moved = false;
+      for (let pageIndex = 0; pageIndex < pages.length - 1; pageIndex += 1) {
+        const nextPage = pages[pageIndex + 1];
+        if (!nextPage.chunks.length) continue;
+        const movedChunk = nextPage.chunks.shift();
+        pages[pageIndex].chunks.push(movedChunk);
+        renderPages();
+        const currentPage = document.querySelectorAll("#invoice-print-pages .invoice-print-page")[pageIndex];
+        if (currentPage.scrollHeight > currentPage.clientHeight + 1) {
+          pages[pageIndex].chunks.pop();
+          nextPage.chunks.unshift(movedChunk);
+          continue;
+        }
+        moved = true;
+        break;
+      }
+      const emptyIndex = pages.findIndex((page, index) => index < pages.length - 1 && !page.final && !page.chunks.length);
+      if (emptyIndex !== -1) { pages.splice(emptyIndex, 1); moved = true; }
+      if (!moved) break;
+    }
     renderPages();
   }
   const closeInvoiceBuilder = () => invoiceModal.classList.remove("open");
