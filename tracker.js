@@ -659,7 +659,8 @@ document.addEventListener("DOMContentLoaded", () => {
     else {
       pages.push({ chunks:takeForPage(firstPageCapacity), final:false });
       while (remainingHeight() > finalPageCapacity) {
-        pages.push({ chunks:takeForPage(middlePageCapacity), final:false });
+        const capacity = Math.min(middlePageCapacity, Math.max(1, remainingHeight() - finalPageCapacity));
+        pages.push({ chunks:takeForPage(capacity), final:false });
       }
       pages.push({ chunks:takeForPage(finalPageCapacity), final:true });
     }
