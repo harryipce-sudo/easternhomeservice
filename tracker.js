@@ -628,14 +628,31 @@ document.addEventListener("DOMContentLoaded", () => {
     return chunks.length ? chunks : ["—"];
   };
   function renderPrintInvoicePages(descriptionChunks, quantity, unitPrice, subtotal, gst, total) {
-    const firstPageLimit = 4;
-    const finalPageLimit = 5;
-    const middlePageLimit = 10;
+    const firstPageCapacity = 1750;
+    const finalPageCapacity = 1600;
+    const middlePageCapacity = 2600;
     const pages = [];
     const remaining = [...descriptionChunks];
-    pages.push({ chunks: remaining.splice(0, firstPageLimit), final: remaining.length === 0 });
-    while (remaining.length > finalPageLimit) pages.push({ chunks: remaining.splice(0, Math.min(middlePageLimit, remaining.length - finalPageLimit)), final:false });
-    if (remaining.length) pages.push({ chunks:remaining.splice(0), final:true });
+    const characterCount = () => remaining.reduce((sum, chunk) => sum + chunk.length, 0);
+    const takeForPage = (capacity) => {
+      const chunks = [];
+      let used = 0;
+      while (remaining.length && (!chunks.length || used + remaining[0].length <= capacity)) {
+        const chunk = remaining.shift();
+        chunks.push(chunk);
+        used += chunk.length;
+      }
+      return chunks;
+    };
+    if (characterCount() <= firstPageCapacity) pages.push({ chunks:takeForPage(firstPageCapacity), final:true });
+    else {
+      pages.push({ chunks:takeForPage(firstPageCapacity), final:false });
+      while (characterCount() > finalPageCapacity) {
+        const pagesNeeded = Math.ceil(characterCount() / finalPageCapacity);
+        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.ceil(characterCount() / pagesNeeded))), final:false });
+      }
+      pages.push({ chunks:takeForPage(finalPageCapacity), final:true });
+    }
     const client = escapeHtml($("#invoice-client").value || "Client");
     const address = escapeHtml($("#invoice-address").value || "Billing address");
     const number = escapeHtml($("#invoice-number").value || "Draft");
