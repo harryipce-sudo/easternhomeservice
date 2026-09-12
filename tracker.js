@@ -703,7 +703,9 @@ document.addEventListener("DOMContentLoaded", () => {
       let moved = false;
       for (let pageIndex = 0; pageIndex < pages.length - 1; pageIndex += 1) {
         const nextPage = pages[pageIndex + 1];
-        if (!nextPage.chunks.length) continue;
+        // The final page must retain description content above the closing
+        // payment and bank details. Otherwise packing can make it look empty.
+        if (!nextPage.chunks.length || (nextPage.final && nextPage.chunks.length === 1)) continue;
         const movedChunk = nextPage.chunks.shift();
         pages[pageIndex].chunks.push(movedChunk);
         renderPages();
