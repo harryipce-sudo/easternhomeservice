@@ -689,6 +689,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (overflowIndex === -1) break;
       const overflowingPage = pages[overflowIndex];
       if (overflowingPage.final) {
+        // Keep the description visible even when the payment summary needs its
+        // own page. A final page must never silently lose its last detail.
+        if (overflowingPage.chunks.length === 1) {
+          overflowingPage.final = false;
+          pages.push({ chunks:[], final:true });
+          continue;
+        }
         const movedChunk = overflowingPage.chunks.shift();
         if (!movedChunk) break;
         pages.splice(overflowIndex, 0, { chunks:[movedChunk], final:false });
