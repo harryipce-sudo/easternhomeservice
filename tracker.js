@@ -628,9 +628,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return chunks.length ? chunks : ["—"];
   };
   function renderPrintInvoicePages(descriptionChunks, quantity, unitPrice, subtotal, gst, total) {
-    const firstPageCapacity = 1750;
-    const finalPageCapacity = 1600;
-    const middlePageCapacity = 2600;
+    // Page one carries the invoice information, so it deliberately has less
+    // description space. Continuation pages are description-only.
+    const firstPageCapacity = 850;
+    const finalPageCapacity = 700;
+    const middlePageCapacity = 2100;
     const pages = [];
     const remaining = [...descriptionChunks];
     const characterCount = () => remaining.reduce((sum, chunk) => sum + chunk.length, 0);
@@ -648,8 +650,7 @@ document.addEventListener("DOMContentLoaded", () => {
     else {
       pages.push({ chunks:takeForPage(firstPageCapacity), final:false });
       while (characterCount() > finalPageCapacity) {
-        const pagesNeeded = Math.ceil(characterCount() / finalPageCapacity);
-        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.ceil(characterCount() / pagesNeeded))), final:false });
+        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.max(1, characterCount() - finalPageCapacity))), final:false });
       }
       pages.push({ chunks:takeForPage(finalPageCapacity), final:true });
     }
@@ -662,12 +663,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const note = escapeHtml($("#invoice-note").value || "");
     let globalChunkIndex = 0;
     $("#invoice-print-pages").innerHTML = pages.map((page, pageIndex) => {
+      const isFirstPage = pageIndex === 0;
       const rows = page.chunks.map((chunk) => {
         const isFirstChunk = globalChunkIndex++ === 0;
+        if (!isFirstPage) return `<tr><td colspan="5">${escapeHtml(chunk)}</td></tr>`;
         return `<tr${isFirstChunk ? "" : ' class="invoice-description-continuation"'}><td>${escapeHtml(chunk)}</td><td>${isFirstChunk ? quantity.toFixed(quantity % 1 ? 2 : 0) : ""}</td><td>${isFirstChunk ? currency(unitPrice) : ""}</td><td>${isFirstChunk ? "10% GST" : ""}</td><td>${isFirstChunk ? currency(subtotal) : ""}</td></tr>`;
       }).join("");
       const ending = page.final ? `<div class="invoice-payment-terms">Payment terms: ${terms}</div><div class="invoice-totals"><div><span>Untaxed Amount</span><strong>${currency(subtotal)}</strong></div><div><span>GST 10%</span><strong>${currency(gst)}</strong></div><div class="grand"><span>Total</span><strong>${currency(total)}</strong></div></div><footer class="invoice-footer"><p><strong>Payment Communication: ${number}</strong></p><p><strong>Note:</strong><br>${note}</p><p><strong>Bank Detail</strong><br>SWIFT: CTBAAU2S<br>Bank Name: Commonwealth Bank<br>Account Name: Eastern Group VIC<br>BSB: 063 109<br>Account Number: 13349243 (AUD ONLY)<br>Bank Address: 28 Main Street, Box Hill, VIC 3128<br>"Please mark \"AUD only\" on bank instruction."</p></footer>` : "";
-      return `<article class="invoice-paper invoice-print-page"><header class="invoice-paper-header"><div class="invoice-company">Melbourne VIC Australia<br><strong>ABN: 67651973711</strong></div><div class="invoice-brand"><img src="./assets/eastern-home-service-logo-clean.png" alt="Eastern Home Services"></div></header><h2 class="invoice-title">Tax Invoice ${number}</h2><div class="invoice-customer"><strong>${client}</strong><br>${address}</div><div class="invoice-meta"><div><span>Invoice Date</span><strong>${date}</strong></div><div><span>Due Date</span><strong>${dueDate}</strong></div></div><table class="invoice-lines"><thead><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>${ending}<div class="invoice-page-footer"><strong>Your Home Maintenance and Service Solution</strong><br><small>Page ${pageIndex + 1} / ${pages.length}</small></div></article>`;
+      const pageHeader = isFirstPage ? `<header class="invoice-paper-header"><div class="invoice-company">Melbourne VIC Australia<br><strong>ABN: 67651973711</strong></div><div class="invoice-brand"><img src="./assets/eastern-home-service-logo-clean.png" alt="Eastern Home Services"></div></header><h2 class="invoice-title">Tax Invoice ${number}</h2><div class="invoice-customer"><strong>${client}</strong><br>${address}</div><div class="invoice-meta"><div><span>Invoice Date</span><strong>${date}</strong></div><div><span>Due Date</span><strong>${dueDate}</strong></div></div>` : `<div class="invoice-continuation-label">Description (continued)</div>`;
+      const table = isFirstPage ? `<table class="invoice-lines"><thead><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>` : `<table class="invoice-lines invoice-continuation-lines"><tbody>${rows}</tbody></table>`;
+      return `<article class="invoice-paper invoice-print-page">${pageHeader}${table}${ending}<div class="invoice-page-footer"><strong>Your Home Maintenance and Service Solution</strong><br><small>Page ${pageIndex + 1} / ${pages.length}</small></div></article>`;
     }).join("");
   }
   const closeInvoiceBuilder = () => invoiceModal.classList.remove("open");
