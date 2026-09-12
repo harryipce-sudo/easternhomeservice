@@ -631,8 +631,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Page one carries the invoice information, so it deliberately has less
     // description space. Continuation pages are description-only.
     const firstPageCapacity = 1000;
-    const finalPageCapacity = 600;
-    const middlePageCapacity = 1200;
+    const finalPageCapacity = 1300;
+    const middlePageCapacity = 1500;
     const pages = [];
     const remaining = [...descriptionChunks];
     const characterCount = () => remaining.reduce((sum, chunk) => sum + chunk.length, 0);
@@ -649,8 +649,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (characterCount() <= firstPageCapacity) pages.push({ chunks:takeForPage(firstPageCapacity), final:true });
     else {
       pages.push({ chunks:takeForPage(firstPageCapacity), final:false });
-      while (characterCount() > finalPageCapacity) {
-        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.max(1, characterCount() - finalPageCapacity))), final:false });
+      let pageCount = 1;
+      while ((pageCount - 1) * middlePageCapacity + finalPageCapacity < characterCount()) pageCount += 1;
+      for (let pageIndex = 1; pageIndex < pageCount; pageIndex += 1) {
+        const pagesLeft = pageCount - pageIndex + 1;
+        const capacityAfterThis = (pagesLeft - 2) * middlePageCapacity + finalPageCapacity;
+        const balancedShare = Math.ceil(characterCount() / pagesLeft);
+        pages.push({ chunks:takeForPage(Math.min(middlePageCapacity, Math.max(balancedShare, characterCount() - capacityAfterThis))), final:false });
       }
       pages.push({ chunks:takeForPage(finalPageCapacity), final:true });
     }
