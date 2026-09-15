@@ -1,0 +1,22 @@
+:root { color-scheme: light; --navy:#063b78; --ink:#172538; --muted:#657384; --line:#d9e2ea; --soft:#f4f8fb; --accent:#2e8259; }
+* { box-sizing:border-box; }
+body { margin:0; min-width:320px; background:var(--soft); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+.portal-shell { width:min(920px,calc(100% - 32px)); margin:0 auto; padding:34px 0 52px; }
+.portal-header { display:flex; align-items:center; justify-content:space-between; gap:22px; padding-bottom:24px; border-bottom:1px solid var(--line); }
+.brand-logo { width:156px; height:auto; }
+.portal-header p { margin:0; color:var(--muted); font-size:14px; font-weight:650; }
+.portal-intro { padding:34px 0 22px; }
+h1 { margin:0 0 8px; color:var(--navy); font-size:clamp(27px,4vw,40px); letter-spacing:-.035em; }
+.portal-intro p,.portal-help { margin:0; color:var(--muted); font-size:15px; line-height:1.55; }
+.invoice-list { display:grid; gap:12px; }
+.invoice-card { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:18px; padding:21px 22px; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:10px; background:#fff; }
+.invoice-number { margin:0 0 5px; color:var(--navy); font-size:17px; font-weight:750; }
+.invoice-address { margin:0; font-size:15px; line-height:1.45; font-weight:650; }
+.invoice-meta { margin:8px 0 0; color:var(--muted); font-size:13px; }
+.invoice-amount { align-self:start; color:var(--navy); font-size:20px; font-weight:800; white-space:nowrap; }
+details { grid-column:1 / -1; border-top:1px solid var(--line); padding-top:14px; }
+summary { cursor:pointer; color:var(--navy); font-size:14px; font-weight:700; }
+.invoice-detail { margin:11px 0 0; color:var(--ink); font-size:14px; line-height:1.55; white-space:pre-line; }
+.empty,.error { padding:28px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--muted); text-align:center; }
+.portal-help { margin-top:26px; }
+@media (max-width:600px) { .portal-shell { width:min(100% - 24px,920px); padding-top:22px; } .portal-header { align-items:flex-start; flex-direction:column; gap:12px; } .invoice-card { grid-template-columns:1fr; gap:8px; padding:18px; } .invoice-amount { margin-top:2px; } }
