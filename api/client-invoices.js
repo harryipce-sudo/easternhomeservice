@@ -52,7 +52,8 @@ module.exports = async (req, res) => {
       .map(normaliseInvoice)
       .sort((a, b) => String(b.invoiceDate).localeCompare(String(a.invoiceDate)) || String(b.invoiceNumber).localeCompare(String(a.invoiceNumber)));
 
-    return res.status(200).json({ clientName: token.clientName, invoices });
+    const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount });
   } catch {
     return res.status(500).json({ error: "Unable to load invoices." });
   }
