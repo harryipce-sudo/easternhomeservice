@@ -6,11 +6,10 @@ const paidInvoiceList = document.querySelector("#paid-invoice-list");
 const money = new Intl.NumberFormat("en-AU", { style:"currency", currency:"AUD" });
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
 const dateLabel = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }) : "Date not available";
-const today = () => new Date().toISOString().slice(0, 10);
 const reportedPayment = (paidDate, note = "", invoiceNumber = "") => `<div class="client-payment-reported">Client reported paid<br><small>${escapeHtml(dateLabel(paidDate))}${note ? `<br>${escapeHtml(note)}` : ""}</small><button type="button" data-client-unpaid="${escapeHtml(invoiceNumber)}">Mark unpaid</button></div>`;
 const clientPaymentControl = (invoice) => invoice.clientReportedPaidDate
   ? reportedPayment(invoice.clientReportedPaidDate, invoice.clientReportedPaymentNote, invoice.invoiceNumber)
-  : `<label class="client-payment-control"><span>Paid date</span><input type="date" value="${today()}" data-client-paid-date><textarea data-client-payment-note maxlength="1000" placeholder="Optional payment or invoice note"></textarea><button type="button" data-client-paid="${escapeHtml(invoice.invoiceNumber)}">Mark paid</button></label>`;
+  : `<label class="client-payment-control"><span>Paid date <b aria-hidden="true">*</b></span><input type="date" data-client-paid-date required><textarea data-client-payment-note maxlength="1000" placeholder="Optional payment or invoice note"></textarea><button type="button" data-client-paid="${escapeHtml(invoice.invoiceNumber)}">Mark paid</button></label>`;
 
 async function loadInvoices() {
   const access = new URLSearchParams(location.search).get("access") || "";
@@ -59,7 +58,12 @@ async function submitClientPayment(button) {
   const paidDate = row?.querySelector("[data-client-paid-date]")?.value || "";
   const note = row?.querySelector("[data-client-payment-note]")?.value.trim() || "";
   const access = new URLSearchParams(location.search).get("access") || "";
-  if (!access || !paidDate) return;
+  if (!access) return;
+  if (!paidDate) {
+    window.alert("Please enter the date this invoice was paid.");
+    row?.querySelector("[data-client-paid-date]")?.focus();
+    return;
+  }
   button.disabled = true;
   button.textContent = "Saving…";
   try {
