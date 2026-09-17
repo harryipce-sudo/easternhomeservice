@@ -31,10 +31,12 @@ details { border-top:1px solid var(--line); padding-top:12px; }
 summary { cursor:pointer; color:var(--navy); font-size:13px; font-weight:750; }
 .invoice-detail { margin:10px 0 0; max-width:760px; color:var(--ink); font-size:14px; line-height:1.55; white-space:pre-line; }
 .empty,.error { margin:0; padding:28px; color:var(--muted); text-align:center; }
+.invoice-section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin:0 0 12px; }
+.invoice-section-heading h2 { margin:0 0 4px; color:var(--navy); font-size:20px; letter-spacing:-.015em; }
+.invoice-section-heading p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+.invoice-section-toggle { flex:0 0 auto; border:1px solid var(--navy); background:#fff; color:var(--navy); cursor:pointer; font:inherit; font-size:13px; font-weight:750; line-height:1; padding:9px 12px; }
+.invoice-section-toggle:hover { background:var(--navy); color:#fff; }
 .paid-invoice-section { margin-top:30px; }
-.paid-invoice-heading { margin:0 0 12px; }
-.paid-invoice-heading h2 { margin:0 0 4px; color:var(--navy); font-size:20px; letter-spacing:-.015em; }
-.paid-invoice-heading p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
 .portal-help { margin-top:20px; }
 @media (max-width:700px) { .invoice-totals { grid-template-columns:1fr; } }
-@media (max-width:600px) { .portal-shell { width:min(100% - 24px,1200px); padding-top:18px; } .portal-header { align-items:flex-start; flex-direction:column; gap:9px; } h1 { font-size:27px; } }
+@media (max-width:600px) { .portal-shell { width:min(100% - 24px,1200px); padding-top:18px; } .portal-header { align-items:flex-start; flex-direction:column; gap:9px; } .invoice-section-heading { align-items:stretch; flex-direction:column; } .invoice-section-toggle { align-self:flex-start; } h1 { font-size:27px; } }

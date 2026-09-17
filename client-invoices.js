@@ -22,8 +22,19 @@ async function loadInvoices() {
   paidInvoiceSection.hidden = !paidInvoices.length;
   if (paidInvoices.length) {
     paidInvoiceCopy.textContent = `${paidInvoices.length} paid invoice${paidInvoices.length === 1 ? "" : "s"} · Total referral payable ${money.format(referralTotal)} including GST`;
-    paidInvoiceList.innerHTML = `<table class="invoice-table paid-invoice-table"><thead><tr><th>Invoice no.</th><th>Address</th><th>Payment status</th><th>Paid date</th><th>Invoice amount</th><th>Referral %</th><th>Referral payable</th></tr></thead><tbody>${paidInvoices.map((invoice) => `<tr><td class="invoice-number">${escapeHtml(invoice.invoiceNumber || "Invoice")}</td><td class="invoice-address">${escapeHtml(invoice.address)}</td><td class="paid-status">Paid</td><td class="invoice-date">${invoice.paymentDate ? escapeHtml(dateLabel(invoice.paymentDate)) : "—"}</td><td class="invoice-amount">${money.format(invoice.amount)}</td><td class="referral-percentage">${Number(invoice.referralPercentage) > 0 ? `${Number(invoice.referralPercentage).toFixed(1)}%` : "—"}</td><td class="invoice-amount">${money.format(invoice.referralFee)}</td></tr>`).join("")}</tbody></table>`;
+    paidInvoiceList.innerHTML = `<table class="invoice-table paid-invoice-table"><thead><tr><th>Invoice no.</th><th>Address</th><th>Payment status</th><th>Paid date</th><th>Invoice amount</th><th>Referral %</th><th>Referral payable</th></tr></thead><tbody>${paidInvoices.map((invoice) => `<tr><td class="invoice-number">${escapeHtml(invoice.invoiceNumber || "Invoice")}</td><td class="invoice-address">${escapeHtml(invoice.address)}</td><td class="paid-status">Paid</td><td class="invoice-date">${invoice.paymentDate ? escapeHtml(dateLabel(invoice.paymentDate)) : "—"}</td><td class="invoice-amount">${money.format(invoice.amount)}</td><td class="referral-percentage">${Number(invoice.referralPercentage) > 0 ? `${Number(invoice.referralPercentage).toFixed(1)}%` : "—"}</td><td class="invoice-amount">${money.format(invoice.referralFee)}</td></tr><tr class="detail-row"><td colspan="7"><details><summary>View invoice details</summary><p class="invoice-detail">${escapeHtml(invoice.detail || "No additional invoice details.")}</p></details></td></tr>`).join("")}</tbody></table>`;
   }
 }
 
 loadInvoices().catch((error) => { copy.textContent = ""; document.querySelector("#invoice-totals").innerHTML = ""; paidInvoiceSection.hidden = true; list.innerHTML = `<p class="error">${escapeHtml(error.message || "This invoice link is unavailable.")}</p>`; });
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-invoice-toggle]");
+  if (!button) return;
+  const content = document.querySelector(`#${button.getAttribute("aria-controls")}`);
+  if (!content) return;
+  const willShow = content.hidden;
+  content.hidden = !willShow;
+  button.setAttribute("aria-expanded", String(willShow));
+  button.textContent = willShow ? "Hide invoices" : "Show invoices";
+});
