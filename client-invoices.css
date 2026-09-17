@@ -16,7 +16,7 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .invoice-totals .referral-total strong { color:var(--navy); }
 .referral-note { margin:0 0 18px; color:var(--muted); font-size:13px; line-height:1.5; }
 .invoice-table-frame { overflow-x:auto; border:1px solid var(--line); background:#fff; }
-.invoice-table { width:100%; min-width:1000px; border-collapse:collapse; font-size:14px; }
+.invoice-table { width:100%; min-width:1160px; border-collapse:collapse; font-size:14px; }
 .invoice-table th { padding:13px 15px; background:var(--header); color:#172338; font-size:13px; font-weight:750; text-align:left; white-space:nowrap; }
 .invoice-table td { padding:15px; border-top:1px solid var(--line); vertical-align:top; }
 .invoice-table td:last-child,.invoice-table th:last-child { text-align:right; }
@@ -26,6 +26,14 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .invoice-amount { color:var(--navy); font-size:15px; font-weight:800; white-space:nowrap; }
 .paid-status { color:#247043; font-weight:800; white-space:nowrap; }
 .referral-percentage { font-weight:700; text-align:right; white-space:nowrap; }
+.client-payment-control { display:grid; gap:6px; min-width:142px; }
+.client-payment-control span { color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; }
+.client-payment-control input { width:100%; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; padding:7px; }
+.client-payment-control textarea { min-height:54px; resize:vertical; width:100%; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; line-height:1.35; padding:7px; }
+.client-payment-control button { border:1px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer; font:inherit; font-size:12px; font-weight:750; padding:8px; }
+.client-payment-control button:disabled { cursor:wait; opacity:.65; }
+.client-payment-reported { color:#247043; font-size:12px; font-weight:800; line-height:1.4; white-space:nowrap; }
+.client-payment-reported small { color:var(--muted); font-size:12px; font-weight:650; }
 .detail-row td { padding:0 15px 16px; border-top:0; }
 details { border-top:1px solid var(--line); padding-top:12px; }
 summary { cursor:pointer; color:var(--navy); font-size:13px; font-weight:750; }

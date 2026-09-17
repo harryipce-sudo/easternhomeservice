@@ -59,9 +59,17 @@ module.exports = async (req, res) => {
     const token = (settings?.payload?.job?.clientPortalTokens || []).find((entry) => matchesAccessCode(hashAccessCode(accessCode), entry?.tokenHash));
     if (!token?.clientName) return res.status(404).json({ error: "This invoice link is unavailable." });
 
+    const paymentConfirmations = Array.isArray(settings?.payload?.job?.clientPaymentConfirmations)
+      ? settings.payload.job.clientPaymentConfirmations.filter((entry) => entry?.clientName === token.clientName)
+      : [];
+    const confirmationByInvoice = new Map(paymentConfirmations.map((entry) => [String(entry.invoiceNumber || ""), entry]));
     const clientInvoices = rows
       .filter((row) => row?.customer_name === token.clientName && !row?.payload?.job?.archived && row?.payload?.job?.status === "invoiced")
-      .map(normaliseInvoice)
+      .map((row) => {
+        const invoice = normaliseInvoice(row);
+        const confirmation = confirmationByInvoice.get(String(invoice.invoiceNumber || ""));
+        return { ...invoice, clientReportedPaidDate: confirmation?.paidDate || "", clientReportedPaymentNote: confirmation?.note || "" };
+      })
       .sort((a, b) => String(b.invoiceDate).localeCompare(String(a.invoiceDate)) || String(b.invoiceNumber).localeCompare(String(a.invoiceNumber)));
     const invoices = clientInvoices.filter((invoice) => invoice.payment !== "paid");
     const paidInvoices = clientInvoices.filter((invoice) => invoice.payment === "paid");
