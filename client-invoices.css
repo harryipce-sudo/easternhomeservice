@@ -16,7 +16,7 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .invoice-totals .referral-total strong { color:var(--navy); }
 .referral-note { margin:0 0 18px; color:var(--muted); font-size:13px; line-height:1.5; }
 .invoice-table-frame { overflow-x:auto; border:1px solid var(--line); background:#fff; }
-.invoice-table { width:100%; min-width:760px; border-collapse:collapse; font-size:14px; }
+.invoice-table { width:100%; min-width:1000px; border-collapse:collapse; font-size:14px; }
 .invoice-table th { padding:13px 15px; background:var(--header); color:#172338; font-size:13px; font-weight:750; text-align:left; white-space:nowrap; }
 .invoice-table td { padding:15px; border-top:1px solid var(--line); vertical-align:top; }
 .invoice-table td:last-child,.invoice-table th:last-child { text-align:right; }
