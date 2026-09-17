@@ -28,7 +28,7 @@ async function readBody(req) {
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+  if (req.method !== "POST" && req.method !== "DELETE") return res.status(405).json({ error: "Method not allowed." });
 
   const config = getSupabaseConfig();
   if (!config) return res.status(503).json({ error: "This invoice link is unavailable." });
@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
     const invoiceNumber = String(body.invoiceNumber || "").trim();
     const paidDate = String(body.paidDate || "");
     const note = String(body.note || "").trim().slice(0, 1000);
-    if (!accessCode || !invoiceNumber || !/^\d{4}-\d{2}-\d{2}$/.test(paidDate)) return res.status(400).json({ error: "Enter a valid paid date." });
+    if (!accessCode || !invoiceNumber || (req.method === "POST" && !/^\d{4}-\d{2}-\d{2}$/.test(paidDate))) return res.status(400).json({ error: "Enter a valid paid date." });
 
     const recordsResponse = await fetch(`${config.supabaseUrl}/rest/v1/quote_records?select=*`, { headers: config.headers });
     if (!recordsResponse.ok) return res.status(recordsResponse.status).json({ error: "Unable to update this invoice." });
@@ -52,13 +52,14 @@ module.exports = async (req, res) => {
     if (!invoice) return res.status(404).json({ error: "Invoice not found." });
 
     const existing = Array.isArray(settings.payload?.job?.clientPaymentConfirmations) ? settings.payload.job.clientPaymentConfirmations : [];
+    const confirmationsWithoutInvoice = existing.filter((entry) => !(entry?.clientName === token.clientName && entry?.invoiceNumber === invoiceNumber));
     const confirmation = { clientName: token.clientName, invoiceNumber, paidDate, note, confirmedAt: new Date().toISOString() };
-    const confirmations = [...existing.filter((entry) => !(entry?.clientName === token.clientName && entry?.invoiceNumber === invoiceNumber)), confirmation];
+    const confirmations = req.method === "DELETE" ? confirmationsWithoutInvoice : [...confirmationsWithoutInvoice, confirmation];
     const payload = { ...settings.payload, job: { ...(settings.payload?.job || {}), clientPaymentConfirmations: confirmations } };
     const update = await fetch(`${config.supabaseUrl}/rest/v1/quote_records?id=eq.${encodeURIComponent(settings.id)}`, { method: "PATCH", headers: config.headers, body: JSON.stringify({ payload }) });
     if (!update.ok) return res.status(update.status).json({ error: "Unable to save the payment confirmation." });
 
-    return res.status(200).json({ invoiceNumber, paidDate, note });
+    return res.status(200).json(req.method === "DELETE" ? { invoiceNumber } : { invoiceNumber, paidDate, note });
   } catch {
     return res.status(500).json({ error: "Unable to save the payment confirmation." });
   }

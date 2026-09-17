@@ -7,9 +7,9 @@ const money = new Intl.NumberFormat("en-AU", { style:"currency", currency:"AUD" 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
 const dateLabel = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }) : "Date not available";
 const today = () => new Date().toISOString().slice(0, 10);
-const reportedPayment = (paidDate, note = "") => `<span class="client-payment-reported">Client reported paid<br><small>${escapeHtml(dateLabel(paidDate))}${note ? `<br>${escapeHtml(note)}` : ""}</small></span>`;
+const reportedPayment = (paidDate, note = "", invoiceNumber = "") => `<div class="client-payment-reported">Client reported paid<br><small>${escapeHtml(dateLabel(paidDate))}${note ? `<br>${escapeHtml(note)}` : ""}</small><button type="button" data-client-unpaid="${escapeHtml(invoiceNumber)}">Mark unpaid</button></div>`;
 const clientPaymentControl = (invoice) => invoice.clientReportedPaidDate
-  ? reportedPayment(invoice.clientReportedPaidDate, invoice.clientReportedPaymentNote)
+  ? reportedPayment(invoice.clientReportedPaidDate, invoice.clientReportedPaymentNote, invoice.invoiceNumber)
   : `<label class="client-payment-control"><span>Paid date</span><input type="date" value="${today()}" data-client-paid-date><textarea data-client-payment-note maxlength="1000" placeholder="Optional payment or invoice note"></textarea><button type="button" data-client-paid="${escapeHtml(invoice.invoiceNumber)}">Mark paid</button></label>`;
 
 async function loadInvoices() {
@@ -34,6 +34,11 @@ async function loadInvoices() {
 loadInvoices().catch((error) => { copy.textContent = ""; document.querySelector("#invoice-totals").innerHTML = ""; paidInvoiceSection.hidden = true; list.innerHTML = `<p class="error">${escapeHtml(error.message || "This invoice link is unavailable.")}</p>`; });
 
 document.addEventListener("click", (event) => {
+  const unpaidButton = event.target.closest("[data-client-unpaid]");
+  if (unpaidButton) {
+    clearClientPayment(unpaidButton);
+    return;
+  }
   const paymentButton = event.target.closest("[data-client-paid]");
   if (paymentButton) {
     submitClientPayment(paymentButton);
@@ -62,10 +67,28 @@ async function submitClientPayment(button) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Unable to save the payment confirmation.");
     const container = button.closest("td");
-    container.innerHTML = reportedPayment(data.paidDate, data.note);
+    container.innerHTML = reportedPayment(data.paidDate, data.note, data.invoiceNumber);
   } catch (error) {
     button.disabled = false;
     button.textContent = "Mark paid";
     window.alert(error.message || "Unable to save the payment confirmation.");
+  }
+}
+
+async function clearClientPayment(button) {
+  if (!window.confirm("Mark this client payment confirmation as unpaid? This will not change Eastern Home Service’s main payment record.")) return;
+  const access = new URLSearchParams(location.search).get("access") || "";
+  if (!access) return;
+  button.disabled = true;
+  button.textContent = "Saving…";
+  try {
+    const response = await fetch("./api/client-payment-status", { method:"DELETE", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ access, invoiceNumber:button.dataset.clientUnpaid }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to clear the payment confirmation.");
+    button.closest("td").innerHTML = clientPaymentControl({ invoiceNumber:data.invoiceNumber });
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Mark unpaid";
+    window.alert(error.message || "Unable to clear the payment confirmation.");
   }
 }

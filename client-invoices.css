@@ -32,8 +32,10 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .client-payment-control textarea { min-height:54px; resize:vertical; width:100%; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; line-height:1.35; padding:7px; }
 .client-payment-control button { border:1px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer; font:inherit; font-size:12px; font-weight:750; padding:8px; }
 .client-payment-control button:disabled { cursor:wait; opacity:.65; }
-.client-payment-reported { color:#247043; font-size:12px; font-weight:800; line-height:1.4; white-space:nowrap; }
+.client-payment-reported { color:#247043; display:grid; font-size:12px; font-weight:800; gap:5px; line-height:1.4; min-width:142px; }
 .client-payment-reported small { color:var(--muted); font-size:12px; font-weight:650; }
+.client-payment-reported button { border:1px solid #247043; background:#fff; color:#247043; cursor:pointer; font:inherit; font-size:12px; font-weight:750; padding:7px; }
+.client-payment-reported button:disabled { cursor:wait; opacity:.65; }
 .detail-row td { padding:0 15px 16px; border-top:0; }
 details { border-top:1px solid var(--line); padding-top:12px; }
 summary { cursor:pointer; color:var(--navy); font-size:13px; font-weight:750; }
