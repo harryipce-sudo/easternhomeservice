@@ -34,6 +34,7 @@ function normaliseInvoice(row) {
     invoiceNumber: job.invoiceNumber || "",
     invoiceDate: job.invoiceDate || "",
     payment: job.payment || "unpaid",
+    paymentDate: job.paymentDate || "",
     detail: job.detail || "",
     amount: Number(job.quote) || Number(row.total_quote) || 0,
     referralFee: referralFee(job),
@@ -57,14 +58,16 @@ module.exports = async (req, res) => {
     const token = (settings?.payload?.job?.clientPortalTokens || []).find((entry) => matchesAccessCode(hashAccessCode(accessCode), entry?.tokenHash));
     if (!token?.clientName) return res.status(404).json({ error: "This invoice link is unavailable." });
 
-    const invoices = rows
-      .filter((row) => row?.customer_name === token.clientName && !row?.payload?.job?.archived && row?.payload?.job?.status === "invoiced" && row?.payload?.job?.payment !== "paid")
+    const clientInvoices = rows
+      .filter((row) => row?.customer_name === token.clientName && !row?.payload?.job?.archived && row?.payload?.job?.status === "invoiced")
       .map(normaliseInvoice)
       .sort((a, b) => String(b.invoiceDate).localeCompare(String(a.invoiceDate)) || String(b.invoiceNumber).localeCompare(String(a.invoiceNumber)));
+    const invoices = clientInvoices.filter((invoice) => invoice.payment !== "paid");
+    const paidReferrals = clientInvoices.filter((invoice) => invoice.payment === "paid" && invoice.referralFee > 0);
 
     const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-    const totalReferralFee = invoices.reduce((sum, invoice) => sum + invoice.referralFee, 0);
-    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, totalReferralFee });
+    const totalReferralFee = paidReferrals.reduce((sum, invoice) => sum + invoice.referralFee, 0);
+    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, paidReferrals, totalReferralFee });
   } catch {
     return res.status(500).json({ error: "Unable to load invoices." });
   }
