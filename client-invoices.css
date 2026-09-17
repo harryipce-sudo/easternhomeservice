@@ -8,14 +8,21 @@ body { margin:0; min-width:320px; background:var(--soft); color:var(--ink); font
 .portal-intro { padding:22px 0 18px; border-top:1px solid var(--line); }
 h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; }
 .portal-intro p,.portal-help { margin:0; color:var(--muted); font-size:14px; line-height:1.55; }
+.invoice-totals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; margin:0 0 18px; overflow:hidden; border:1px solid var(--line); background:var(--line); }
+.invoice-totals article { display:grid; gap:5px; padding:17px 18px; background:#fff; }
+.invoice-totals span { color:var(--muted); font-size:12px; font-weight:750; text-transform:uppercase; letter-spacing:.035em; }
+.invoice-totals strong { color:var(--ink); font-size:22px; letter-spacing:-.025em; }
+.invoice-totals small { color:var(--muted); font-size:12px; }
+.invoice-totals .referral-total strong { color:var(--navy); }
 .invoice-table-frame { overflow-x:auto; border:1px solid var(--line); background:#fff; }
-.invoice-table { width:100%; min-width:760px; border-collapse:collapse; font-size:14px; }
+.invoice-table { width:100%; min-width:900px; border-collapse:collapse; font-size:14px; }
 .invoice-table th { padding:13px 15px; background:var(--header); color:#172338; font-size:13px; font-weight:750; text-align:left; white-space:nowrap; }
 .invoice-table td { padding:15px; border-top:1px solid var(--line); vertical-align:top; }
 .invoice-table td:last-child,.invoice-table th:last-child { text-align:right; }
 .invoice-number { color:var(--navy); font-weight:800; white-space:nowrap; }
 .invoice-address { max-width:400px; font-weight:650; line-height:1.4; }
 .invoice-date { color:var(--muted); white-space:nowrap; }
+.invoice-referral { color:var(--ink); font-weight:700; white-space:nowrap; text-align:right; }
 .invoice-amount { color:var(--navy); font-size:15px; font-weight:800; white-space:nowrap; }
 .detail-row td { padding:0 15px 16px; border-top:0; }
 details { border-top:1px solid var(--line); padding-top:12px; }
@@ -23,4 +30,5 @@ summary { cursor:pointer; color:var(--navy); font-size:13px; font-weight:750; }
 .invoice-detail { margin:10px 0 0; max-width:760px; color:var(--ink); font-size:14px; line-height:1.55; white-space:pre-line; }
 .empty,.error { margin:0; padding:28px; color:var(--muted); text-align:center; }
 .portal-help { margin-top:20px; }
+@media (max-width:700px) { .invoice-totals { grid-template-columns:1fr; } }
 @media (max-width:600px) { .portal-shell { width:min(100% - 24px,1200px); padding-top:18px; } .portal-header { align-items:flex-start; flex-direction:column; gap:9px; } h1 { font-size:27px; } }

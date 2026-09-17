@@ -18,6 +18,15 @@ function matchesAccessCode(actual, expected) {
   return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
 }
 
+function referralFee(job) {
+  const invoiceAmount = Number(job.quote) || 0;
+  const markupPercentage = Number(job.markup) || 0;
+  const amountExGst = markupPercentage > 0
+    ? invoiceAmount / 1.1 - (invoiceAmount / 1.1) / (1 + markupPercentage / 100)
+    : 0;
+  return Math.round((amountExGst * 1.1 + Number.EPSILON) * 100) / 100;
+}
+
 function normaliseInvoice(row) {
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
   const job = payload.job && typeof payload.job === "object" ? payload.job : {};
@@ -27,6 +36,7 @@ function normaliseInvoice(row) {
     payment: job.payment || "unpaid",
     detail: job.detail || "",
     amount: Number(job.quote) || Number(row.total_quote) || 0,
+    referralFee: referralFee(job),
     address: row.address || ""
   };
 }
@@ -53,7 +63,8 @@ module.exports = async (req, res) => {
       .sort((a, b) => String(b.invoiceDate).localeCompare(String(a.invoiceDate)) || String(b.invoiceNumber).localeCompare(String(a.invoiceNumber)));
 
     const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount });
+    const totalReferralFee = invoices.reduce((sum, invoice) => sum + invoice.referralFee, 0);
+    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, totalReferralFee });
   } catch {
     return res.status(500).json({ error: "Unable to load invoices." });
   }
