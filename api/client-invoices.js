@@ -37,6 +37,7 @@ function normaliseInvoice(row) {
     paymentDate: job.paymentDate || "",
     detail: job.detail || "",
     amount: Number(job.quote) || Number(row.total_quote) || 0,
+    referralPercentage: Number(job.markup) || 0,
     referralFee: referralFee(job),
     address: row.address || ""
   };
@@ -63,11 +64,11 @@ module.exports = async (req, res) => {
       .map(normaliseInvoice)
       .sort((a, b) => String(b.invoiceDate).localeCompare(String(a.invoiceDate)) || String(b.invoiceNumber).localeCompare(String(a.invoiceNumber)));
     const invoices = clientInvoices.filter((invoice) => invoice.payment !== "paid");
-    const paidReferrals = clientInvoices.filter((invoice) => invoice.payment === "paid" && invoice.referralFee > 0);
+    const paidInvoices = clientInvoices.filter((invoice) => invoice.payment === "paid");
 
     const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-    const totalReferralFee = paidReferrals.reduce((sum, invoice) => sum + invoice.referralFee, 0);
-    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, paidReferrals, totalReferralFee });
+    const totalReferralFee = paidInvoices.reduce((sum, invoice) => sum + invoice.referralFee, 0);
+    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, paidInvoices, totalReferralFee });
   } catch {
     return res.status(500).json({ error: "Unable to load invoices." });
   }

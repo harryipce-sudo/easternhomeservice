@@ -25,15 +25,16 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .invoice-date { color:var(--muted); white-space:nowrap; }
 .invoice-amount { color:var(--navy); font-size:15px; font-weight:800; white-space:nowrap; }
 .paid-status { color:#247043; font-weight:800; white-space:nowrap; }
+.referral-percentage { font-weight:700; text-align:right; white-space:nowrap; }
 .detail-row td { padding:0 15px 16px; border-top:0; }
 details { border-top:1px solid var(--line); padding-top:12px; }
 summary { cursor:pointer; color:var(--navy); font-size:13px; font-weight:750; }
 .invoice-detail { margin:10px 0 0; max-width:760px; color:var(--ink); font-size:14px; line-height:1.55; white-space:pre-line; }
 .empty,.error { margin:0; padding:28px; color:var(--muted); text-align:center; }
-.paid-referral-section { margin-top:30px; }
-.paid-referral-heading { margin:0 0 12px; }
-.paid-referral-heading h2 { margin:0 0 4px; color:var(--navy); font-size:20px; letter-spacing:-.015em; }
-.paid-referral-heading p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+.paid-invoice-section { margin-top:30px; }
+.paid-invoice-heading { margin:0 0 12px; }
+.paid-invoice-heading h2 { margin:0 0 4px; color:var(--navy); font-size:20px; letter-spacing:-.015em; }
+.paid-invoice-heading p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
 .portal-help { margin-top:20px; }
 @media (max-width:700px) { .invoice-totals { grid-template-columns:1fr; } }
 @media (max-width:600px) { .portal-shell { width:min(100% - 24px,1200px); padding-top:18px; } .portal-header { align-items:flex-start; flex-direction:column; gap:9px; } h1 { font-size:27px; } }
