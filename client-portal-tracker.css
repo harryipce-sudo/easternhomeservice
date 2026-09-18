@@ -1,0 +1,22 @@
+.client-portal-totals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; margin:0 0 12px; overflow:hidden; border:1px solid var(--line); background:var(--line); max-width:700px; }
+.client-portal-totals article { display:grid; gap:5px; padding:17px 18px; background:#fff; }
+.client-portal-totals span { color:var(--muted); font-size:12px; font-weight:750; text-transform:uppercase; letter-spacing:.035em; }
+.client-portal-totals strong { color:var(--ink); font-size:22px; letter-spacing:-.025em; }
+.client-portal-totals small, .client-portal-meta { color:var(--muted); font-size:12px; }
+.client-portal-totals .referral-total strong { color:var(--navy); }
+.client-portal-meta { margin:0 0 18px; }
+.client-portal-frame { border-radius:0; }
+.client-portal-table { min-width:1180px; }
+.client-portal-table th { font-size:13px; }
+.client-portal-table td { padding:15px; }
+.client-portal-table tbody tr { cursor:default; }
+.client-portal-address { font-weight:650; line-height:1.4; max-width:330px; }
+.client-portal-reported { display:grid; gap:3px; color:#247043; font-size:12px; line-height:1.35; min-width:150px; }
+.client-portal-reported small { color:var(--muted); font-size:12px; }
+.client-portal-unpaid { color:var(--muted); font-size:12px; }
+.client-portal-detail-row:hover { background:#fff; }
+.client-portal-detail-row td { padding:0 15px 16px; border-top:0; }
+.client-portal-detail-row details { border-top:1px solid var(--line); padding-top:12px; }
+.client-portal-detail-row summary { cursor:pointer; color:var(--blue); font-size:13px; font-weight:700; }
+.client-portal-detail-row p { margin:10px 0 0; max-width:760px; color:#516074; font-size:14px; line-height:1.55; white-space:pre-line; }
+@media (max-width:960px) { .client-portal-totals { grid-template-columns:1fr; } }
