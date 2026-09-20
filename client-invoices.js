@@ -33,6 +33,14 @@ async function loadInvoices() {
 
 loadInvoices().catch((error) => { copy.textContent = ""; document.querySelector("#invoice-totals").innerHTML = ""; paidInvoiceSection.hidden = true; list.innerHTML = `<p class="error">${escapeHtml(error.message || "This invoice link is unavailable.")}</p>`; });
 
+const hasClientPaymentDraft = () => [...document.querySelectorAll("[data-client-paid-date], [data-client-payment-note]")].some((field) => String(field.value || "").trim());
+const syncClientPortal = () => {
+  if (document.hidden || hasClientPaymentDraft()) return;
+  loadInvoices().catch(() => {});
+};
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncClientPortal(); });
+window.setInterval(syncClientPortal, 30000);
+
 document.addEventListener("click", (event) => {
   const unpaidButton = event.target.closest("[data-client-unpaid]");
   if (unpaidButton) {
