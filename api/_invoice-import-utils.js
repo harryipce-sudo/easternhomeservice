@@ -63,8 +63,9 @@ function extractInvoice(text) {
   let description = lineItems.join(" ");
   let quantity = 1;
   let unitPrice = subtotal;
+  const itemCount = (description.match(/(?:10%\s*GST|\bGST\b)/gi) || []).length;
   const quantityIndex = lineItems.findIndex((line) => /^\d+(?:\.\d+)?$/.test(line));
-  if (quantityIndex > 0 && /^\d+(?:\.\d+)?$/.test(lineItems[quantityIndex + 1] || "")) {
+  if (itemCount <= 1 && quantityIndex > 0 && /^[\d,]+(?:\.\d+)?$/.test(lineItems[quantityIndex + 1] || "")) {
     description = lineItems.slice(0, quantityIndex).join(" ");
     quantity = Number(lineItems[quantityIndex]) || 1;
     unitPrice = money(lineItems[quantityIndex + 1]) || subtotal;
@@ -90,6 +91,11 @@ function extractInvoice(text) {
   if (!subtotal || !total) warnings.push("One or more totals could not be read.");
   if (subtotal && gst && total && Math.abs(subtotal + gst - total) > 0.01) warnings.push("Subtotal, GST and total do not match. Please review the amounts.");
   if (!description) warnings.push("Service description could not be read.");
+  if (itemCount > 1 || (subtotal && unitPrice && Math.abs(quantity * unitPrice - subtotal) > 0.01)) {
+    quantity = 1;
+    unitPrice = subtotal;
+    warnings.push("Multiple line items were combined. Please review the service details before saving.");
+  }
   return { invoiceNumber, client:"", address, invoiceDate, dueDate, termsDays, description, quantity, unitPrice, subtotal, gst, total, note, warnings };
 }
 
