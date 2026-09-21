@@ -117,9 +117,9 @@ async function readJsonBody(req) {
 }
 
 async function ensureDocumentBucket(config) {
-  const existing = await supabaseFetch(config, `/storage/v1/bucket/${DOCUMENT_BUCKET}`);
-  if (existing.ok) return;
-  if (existing.status !== 404) throw new Error("Unable to prepare private invoice storage.");
+  // Supabase Storage reports a missing bucket as either 400 or 404 depending
+  // on the project version. Creating idempotently and accepting 409 means
+  // both a new bucket and an already-existing bucket work reliably.
   const created = await supabaseFetch(config, "/storage/v1/bucket", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ id:DOCUMENT_BUCKET, name:DOCUMENT_BUCKET, public:false, file_size_limit:MAX_PDF_BYTES, allowed_mime_types:["application/pdf"] }) });
   if (!created.ok && created.status !== 409) throw new Error("Unable to prepare private invoice storage.");
 }
