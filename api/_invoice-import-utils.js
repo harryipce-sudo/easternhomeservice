@@ -7,8 +7,10 @@ function getSupabaseConfig() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
   if (!supabaseUrl || !serverKey) return null;
-  const headers = { apikey: serverKey };
-  if (!serverKey.startsWith("sb_secret_")) headers.Authorization = `Bearer ${serverKey}`;
+  // Storage operations need an Authorization bearer token as well as the API
+  // key. New Supabase secret keys use the `sb_secret_` format, but they still
+  // need to be sent in both headers for the Storage API.
+  const headers = { apikey: serverKey, Authorization: `Bearer ${serverKey}` };
   return { supabaseUrl, headers };
 }
 
