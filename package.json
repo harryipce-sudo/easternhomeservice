@@ -1,0 +1,8 @@
+{
+  "name": "eastern-home-service-tracker",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "pdfjs-dist": "6.3.289"
+  }
+}

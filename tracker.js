@@ -479,7 +479,7 @@ function renderQuotes() {
   const filterLabel = { pending:"Pending for invoice", unpaid:"Unpaid invoices", paid:"Paid invoices", "unpaid-referral":"Unpaid referral payable", "paid-referral":"Paid referral payable" }[state.invoiceFilter];
   const periodLabel = [state.invoiceFY, state.invoiceQuarter ? `Q${state.invoiceQuarter}` : ""].filter(Boolean).join(" · ");
   $("#invoice-filter-note").innerHTML = periodLabel || filterLabel ? `Showing <strong>${escapeHtml(periodLabel || "All financial years")}</strong>${filterLabel ? ` · <strong>${escapeHtml(filterLabel)}</strong>` : ""} · <button type="button" data-invoice-filter="all">Clear filters</button>` : "";
-  $("#invoices-body").innerHTML = filteredInvoices.map((record) => { const pending = record.job.status === "completed"; const key = invoiceKey(record.job.invoiceNumber); const issue = pending ? "" : reviewIssue(record); const issueClass = pending ? "" : !key ? "invoice-review-missing" : invoiceCounts.get(key) > 1 ? "invoice-review-duplicate" : issue ? "invoice-review-odoo" : ""; return `<tr class="${issueClass}" data-id="${escapeHtml(record.id)}"><td>${escapeHtml(pending ? "Pending" : record.job.invoiceNumber || "—")}${issue ? `<span class="invoice-review-badge">${escapeHtml(issue)}</span>` : ""}</td><td>${escapeHtml(record.customerName || "—")}</td><td>${escapeHtml(record.address)}</td><td>${escapeHtml(record.job.invoiceDate || "—")}</td><td>${escapeHtml(record.job.payment === "paid" ? record.job.paymentDate || "—" : "—")}</td><td>${pending ? tag("pending") : paymentButton(record)}</td><td>${referralPayable(record) > 0 ? currency(referralPayable(record)) : "—"}</td><td>${currency(record.job.quote)}</td></tr>`; }).join("") || `<tr><td colspan="8">No matching invoices.</td></tr>`;
+  $("#invoices-body").innerHTML = filteredInvoices.map((record) => { const pending = record.job.status === "completed"; const key = invoiceKey(record.job.invoiceNumber); const issue = pending ? "" : reviewIssue(record); const issueClass = pending ? "" : !key ? "invoice-review-missing" : invoiceCounts.get(key) > 1 ? "invoice-review-duplicate" : issue ? "invoice-review-odoo" : ""; const sourceId = record.job.invoice?.sourceDocument?.importId; const documentLink = sourceId ? `<br><a href="./api/invoice-documents/${encodeURIComponent(sourceId)}" target="_blank" rel="noopener" data-source-document>View original PDF</a>` : ""; return `<tr class="${issueClass}" data-id="${escapeHtml(record.id)}"><td>${escapeHtml(pending ? "Pending" : record.job.invoiceNumber || "—")}${documentLink}${issue ? `<span class="invoice-review-badge">${escapeHtml(issue)}</span>` : ""}</td><td>${escapeHtml(record.customerName || "—")}</td><td>${escapeHtml(record.address)}</td><td>${escapeHtml(record.job.invoiceDate || "—")}</td><td>${escapeHtml(record.job.payment === "paid" ? record.job.paymentDate || "—" : "—")}</td><td>${pending ? tag("pending") : paymentButton(record)}</td><td>${referralPayable(record) > 0 ? currency(referralPayable(record)) : "—"}</td><td>${currency(record.job.quote)}</td></tr>`; }).join("") || `<tr><td colspan="8">No matching invoices.</td></tr>`;
 }
 function setView(view) { const labels = { jobs:["Job Board","All work in one shared job register."],calendar:["Calendar","Scheduled jobs from the shared register."],clients:["Clients","All clients from saved quotes."],invoices:["Invoices","Completed or invoiced jobs from the shared register."],"client-portal":["Client portal","BRW Group read-only invoice view and referral summary."],accounting:["Accounting","Income, expenses and outstanding invoices by financial year."],profit:["Profit Summary","Paid income, referral payable and operating expenses by financial year."],archive:["Archive","Archived cards are kept here until you restore them."],settings:["Settings","Shared tracker settings."] }; if (!labels[view]) view = "jobs"; state.view = view; try { localStorage.setItem("tracker-view", view); } catch {} document.querySelectorAll(".nav-link[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view)); document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active", section.id === `view-${view}`)); $("#page-title").textContent = labels[view][0]; $("#page-description").textContent = labels[view][1]; $("#add-job").style.display = view === "jobs" ? "inline-block" : "none"; if (view === "invoices") renderQuotes(); if (view === "client-portal") renderClientPortal(); if (view === "archive") renderArchive(); if (view === "profit") renderProfit(); if (view === "accounting") renderAccounting(); }
 document.addEventListener("DOMContentLoaded", () => { $("#search").addEventListener("input", (e) => { state.search = e.target.value; render(); }); $("#sort").addEventListener("change", (e) => { state.sort=e.target.value; render(); }); $("#jobs-body").addEventListener("click", (e) => { const row=e.target.closest("tr[data-id]"); if(row) openDrawer(state.records.find((record)=>record.id===row.dataset.id)); }); $("#invoices-body").addEventListener("click", (e) => { const control = e.target.closest("[data-payment-toggle]"); if (control) togglePayment(control.dataset.paymentToggle); }); $("#invoice-summary").addEventListener("click", (e) => { const control = e.target.closest("[data-invoice-filter]"); if (!control) return; state.invoiceFilter = state.invoiceFilter === control.dataset.invoiceFilter ? "all" : control.dataset.invoiceFilter; renderQuotes(); }); $("#invoice-filter-note").addEventListener("click", (e) => { if (e.target.closest("[data-invoice-filter='all']")) { state.invoiceFilter = "all"; state.invoiceFY = ""; state.invoiceQuarter = ""; renderQuotes(); } }); $("#invoice-fy").addEventListener("change", (e) => { state.invoiceFY = e.target.value; renderQuotes(); }); $("#invoice-quarter").addEventListener("change", (e) => { state.invoiceQuarter = e.target.value; renderQuotes(); }); $("#archive-body").addEventListener("click", (e) => { const deleteControl = e.target.closest("[data-delete-card]"); const restoreControl = e.target.closest("[data-restore-card]"); if (deleteControl) permanentlyDeleteArchivedJob(deleteControl.dataset.deleteCard); else if (restoreControl) restoreJob(restoreControl.dataset.restoreCard); }); $("#payment-date-cancel").addEventListener("click",closePaymentDateModal); $("#payment-date-skip").addEventListener("click",()=>{ const id = state.paymentRecordId; closePaymentDateModal(); if (id) setPayment(id,"paid",""); }); $("#payment-date-save").addEventListener("click",()=>{ const id = state.paymentRecordId; const date = $("#payment-date").value; closePaymentDateModal(); if (id) setPayment(id,"paid",date); }); $("#add-job").addEventListener("click",()=>openDrawer()); $("#close-drawer").addEventListener("click",closeDrawer); $("#cancel-edit").addEventListener("click",closeDrawer); $("#job-form").addEventListener("submit",saveJob); $("#job-quote").addEventListener("input", updateMarkupAmount); $("#job-markup").addEventListener("input", updateMarkupAmount); $("#job-markup-amount").addEventListener("input", updateMarkupPercentage); $("#refresh-button").addEventListener("click",loadRecords); $("#sidebar-toggle").addEventListener("click", () => { const open = document.body.classList.toggle("sidebar-open"); $("#sidebar-toggle").setAttribute("aria-expanded", String(open)); $("#sidebar-toggle").setAttribute("aria-label", open ? "Hide sidebar" : "Show sidebar"); $("#sidebar-toggle").textContent = open ? "‹" : "›"; }); document.querySelectorAll(".nav-link[data-view]").forEach((button)=>button.addEventListener("click",()=>{ setView(button.dataset.view); loadRecords(); })); document.addEventListener("visibilitychange", () => { if (!document.hidden) loadRecords(); }); setView(state.view); loadRecords(); window.setInterval(loadRecords, 30000); });
@@ -607,6 +607,97 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeCardMenu(); });
   $("#job-board").addEventListener("click", (event) => { const add = event.target.closest("[data-new-job-stage]"); if (add) { openDrawer(null, add.dataset.newJobStage); return; } const card = event.target.closest(".board-card[data-job-id]"); if (card) openDrawer(state.records.find((record) => record.id === card.dataset.jobId)); });
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = $("#invoice-import-modal");
+  const fileInput = $("#invoice-import-file");
+  const dropzone = $("#invoice-import-dropzone");
+  const review = $("#invoice-import-review");
+  const status = $("#invoice-import-status");
+  const warning = $("#invoice-import-warning");
+  const save = $("#invoice-import-save");
+  let sourceDocument = null;
+  let hasDuplicate = false;
+  let extractionWarnings = [];
+
+  const fields = ["client", "address", "number", "date", "due-date", "terms", "description", "quantity", "unit-price", "subtotal", "gst", "total", "note"];
+  const field = (name) => $(`#import-${name}`);
+  const setStatus = (message, type = "") => { status.textContent = message; status.className = `invoice-import-status ${type}`; };
+  const resetImport = () => {
+    sourceDocument = null; hasDuplicate = false; extractionWarnings = []; fileInput.value = ""; review.reset(); review.hidden = true; save.disabled = true; warning.textContent = ""; $("#invoice-import-file-name").textContent = ""; setStatus("");
+  };
+  const close = () => { modal.classList.remove("open"); resetImport(); };
+  const open = () => { resetImport(); modal.classList.add("open"); };
+  const numeric = (name) => Math.max(0, Number(field(name).value) || 0);
+  const refreshReviewWarning = () => {
+    const subtotal = numeric("subtotal"); const gst = numeric("gst"); const total = numeric("total");
+    const warnings = extractionWarnings.filter((item) => !(item === "Enter the client name before saving." && field("client").value.trim()));
+    if (subtotal + gst && Math.abs(subtotal + gst - total) > 0.01) warnings.push("Subtotal + GST must equal the total before saving.");
+    warning.innerHTML = warnings.map((item) => escapeHtml(item)).join("<br>");
+    save.disabled = hasDuplicate || !sourceDocument;
+  };
+  const populate = (data, filename) => {
+    const values = data.fields || {};
+    field("client").value = values.client || "";
+    field("address").value = values.address || "";
+    field("number").value = values.invoiceNumber || "";
+    field("date").value = values.invoiceDate || "";
+    field("due-date").value = values.dueDate || "";
+    field("terms").value = Number.isFinite(Number(values.termsDays)) ? values.termsDays : 30;
+    field("description").value = values.description || "";
+    field("quantity").value = values.quantity || 1;
+    field("unit-price").value = Number(values.unitPrice || 0).toFixed(2);
+    field("subtotal").value = Number(values.subtotal || 0).toFixed(2);
+    field("gst").value = Number(values.gst || 0).toFixed(2);
+    field("total").value = Number(values.total || 0).toFixed(2);
+    field("note").value = values.note || "";
+    sourceDocument = data.sourceDocument;
+    hasDuplicate = Boolean(data.duplicate);
+    extractionWarnings = values.warnings || [];
+    $("#invoice-import-file-name").textContent = `Original PDF stored: ${filename}`;
+    review.hidden = false;
+    refreshReviewWarning();
+    setStatus(data.duplicate ? "Duplicate invoice number found. Review the number; saving is blocked." : "Invoice text extracted. Review the fields before saving.", data.duplicate ? "error" : "success");
+  };
+  const importFile = async (file) => {
+    if (!file) return;
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) { setStatus("Please choose an Odoo PDF invoice.", "error"); return; }
+    if (file.size > 6 * 1024 * 1024) { setStatus("This PDF is larger than 6 MB.", "error"); return; }
+    resetImport();
+    setStatus("Reading Odoo invoice…");
+    try {
+      const response = await fetch("./api/invoice-imports", { method:"POST", headers:{ "Content-Type":"application/pdf" }, body:file });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to read this invoice.");
+      populate(data, file.name);
+    } catch (error) { setStatus(error.message || "Unable to read this invoice.", "error"); }
+  };
+  $("#invoice-import-open").addEventListener("click", open);
+  $("#invoice-import-close").addEventListener("click", close);
+  $("#invoice-import-cancel").addEventListener("click", close);
+  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInput.click(); } });
+  fileInput.addEventListener("change", () => importFile(fileInput.files[0]));
+  ["dragenter", "dragover"].forEach((eventName) => dropzone.addEventListener(eventName, (event) => { event.preventDefault(); dropzone.classList.add("dragging"); }));
+  ["dragleave", "drop"].forEach((eventName) => dropzone.addEventListener(eventName, (event) => { event.preventDefault(); dropzone.classList.remove("dragging"); }));
+  dropzone.addEventListener("drop", (event) => importFile(event.dataTransfer.files[0]));
+  fields.forEach((name) => field(name).addEventListener("input", refreshReviewWarning));
+  review.addEventListener("submit", (event) => event.preventDefault());
+  save.addEventListener("click", async () => {
+    if (!review.reportValidity() || !sourceDocument || hasDuplicate) return;
+    const subtotal = numeric("subtotal"); const gst = numeric("gst"); const total = numeric("total");
+    if (Math.abs(subtotal + gst - total) > 0.01) { refreshReviewWarning(); return; }
+    const payload = { sourceDocument, fields:{ invoiceNumber:field("number").value.trim(), client:field("client").value.trim(), address:field("address").value.trim(), invoiceDate:field("date").value, dueDate:field("due-date").value, termsDays:numeric("terms"), description:field("description").value.trim(), quantity:Number(field("quantity").value), unitPrice:numeric("unit-price"), subtotal, gst, total, note:field("note").value.trim() } };
+    save.disabled = true; setStatus("Creating tracker invoice…");
+    try {
+      const response = await fetch(`./api/invoice-imports/${encodeURIComponent(sourceDocument.importId)}/commit`, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to create the tracker invoice.");
+      setStatus("Tracker invoice created.", "success");
+      await loadRecords(); setView("invoices"); window.setTimeout(close, 500);
+    } catch (error) { setStatus(error.message || "Unable to create the tracker invoice.", "error"); save.disabled = false; }
+  });
+});
 document.addEventListener("DOMContentLoaded", () => {
   $("#profit-fy").addEventListener("change", (event) => { state.profitFY = event.target.value; renderProfit(); });
   $("#accounting-fy").addEventListener("change", (event) => { state.accountingFY = event.target.value; renderAccounting(); });
@@ -618,7 +709,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Opening an invoice row shows the same job detail drawer used by the Jobs page.
   $("#invoices-body").addEventListener("click", (event) => {
-    if (event.target.closest("[data-payment-toggle]")) return;
+    if (event.target.closest("[data-payment-toggle], [data-source-document]")) return;
     const row = event.target.closest("tr[data-id]");
     if (row) openDrawer(state.records.find((record) => record.id === row.dataset.id));
   });
