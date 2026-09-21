@@ -619,12 +619,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let sourceDocument = null;
   let hasDuplicate = false;
   let extractionWarnings = [];
+  let importedLineItems = [];
 
   const fields = ["client", "address", "number", "date", "due-date", "terms", "description", "quantity", "unit-price", "subtotal", "gst", "total", "note"];
   const field = (name) => $(`#import-${name}`);
   const setStatus = (message, type = "") => { status.textContent = message; status.className = `invoice-import-status ${type}`; };
   const resetImport = () => {
-    sourceDocument = null; hasDuplicate = false; extractionWarnings = []; fileInput.value = ""; review.reset(); review.hidden = true; save.disabled = true; warning.textContent = ""; $("#invoice-import-file-name").textContent = ""; setStatus("");
+    sourceDocument = null; hasDuplicate = false; extractionWarnings = []; importedLineItems = []; fileInput.value = ""; review.reset(); review.hidden = true; save.disabled = true; warning.textContent = ""; $("#invoice-import-file-name").textContent = ""; $("#import-line-items").hidden = true; $("#import-line-items-body").innerHTML = ""; setStatus("");
   };
   const close = () => { modal.classList.remove("open"); resetImport(); };
   const open = () => { resetImport(); modal.classList.add("open"); };
@@ -651,6 +652,9 @@ document.addEventListener("DOMContentLoaded", () => {
     field("gst").value = Number(values.gst || 0).toFixed(2);
     field("total").value = Number(values.total || 0).toFixed(2);
     field("note").value = values.note || "";
+    importedLineItems = Array.isArray(values.lineItems) ? values.lineItems : [];
+    $("#import-line-items-body").innerHTML = importedLineItems.map((item) => `<tr><td>${escapeHtml(item.description || "—")}</td><td>${Number(item.quantity || 0).toFixed(2)}</td><td>${currency(item.unitPrice || 0)}</td><td>${currency(item.amount || 0)}</td></tr>`).join("");
+    $("#import-line-items").hidden = !importedLineItems.length;
     sourceDocument = data.sourceDocument;
     hasDuplicate = Boolean(data.duplicate);
     extractionWarnings = values.warnings || [];
@@ -687,7 +691,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!review.reportValidity() || !sourceDocument || hasDuplicate) return;
     const subtotal = numeric("subtotal"); const gst = numeric("gst"); const total = numeric("total");
     if (Math.abs(subtotal + gst - total) > 0.01) { refreshReviewWarning(); return; }
-    const payload = { sourceDocument, fields:{ invoiceNumber:field("number").value.trim(), client:field("client").value.trim(), address:field("address").value.trim(), invoiceDate:field("date").value, dueDate:field("due-date").value, termsDays:numeric("terms"), description:field("description").value.trim(), quantity:Number(field("quantity").value), unitPrice:numeric("unit-price"), subtotal, gst, total, note:field("note").value.trim() } };
+    const payload = { sourceDocument, fields:{ invoiceNumber:field("number").value.trim(), client:field("client").value.trim(), address:field("address").value.trim(), invoiceDate:field("date").value, dueDate:field("due-date").value, termsDays:numeric("terms"), description:field("description").value.trim(), lineItems:importedLineItems, quantity:Number(field("quantity").value), unitPrice:numeric("unit-price"), subtotal, gst, total, note:field("note").value.trim() } };
     save.disabled = true; setStatus("Creating tracker invoice…");
     try {
       const response = await fetch(`./api/invoice-imports/${encodeURIComponent(sourceDocument.importId)}/commit`, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });

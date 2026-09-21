@@ -23,6 +23,7 @@ module.exports = async (req, res) => {
     if (rows.some((row) => invoiceKey(row?.payload?.job?.invoiceNumber) === invoiceKey(invoiceNumber))) return res.status(409).json({ error:"That invoice number already exists in the tracker." });
     const quantity = Math.max(0.01, Number(fields.quantity) || 1);
     const unitPrice = money(fields.unitPrice) || Number((subtotal / quantity).toFixed(2));
+    const lineItems = Array.isArray(fields.lineItems) ? fields.lineItems.map((item) => ({ description:String(item?.description || "").trim(), quantity:Math.max(0.01, Number(item?.quantity) || 1), unitPrice:money(item?.unitPrice), amount:money(item?.amount) })).filter((item) => item.description) : [];
     const now = new Date().toISOString();
     const recordId = crypto.randomUUID();
     const record = {
@@ -38,7 +39,7 @@ module.exports = async (req, res) => {
       blind_count:0,
       curtain_count:0,
       sheer_count:0,
-      payload:{ submittedAt:now, recordType:"service-invoice", sector:"Service", jobStage:"invoiced", job:{ number:"", detail:String(fields.description || "").trim(), quote:total, markup:0, markupStatus:"not-recorded", status:"invoiced", payment:"unpaid", paymentDate:"", referral:"pending", invoiceNumber, invoiceDate, scheduledDate:"", boardOrder:-Date.now(), invoice:{ number:invoiceNumber, date:invoiceDate, dueDate:validDate(fields.dueDate) ? fields.dueDate : "", termsDays:Math.max(0, Number(fields.termsDays) || 0), client, address:String(fields.address || "").trim(), description:String(fields.description || "").trim(), quantity, unitPrice, subtotal, gst, total, note:String(fields.note || "").trim(), status:"issued", sourceDocument:{ importId:sourceDocument.importId, bucket:sourceDocument.bucket || "invoice-documents", path:sourceDocument.path, checksum:sourceDocument.checksum, importedAt:now } }, archived:false, groupKey:"" } }
+      payload:{ submittedAt:now, recordType:"service-invoice", sector:"Service", jobStage:"invoiced", job:{ number:"", detail:String(fields.description || "").trim(), quote:total, markup:0, markupStatus:"not-recorded", status:"invoiced", payment:"unpaid", paymentDate:"", referral:"pending", invoiceNumber, invoiceDate, scheduledDate:"", boardOrder:-Date.now(), invoice:{ number:invoiceNumber, date:invoiceDate, dueDate:validDate(fields.dueDate) ? fields.dueDate : "", termsDays:Math.max(0, Number(fields.termsDays) || 0), client, address:String(fields.address || "").trim(), description:String(fields.description || "").trim(), lineItems, quantity, unitPrice, subtotal, gst, total, note:String(fields.note || "").trim(), status:"issued", sourceDocument:{ importId:sourceDocument.importId, bucket:sourceDocument.bucket || "invoice-documents", path:sourceDocument.path, checksum:sourceDocument.checksum, importedAt:now } }, archived:false, groupKey:"" } }
     };
     const response = await supabaseFetch(config, "/rest/v1/quote_records", { method:"POST", headers:{ "Content-Type":"application/json", Prefer:"return=representation" }, body:JSON.stringify(record) });
     if (!response.ok) throw new Error("Unable to create the tracker invoice.");

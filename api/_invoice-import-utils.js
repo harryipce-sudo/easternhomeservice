@@ -60,12 +60,31 @@ function extractInvoice(text) {
   const detailsStart = lines.findIndex((line) => /^Description/i.test(line) && /Quantity/i.test(line));
   const paymentTermsIndex = lines.findIndex((line) => /^Payment terms:/i.test(line));
   const lineItems = detailsStart >= 0 && paymentTermsIndex > detailsStart ? lines.slice(detailsStart + 1, paymentTermsIndex) : [];
-  let description = lineItems.join(" ");
+  const lineItemText = lineItems.join("\n");
+  // Odoo's selectable-PDF text keeps each table row in reading order. Match
+  // the four numeric columns and retain only the text that precedes them as
+  // the service description. This prevents quantity, tax and dollar values
+  // from leaking into the Description field.
+  const importedLineItems = [];
+  const itemPattern = /([\s\S]*?)\s+(\d+(?:\.\d+)?)\s+([\d,]+(?:\.\d{2})?)\s+10%\s*GST\s+\$?\s*([\d,]+(?:\.\d{2})?)/gi;
+  let match;
+  while ((match = itemPattern.exec(lineItemText))) {
+    const itemDescription = match[1].replace(/\s+/g, " ").trim();
+    if (!itemDescription) continue;
+    const itemQuantity = Number(match[2]) || 1;
+    const itemUnitPrice = money(match[3]);
+    const itemAmount = money(match[4]) || Number((itemQuantity * itemUnitPrice).toFixed(2));
+    importedLineItems.push({ description:itemDescription, quantity:itemQuantity, unitPrice:itemUnitPrice, amount:itemAmount });
+  }
+  let description = importedLineItems.length ? importedLineItems.map((item) => item.description).join("\n\n") : lineItems.join(" ");
   let quantity = 1;
   let unitPrice = subtotal;
-  const itemCount = (description.match(/(?:10%\s*GST|\bGST\b)/gi) || []).length;
+  const itemCount = importedLineItems.length || (lineItemText.match(/(?:10%\s*GST|\bGST\b)/gi) || []).length;
   const quantityIndex = lineItems.findIndex((line) => /^\d+(?:\.\d+)?$/.test(line));
-  if (itemCount <= 1 && quantityIndex > 0 && /^[\d,]+(?:\.\d+)?$/.test(lineItems[quantityIndex + 1] || "")) {
+  if (importedLineItems.length === 1) {
+    quantity = importedLineItems[0].quantity;
+    unitPrice = importedLineItems[0].unitPrice || subtotal;
+  } else if (!importedLineItems.length && itemCount <= 1 && quantityIndex > 0 && /^[\d,]+(?:\.\d+)?$/.test(lineItems[quantityIndex + 1] || "")) {
     description = lineItems.slice(0, quantityIndex).join(" ");
     quantity = Number(lineItems[quantityIndex]) || 1;
     unitPrice = money(lineItems[quantityIndex + 1]) || subtotal;
@@ -94,9 +113,10 @@ function extractInvoice(text) {
   if (itemCount > 1 || (subtotal && unitPrice && Math.abs(quantity * unitPrice - subtotal) > 0.01)) {
     quantity = 1;
     unitPrice = subtotal;
-    warnings.push("Multiple line items were combined. Please review the service details before saving.");
+    if (importedLineItems.length > 1) warnings.push(`${importedLineItems.length} separate line items were found. Their prices are shown separately below.`);
+    else warnings.push("Multiple line items were combined. Please review the service details before saving.");
   }
-  return { invoiceNumber, client:"", address, invoiceDate, dueDate, termsDays, description, quantity, unitPrice, subtotal, gst, total, note, warnings };
+  return { invoiceNumber, client:"", address, invoiceDate, dueDate, termsDays, description, lineItems:importedLineItems, quantity, unitPrice, subtotal, gst, total, note, warnings };
 }
 
 function invoiceKey(value) {
