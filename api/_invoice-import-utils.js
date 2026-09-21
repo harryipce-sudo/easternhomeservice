@@ -138,6 +138,10 @@ async function allInvoiceRows(config) {
 
 async function extractPdfText(buffer) {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  // PDF.js runs a "fake" worker in Node. Giving it an explicit resolved path
+  // makes Vercel bundle the worker alongside this serverless function instead
+  // of trying to find it relative to the deployed entry file.
+  pdfjs.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
   const document = await pdfjs.getDocument({ data:new Uint8Array(buffer) }).promise;
   const pages = [];
   for (let number = 1; number <= document.numPages; number += 1) {
