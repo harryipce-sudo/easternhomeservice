@@ -621,7 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let extractionWarnings = [];
   let importedLineItems = [];
 
-  const fields = ["client", "address", "number", "date", "due-date", "terms", "description", "quantity", "unit-price", "subtotal", "gst", "total", "note"];
+  const fields = ["client", "address", "number", "date", "due-date", "terms", "description", "quantity", "unit-price", "subtotal", "gst", "total", "referral-percent", "referral-amount", "note"];
   const field = (name) => $(`#import-${name}`);
   const setStatus = (message, type = "") => { status.textContent = message; status.className = `invoice-import-status ${type}`; };
   const resetImport = () => {
@@ -630,6 +630,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const close = () => { modal.classList.remove("open"); resetImport(); };
   const open = () => { resetImport(); modal.classList.add("open"); };
   const numeric = (name) => Math.max(0, Number(field(name).value) || 0);
+  const updateReferralAmount = () => {
+    const subtotal = numeric("subtotal");
+    const percentage = numeric("referral-percent");
+    const amount = percentage > 0 ? subtotal - subtotal / (1 + percentage / 100) : 0;
+    field("referral-amount").value = amount.toFixed(2);
+  };
+  const updateReferralPercentage = () => {
+    const subtotal = numeric("subtotal");
+    const amount = numeric("referral-amount");
+    const percentage = subtotal > amount && amount > 0 ? amount / (subtotal - amount) * 100 : 0;
+    field("referral-percent").value = percentage.toFixed(1);
+  };
   const refreshReviewWarning = () => {
     const subtotal = numeric("subtotal"); const gst = numeric("gst"); const total = numeric("total");
     const warnings = extractionWarnings.filter((item) => !(item === "Enter the client name before saving." && field("client").value.trim()));
@@ -651,6 +663,8 @@ document.addEventListener("DOMContentLoaded", () => {
     field("subtotal").value = Number(values.subtotal || 0).toFixed(2);
     field("gst").value = Number(values.gst || 0).toFixed(2);
     field("total").value = Number(values.total || 0).toFixed(2);
+    field("referral-percent").value = Number(values.referralPercentage || 0).toFixed(1);
+    updateReferralAmount();
     field("note").value = values.note || "";
     importedLineItems = Array.isArray(values.lineItems) ? values.lineItems : [];
     $("#import-line-items-body").innerHTML = importedLineItems.map((item) => `<tr><td>${escapeHtml(item.description || "—")}</td><td>${Number(item.quantity || 0).toFixed(2)}</td><td>${currency(item.unitPrice || 0)}</td><td>${currency(item.amount || 0)}</td></tr>`).join("");
@@ -686,12 +700,15 @@ document.addEventListener("DOMContentLoaded", () => {
   ["dragleave", "drop"].forEach((eventName) => dropzone.addEventListener(eventName, (event) => { event.preventDefault(); dropzone.classList.remove("dragging"); }));
   dropzone.addEventListener("drop", (event) => importFile(event.dataTransfer.files[0]));
   fields.forEach((name) => field(name).addEventListener("input", refreshReviewWarning));
+  field("referral-percent").addEventListener("input", updateReferralAmount);
+  field("referral-amount").addEventListener("input", updateReferralPercentage);
+  field("subtotal").addEventListener("input", updateReferralAmount);
   review.addEventListener("submit", (event) => event.preventDefault());
   save.addEventListener("click", async () => {
     if (!review.reportValidity() || !sourceDocument || hasDuplicate) return;
     const subtotal = numeric("subtotal"); const gst = numeric("gst"); const total = numeric("total");
     if (Math.abs(subtotal + gst - total) > 0.01) { refreshReviewWarning(); return; }
-    const payload = { sourceDocument, fields:{ invoiceNumber:field("number").value.trim(), client:field("client").value.trim(), address:field("address").value.trim(), invoiceDate:field("date").value, dueDate:field("due-date").value, termsDays:numeric("terms"), description:field("description").value.trim(), lineItems:importedLineItems, quantity:Number(field("quantity").value), unitPrice:numeric("unit-price"), subtotal, gst, total, note:field("note").value.trim() } };
+    const payload = { sourceDocument, fields:{ invoiceNumber:field("number").value.trim(), client:field("client").value.trim(), address:field("address").value.trim(), invoiceDate:field("date").value, dueDate:field("due-date").value, termsDays:numeric("terms"), description:field("description").value.trim(), lineItems:importedLineItems, quantity:Number(field("quantity").value), unitPrice:numeric("unit-price"), subtotal, gst, total, referralPercentage:numeric("referral-percent"), referralAmount:numeric("referral-amount"), note:field("note").value.trim() } };
     save.disabled = true; setStatus("Creating tracker invoice…");
     try {
       const response = await fetch(`./api/invoice-imports/${encodeURIComponent(sourceDocument.importId)}/commit`, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });
