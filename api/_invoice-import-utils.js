@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { pathToFileURL } = require("url");
 
 const DOCUMENT_BUCKET = "invoice-documents";
 const MAX_PDF_BYTES = 6 * 1024 * 1024;
@@ -143,7 +144,7 @@ async function extractPdfText(buffer) {
   // PDF.js runs a "fake" worker in Node. Giving it an explicit resolved path
   // makes Vercel bundle the worker alongside this serverless function instead
   // of trying to find it relative to the deployed entry file.
-  pdfjs.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")).href;
   const document = await pdfjs.getDocument({ data:new Uint8Array(buffer) }).promise;
   const pages = [];
   for (let number = 1; number <= document.numPages; number += 1) {
