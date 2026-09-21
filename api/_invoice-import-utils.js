@@ -127,8 +127,13 @@ async function ensureDocumentBucket(config) {
   // on the project version. Creating idempotently and accepting 409 means
   // both a new bucket and an already-existing bucket work reliably.
   const created = await supabaseFetch(config, "/storage/v1/bucket", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ id:DOCUMENT_BUCKET, name:DOCUMENT_BUCKET, public:false, file_size_limit:MAX_PDF_BYTES, allowed_mime_types:["application/pdf"] }) });
-  if (!created.ok && created.status !== 409) {
-    throw new Error(`Unable to prepare private invoice storage (Storage response ${created.status}).`);
+  if (created.ok || created.status === 409) return;
+  const detail = await created.text();
+  // This project's Storage version returns HTTP 400 (not 409) for a duplicate
+  // bucket name. The bucket has already been created, so uploads can continue.
+  if (created.status === 400 && /(already exists|duplicate|exists)/i.test(detail)) return;
+  if (!created.ok) {
+    throw new Error("Unable to prepare private invoice storage.");
   }
 }
 
