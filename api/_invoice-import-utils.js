@@ -76,7 +76,9 @@ function extractInvoice(text) {
     const itemAmount = money(match[4]) || Number((itemQuantity * itemUnitPrice).toFixed(2));
     importedLineItems.push({ description:itemDescription, quantity:itemQuantity, unitPrice:itemUnitPrice, amount:itemAmount });
   }
-  let description = importedLineItems.length ? importedLineItems.map((item) => item.description).join("\n\n") : lineItems.join(" ");
+  let description = importedLineItems.length
+    ? importedLineItems.map((item) => `${item.description} — Qty ${item.quantity.toFixed(2)} × $${item.unitPrice.toLocaleString("en-AU", { minimumFractionDigits:2, maximumFractionDigits:2 })} = $${item.amount.toLocaleString("en-AU", { minimumFractionDigits:2, maximumFractionDigits:2 })} (ex. GST)`).join("\n\n")
+    : lineItems.join(" ");
   let quantity = 1;
   let unitPrice = subtotal;
   const itemCount = importedLineItems.length || (lineItemText.match(/(?:10%\s*GST|\bGST\b)/gi) || []).length;
