@@ -624,11 +624,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const fields = ["client", "address", "number", "date", "due-date", "terms", "description", "quantity", "unit-price", "subtotal", "gst", "total", "referral-percent", "referral-amount", "note"];
   const field = (name) => $(`#import-${name}`);
   const setStatus = (message, type = "") => { status.textContent = message; status.className = `invoice-import-status ${type}`; };
+  const populateClientOptions = (selected = "") => {
+    const clients = [...new Set(state.records.map((record) => String(record.customerName || "").trim()).filter((name) => name && name !== "-"))].sort((a, b) => a.localeCompare(b));
+    const clientField = field("client");
+    clientField.innerHTML = `<option value="">Select a saved client</option>${clients.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}`;
+    clientField.value = clients.includes(selected) ? selected : "";
+  };
   const resetImport = () => {
     sourceDocument = null; hasDuplicate = false; extractionWarnings = []; importedLineItems = []; fileInput.value = ""; review.reset(); review.hidden = true; save.disabled = true; warning.textContent = ""; $("#invoice-import-file-name").textContent = ""; $("#import-line-items").hidden = true; $("#import-line-items-body").innerHTML = ""; setStatus("");
   };
   const close = () => { modal.classList.remove("open"); resetImport(); };
-  const open = () => { resetImport(); modal.classList.add("open"); };
+  const open = () => { resetImport(); populateClientOptions(); modal.classList.add("open"); };
   const numeric = (name) => Math.max(0, Number(field(name).value) || 0);
   const updateReferralAmount = () => {
     const subtotal = numeric("subtotal");
@@ -651,7 +657,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const populate = (data, filename) => {
     const values = data.fields || {};
-    field("client").value = values.client || "";
+    populateClientOptions(values.client || "");
     field("address").value = values.address || "";
     field("number").value = values.invoiceNumber || "";
     field("date").value = values.invoiceDate || "";
