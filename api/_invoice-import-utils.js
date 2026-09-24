@@ -169,7 +169,7 @@ async function uploadDocument(config, buffer, checksum) {
 }
 
 async function allInvoiceRows(config) {
-  const response = await supabaseFetch(config, "/rest/v1/quote_records?select=id,payload");
+  const response = await supabaseFetch(config, "/rest/v1/quote_records?select=id,payload,address,customer_name,quote_number,total_quote,job_stage");
   if (!response.ok) throw new Error("Unable to check existing invoices.");
   return response.json();
 }
