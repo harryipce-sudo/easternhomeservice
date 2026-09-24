@@ -431,14 +431,13 @@ function openGroupMenu(event, key, stage) {
   menu.style.top = `${Math.min(event.clientY, window.innerHeight - bounds.height - 8)}px`;
   menu.style.visibility = "";
 }
-function nextInvoiceNumber() { const highest = state.records.reduce((max, record) => { const match = String(record.job.invoiceNumber || "").match(/(\d+)(?!.*\d)/); return Math.max(max, match ? Number(match[1]) : 0); }, 1000); return `INV-${highest + 1}`; }
 function updateTaxAmounts() { const quotation = Math.max(0, Number($("#job-quote").value) || 0); const gst = quotation * 0.1; const total = quotation + gst; $("#job-total").value = total.toFixed(2); return { quotation, gst, total }; }
 function updateMarkupAmount() { const { quotation } = updateTaxAmounts(); const percentage = Number($("#job-markup").value) || 0; const amount = percentage > 0 ? quotation - (quotation / (1 + percentage / 100)) : 0; $("#job-markup-amount").value = amount.toFixed(2); }
 function updateMarkupPercentage() { const { quotation } = updateTaxAmounts(); const amount = Math.max(0, Number($("#job-markup-amount").value) || 0); const percentage = quotation > amount && amount > 0 ? (amount / (quotation - amount)) * 100 : 0; $("#job-markup").value = percentage.toFixed(1); }
 function populateJobClientOptions(selected = "") { const clients = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter((name) => name && name !== "-"))].sort((a, b) => a.localeCompare(b)); const select = $("#job-client"); select.innerHTML = `<option value="">Select a saved client</option>${clients.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}`; select.value = clients.includes(savedClientName(selected)) ? savedClientName(selected) : ""; }
-function openDrawer(record = null, defaultStage = "quoted") { state.selected = record; const j = record?.job || {}; const selectedClient = record?.customerName && record.customerName !== "-" ? record.customerName : ""; state.drawerStage = j.status || defaultStage; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; populateJobClientOptions(selectedClient); $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; $("#job-detail").value = j.detail || ""; $("#job-quote").value = j.quote ? (Number(j.quote) / 1.1).toFixed(2) : ""; updateTaxAmounts(); $("#job-markup").value = j.markup ?? 50; updateMarkupAmount(); $("#job-payment").value = j.payment === "paid" ? "paid" : "unpaid"; $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || nextInvoiceNumber(); $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; document.body.classList.add("drawer-open"); $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
+function openDrawer(record = null, defaultStage = "quoted") { state.selected = record; const j = record?.job || {}; const selectedClient = record?.customerName && record.customerName !== "-" ? record.customerName : ""; state.drawerStage = j.status || defaultStage; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; populateJobClientOptions(selectedClient); $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; $("#job-detail").value = j.detail || ""; $("#job-quote").value = j.quote ? (Number(j.quote) / 1.1).toFixed(2) : ""; updateTaxAmounts(); $("#job-markup").value = j.markup ?? 50; updateMarkupAmount(); $("#job-payment").value = j.payment === "paid" ? "paid" : "unpaid"; $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || ""; $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; document.body.classList.add("drawer-open"); $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
 function closeDrawer() { document.body.classList.remove("drawer-open"); $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
-function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", blindItems:[], curtainItems:[] }; const tax = updateTaxAmounts(); const quote = tax.total; const status = state.selected?.job?.status || state.drawerStage || "quoted"; const markup = Number($("#job-markup").value)||0; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), subtotalExGst: currency(tax.quotation), gstTotal: currency(tax.gst), jobStage: status, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup, markupStatus: markup > 0 ? "included" : "not-recorded", status, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim() || nextInvoiceNumber(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, invoice: state.selected?.job?.invoice || {}, archived: state.selected?.job?.archived === true, groupKey: state.selected?.job?.groupKey || "", boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
+function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", blindItems:[], curtainItems:[] }; const tax = updateTaxAmounts(); const quote = tax.total; const status = state.selected?.job?.status || state.drawerStage || "quoted"; const markup = Number($("#job-markup").value)||0; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), subtotalExGst: currency(tax.quotation), gstTotal: currency(tax.gst), jobStage: status, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup, markupStatus: markup > 0 ? "included" : "not-recorded", status, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, invoice: state.selected?.job?.invoice || {}, archived: state.selected?.job?.archived === true, groupKey: state.selected?.job?.groupKey || "", boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
 async function saveJob(event) { event.preventDefault(); const record = formRecord(); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; closeDrawer(); render(); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
 function renderQuotes() {
   const records = activeRecords();
@@ -618,6 +617,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const status = $("#invoice-import-status");
   const warning = $("#invoice-import-warning");
   const save = $("#invoice-import-save");
+  const relatedJobsPanel = document.createElement("section");
+  relatedJobsPanel.className = "invoice-import-matches";
+  relatedJobsPanel.hidden = true;
+  warning.insertAdjacentElement("afterend", relatedJobsPanel);
   let sourceDocument = null;
   let hasDuplicate = false;
   let extractionWarnings = [];
@@ -626,6 +629,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const fields = ["client", "address", "number", "date", "due-date", "terms", "description", "quantity", "unit-price", "subtotal", "gst", "total", "referral-percent", "referral-amount", "note"];
   const field = (name) => $(`#import-${name}`);
   const setStatus = (message, type = "") => { status.textContent = message; status.className = `invoice-import-status ${type}`; };
+  const renderRelatedJobs = (matches = []) => {
+    relatedJobsPanel.hidden = !matches.length;
+    relatedJobsPanel.innerHTML = matches.length ? `<h4>Possible matching Tracker jobs</h4><p>Check these before saving. This import will still create a new invoice record.</p>${matches.map((match) => `<div class="invoice-import-match"><strong>${escapeHtml(match.match)} · ${escapeHtml(match.jobNumber)}</strong><span>${escapeHtml(match.address)}</span><small>${escapeHtml(match.client)} · ${escapeHtml(match.status)} · ${currency(match.amount)}</small></div>`).join("")}` : "";
+  };
   const populateClientOptions = (selected = "") => {
     const clients = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter((name) => name && name !== "-"))].sort((a, b) => a.localeCompare(b));
     const clientField = field("client");
@@ -633,7 +640,7 @@ document.addEventListener("DOMContentLoaded", () => {
     clientField.value = clients.includes(savedClientName(selected)) ? savedClientName(selected) : "";
   };
   const resetImport = () => {
-    sourceDocument = null; hasDuplicate = false; extractionWarnings = []; importedLineItems = []; fileInput.value = ""; review.reset(); review.hidden = true; save.disabled = true; warning.textContent = ""; $("#invoice-import-file-name").textContent = ""; $("#import-line-items").hidden = true; $("#import-line-items-body").innerHTML = ""; setStatus("");
+    sourceDocument = null; hasDuplicate = false; extractionWarnings = []; importedLineItems = []; fileInput.value = ""; review.reset(); review.hidden = true; save.disabled = true; warning.textContent = ""; $("#invoice-import-file-name").textContent = ""; $("#import-line-items").hidden = true; $("#import-line-items-body").innerHTML = ""; renderRelatedJobs(); setStatus("");
   };
   const close = () => { modal.classList.remove("open"); resetImport(); };
   const open = () => { resetImport(); populateClientOptions(); modal.classList.add("open"); };
@@ -677,6 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
     importedLineItems = Array.isArray(values.lineItems) ? values.lineItems : [];
     $("#import-line-items-body").innerHTML = importedLineItems.map((item) => `<tr><td>${escapeHtml(item.description || "—")}</td><td>${Number(item.quantity || 0).toFixed(2)}</td><td>${currency(item.unitPrice || 0)}</td><td>${currency(item.amount || 0)}</td></tr>`).join("");
     $("#import-line-items").hidden = !importedLineItems.length;
+    renderRelatedJobs(Array.isArray(data.relatedJobs) ? data.relatedJobs : []);
     sourceDocument = data.sourceDocument;
     hasDuplicate = Boolean(data.duplicate);
     extractionWarnings = values.warnings || [];
@@ -882,7 +890,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const terms = Number(invoice.termsDays) >= 0 ? invoice.termsDays : 30;
     $("#invoice-client").value = invoice.client || state.selected.customerName || "";
     $("#invoice-address").value = invoice.address || state.selected.address || "";
-    $("#invoice-number").value = invoice.number || job.invoiceNumber || nextInvoiceNumber();
+    $("#invoice-number").value = invoice.number || job.invoiceNumber || "";
     $("#invoice-date").value = date;
     $("#invoice-terms").value = terms;
     $("#invoice-due-date").value = isExistingInvoice && invoice.dueDate ? invoice.dueDate : dueDateFor(date, terms);
