@@ -49,7 +49,8 @@ module.exports = async (req, res) => {
     const duplicate = rows.find((row) => invoiceKey(row?.payload?.job?.invoiceNumber) && invoiceKey(row?.payload?.job?.invoiceNumber) === invoiceKey(fields.invoiceNumber));
     if (duplicate) fields.warnings.push("This invoice number already exists in the tracker. It cannot be created again.");
     const sourceDocument = await uploadDocument(config, buffer, checksum);
-    return res.status(200).json({ importId:sourceDocument.importId, sourceDocument, fields, relatedJobs:matches, duplicate:Boolean(duplicate) });
+    const duplicateRecord = duplicate ? { id:duplicate.id, jobNumber:String(duplicate?.payload?.job?.number || duplicate.quote_number || "—"), address:String(duplicate.address || "—") } : null;
+    return res.status(200).json({ importId:sourceDocument.importId, sourceDocument, fields, relatedJobs:matches, duplicate:Boolean(duplicate), duplicateRecord });
   } catch (error) {
     return res.status(error.statusCode || 500).json({ error:error.message || "Unable to import this invoice." });
   }

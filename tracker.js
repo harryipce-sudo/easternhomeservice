@@ -2,7 +2,7 @@ const API = "./api/quote-records";
 const savedView = (() => {
   try { return localStorage.getItem("tracker-view") || "jobs"; } catch { return "jobs"; }
 })();
-const state = { records: [], search: "", sort: "newest", view: savedView, layout: "board", selected: null, drawerStage: "quoted", invoiceFilter: "all", invoiceFY: "", invoiceQuarter: "", profitFY: "", accountingFY: "", expandedGroups: new Set(), customBoards: [], boardOrder: [], hiddenBoards: [], boardSettings: null };
+const state = { records: [], search: "", sort: "newest", view: savedView, layout: "board", selected: null, drawerStage: "quoted", drawerImportedInvoice:null, invoiceFilter: "all", invoiceFY: "", invoiceQuarter: "", profitFY: "", accountingFY: "", expandedGroups: new Set(), customBoards: [], boardOrder: [], hiddenBoards: [], boardSettings: null };
 let syncRequest = null;
 const $ = (selector) => document.querySelector(selector);
 const currency = (value) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value) || 0);
@@ -435,9 +435,90 @@ function updateTaxAmounts() { const quotation = Math.max(0, Number($("#job-quote
 function updateMarkupAmount() { const { quotation } = updateTaxAmounts(); const percentage = Number($("#job-markup").value) || 0; const amount = percentage > 0 ? quotation - (quotation / (1 + percentage / 100)) : 0; $("#job-markup-amount").value = amount.toFixed(2); }
 function updateMarkupPercentage() { const { quotation } = updateTaxAmounts(); const amount = Math.max(0, Number($("#job-markup-amount").value) || 0); const percentage = quotation > amount && amount > 0 ? (amount / (quotation - amount)) * 100 : 0; $("#job-markup").value = percentage.toFixed(1); }
 function populateJobClientOptions(selected = "") { const clients = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter((name) => name && name !== "-"))].sort((a, b) => a.localeCompare(b)); const select = $("#job-client"); select.innerHTML = `<option value="">Select a saved client</option>${clients.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}`; select.value = clients.includes(savedClientName(selected)) ? savedClientName(selected) : ""; }
-function openDrawer(record = null, defaultStage = "quoted") { state.selected = record; const j = record?.job || {}; const selectedClient = record?.customerName && record.customerName !== "-" ? record.customerName : ""; state.drawerStage = j.status || defaultStage; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; populateJobClientOptions(selectedClient); $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; $("#job-detail").value = j.detail || ""; $("#job-quote").value = j.quote ? (Number(j.quote) / 1.1).toFixed(2) : ""; updateTaxAmounts(); $("#job-markup").value = j.markup ?? 50; updateMarkupAmount(); $("#job-payment").value = j.payment === "paid" ? "paid" : "unpaid"; $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || ""; $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; document.body.classList.add("drawer-open"); $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
-function closeDrawer() { document.body.classList.remove("drawer-open"); $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
-function formRecord() { const base = state.selected ? { ...state.selected } : { id: crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", blindItems:[], curtainItems:[] }; const tax = updateTaxAmounts(); const quote = tax.total; const status = state.selected?.job?.status || state.drawerStage || "quoted"; const markup = Number($("#job-markup").value)||0; return { ...base, customerName: $("#job-client").value.trim() || "-", address: $("#job-address").value.trim(), quoteNumber: $("#job-number").value.trim(), totalQuote: currency(quote), subtotalExGst: currency(tax.quotation), gstTotal: currency(tax.gst), jobStage: status, job:{ number:$("#job-number").value.trim(), detail:$("#job-detail").value.trim(), quote, markup, markupStatus: markup > 0 ? "included" : "not-recorded", status, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber:$("#job-invoice").value.trim(), invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, invoice: state.selected?.job?.invoice || {}, archived: state.selected?.job?.archived === true, groupKey: state.selected?.job?.groupKey || "", boardOrder: state.selected?.job?.boardOrder ?? undefined } }; }
+function ensureJobInvoiceDropzone() {
+  if ($("#job-invoice-dropzone")) return;
+  const zone = document.createElement("div");
+  zone.className = "job-invoice-dropzone";
+  zone.id = "job-invoice-dropzone";
+  zone.tabIndex = 0;
+  zone.setAttribute("role", "button");
+  zone.setAttribute("aria-label", "Choose an Odoo invoice PDF to match this job");
+  zone.innerHTML = `<input type="file" accept="application/pdf,.pdf" hidden><div><strong>Drop Odoo invoice PDF here to match this job</strong><small>The job will be moved to Invoiced only after you save.</small><p aria-live="polite"></p></div>`;
+  $("#job-detail").closest("label").insertAdjacentElement("afterend", zone);
+  const fileInput = zone.querySelector("input");
+  const message = zone.querySelector("p");
+  const setMessage = (text, type = "") => { message.textContent = text; message.className = type; };
+  const importForJob = async (file) => {
+    if (!state.selected) return;
+    if (!file || (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name))) { setMessage("Choose an Odoo PDF invoice.", "error"); return; }
+    if (file.size > 6 * 1024 * 1024) { setMessage("This PDF is larger than 6 MB.", "error"); return; }
+    setMessage("Reading and matching invoice…");
+    try {
+      const response = await fetch("./api/invoice-imports", { method:"POST", headers:{ "Content-Type":"application/pdf" }, body:file });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to read this invoice.");
+      const selectedMatch = (data.relatedJobs || []).find((match) => match.id === state.selected.id);
+      if (!selectedMatch) throw new Error("This invoice address does not match the job currently open. Open the matching job first.");
+      if (data.duplicate && data.duplicateRecord?.id !== state.selected.id) throw new Error(`Invoice ${data.fields?.invoiceNumber || "number"} is already used by ${data.duplicateRecord?.jobNumber || "another job"}.`);
+      const imported = data.fields || {};
+      state.drawerImportedInvoice = { sourceDocument:data.sourceDocument, fields:imported };
+      $("#job-address").value = imported.address || $("#job-address").value;
+      $("#job-detail").value = imported.description || $("#job-detail").value;
+      $("#job-quote").value = Number(imported.subtotal || 0).toFixed(2);
+      $("#job-invoice").value = imported.invoiceNumber || "";
+      $("#job-invoice-date").value = imported.invoiceDate || "";
+      state.drawerStage = "invoiced";
+      updateTaxAmounts();
+      updateMarkupAmount();
+      setMessage(`Matched ${selectedMatch.match.toLowerCase()}. Details filled — Save changes to move this job to Invoiced.`, "success");
+    } catch (error) { setMessage(error.message || "Unable to match this invoice.", "error"); }
+  };
+  zone.addEventListener("click", (event) => { if (event.target !== fileInput) fileInput.click(); });
+  zone.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInput.click(); } });
+  fileInput.addEventListener("change", () => importForJob(fileInput.files[0]));
+  ["dragenter", "dragover"].forEach((eventName) => zone.addEventListener(eventName, (event) => { event.preventDefault(); zone.classList.add("dragging"); }));
+  ["dragleave", "drop"].forEach((eventName) => zone.addEventListener(eventName, (event) => { event.preventDefault(); zone.classList.remove("dragging"); }));
+  zone.addEventListener("drop", (event) => importForJob(event.dataTransfer.files[0]));
+}
+function openDrawer(record = null, defaultStage = "quoted") { ensureJobInvoiceDropzone(); $("#job-invoice-dropzone").hidden = !record; state.selected = record; state.drawerImportedInvoice = null; const j = record?.job || {}; const selectedClient = record?.customerName && record.customerName !== "-" ? record.customerName : ""; state.drawerStage = j.status || defaultStage; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; populateJobClientOptions(selectedClient); $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; $("#job-detail").value = j.detail || ""; $("#job-quote").value = j.quote ? (Number(j.quote) / 1.1).toFixed(2) : ""; updateTaxAmounts(); $("#job-markup").value = j.markup ?? 50; updateMarkupAmount(); $("#job-payment").value = j.payment === "paid" ? "paid" : "unpaid"; $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || ""; $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; const message = $("#job-invoice-dropzone p"); if (message) { message.textContent = ""; message.className = ""; } document.body.classList.add("drawer-open"); $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
+function closeDrawer() { state.drawerImportedInvoice = null; document.body.classList.remove("drawer-open"); $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
+function formRecord() {
+  const base = state.selected ? { ...state.selected } : { id:crypto.randomUUID(), recordType:"general", sector:"General", submittedAt:new Date().toISOString(), phone:"", email:"", blindItems:[], curtainItems:[] };
+  const imported = state.drawerImportedInvoice;
+  const importedFields = imported?.fields || {};
+  const tax = updateTaxAmounts();
+  const quote = imported ? Number(importedFields.total || tax.total) : tax.total;
+  const subtotal = imported ? Number(importedFields.subtotal || tax.quotation) : tax.quotation;
+  const gst = imported ? Number(importedFields.gst || tax.gst) : tax.gst;
+  const status = state.drawerStage || state.selected?.job?.status || "quoted";
+  const markup = Number($("#job-markup").value) || 0;
+  const client = $("#job-client").value.trim() || "-";
+  const address = $("#job-address").value.trim();
+  const detail = $("#job-detail").value.trim();
+  const invoiceNumber = $("#job-invoice").value.trim();
+  const invoice = imported ? {
+    ...(state.selected?.job?.invoice || {}),
+    number:invoiceNumber,
+    date:$("#job-invoice-date").value,
+    dueDate:importedFields.dueDate || "",
+    termsDays:Number(importedFields.termsDays) || 0,
+    client,
+    address,
+    description:detail,
+    lineItems:Array.isArray(importedFields.lineItems) ? importedFields.lineItems : [],
+    quantity:Number(importedFields.quantity) || 1,
+    unitPrice:Number(importedFields.unitPrice) || subtotal,
+    subtotal,
+    gst,
+    total:quote,
+    referralPercentage:markup,
+    referralAmount:markup > 0 ? Number((subtotal - subtotal / (1 + markup / 100)).toFixed(2)) : 0,
+    note:String(importedFields.note || "").trim(),
+    status:"issued",
+    sourceDocument:imported.sourceDocument
+  } : (state.selected?.job?.invoice || {});
+  return { ...base, customerName:client, address, quoteNumber:$("#job-number").value.trim(), totalQuote:currency(quote), subtotalExGst:currency(subtotal), gstTotal:currency(gst), jobStage:status, job:{ number:$("#job-number").value.trim(), detail, quote, markup, markupStatus:markup > 0 ? "included" : "not-recorded", status, payment:$("#job-payment").value, referral:$("#job-referral").value, invoiceNumber, invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, invoice, archived:state.selected?.job?.archived === true, groupKey:state.selected?.job?.groupKey || "", boardOrder:status === "invoiced" && imported ? -Date.now() : state.selected?.job?.boardOrder ?? undefined } };
+}
 async function saveJob(event) { event.preventDefault(); const record = formRecord(); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; closeDrawer(); render(); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
 function renderQuotes() {
   const records = activeRecords();
