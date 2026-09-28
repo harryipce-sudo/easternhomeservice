@@ -454,7 +454,7 @@ function ensureJobInvoiceDropzone() {
     if (file.size > 6 * 1024 * 1024) { setMessage("This PDF is larger than 6 MB.", "error"); return; }
     setMessage("Reading and matching invoice…");
     try {
-      const response = await fetch("./api/invoice-imports", { method:"POST", headers:{ "Content-Type":"application/pdf" }, body:file });
+      const response = await fetch("./api/invoice-imports", { method:"POST", headers:{ "Content-Type":"application/pdf", "x-tracker-job-id":state.selected.id }, body:file });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to read this invoice.");
       const selectedMatch = (data.relatedJobs || []).find((match) => match.id === state.selected.id);

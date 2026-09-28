@@ -4,7 +4,7 @@ function addressTokens(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter((token) => token && !["street", "st", "road", "rd", "avenue", "ave", "vic", "australia"].includes(token));
 }
 
-function relatedJobs(address, rows) {
+function relatedJobs(address, rows, preferredJobId = "") {
   const source = addressTokens(address);
   if (!source.length) return [];
   return rows.map((row) => {
@@ -14,7 +14,7 @@ function relatedJobs(address, rows) {
     const exact = source.join(" ") === candidate.join(" ");
     return { row, score, exact };
   }).filter(({ score, exact }) => exact || score >= 0.6)
-    .sort((a, b) => Number(b.exact) - Number(a.exact) || b.score - a.score)
+    .sort((a, b) => Number(String(b.row.id) === preferredJobId) - Number(String(a.row.id) === preferredJobId) || Number(b.exact) - Number(a.exact) || b.score - a.score)
     .slice(0, 5)
     .map(({ row, score, exact }) => ({
       id:row.id,
@@ -44,7 +44,8 @@ module.exports = async (req, res) => {
     const fields = extractInvoice(text);
     const checksum = crypto.createHash("sha256").update(buffer).digest("hex");
     const rows = await allInvoiceRows(config);
-    const matches = relatedJobs(fields.address, rows);
+    const preferredJobId = String(req.headers["x-tracker-job-id"] || "");
+    const matches = relatedJobs(fields.address, rows, preferredJobId);
     if (matches.length) fields.warnings.push(`${matches.length} possible Tracker job match${matches.length === 1 ? " was" : "es were"} found by address. Check the match below before saving.`);
     const duplicate = rows.find((row) => invoiceKey(row?.payload?.job?.invoiceNumber) && invoiceKey(row?.payload?.job?.invoiceNumber) === invoiceKey(fields.invoiceNumber));
     if (duplicate) fields.warnings.push("This invoice number already exists in the tracker. It cannot be created again.");
