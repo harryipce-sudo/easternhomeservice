@@ -27,12 +27,22 @@ function referralFee(job) {
   return Math.round((amountExGst * 1.1 + Number.EPSILON) * 100) / 100;
 }
 
+function dueDateForJob(job) {
+  const invoice = job?.invoice && typeof job.invoice === "object" ? job.invoice : {};
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(invoice.dueDate || ""))) return invoice.dueDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(job?.invoiceDate || ""))) return "";
+  const dueDate = new Date(`${job.invoiceDate}T00:00:00Z`);
+  dueDate.setUTCDate(dueDate.getUTCDate() + (Number(invoice.termsDays) || 30));
+  return dueDate.toISOString().slice(0, 10);
+}
+
 function normaliseInvoice(row) {
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
   const job = payload.job && typeof payload.job === "object" ? payload.job : {};
   return {
     invoiceNumber: job.invoiceNumber || "",
     invoiceDate: job.invoiceDate || "",
+    dueDate: dueDateForJob(job),
     payment: job.payment || "unpaid",
     paymentDate: job.paymentDate || "",
     detail: job.detail || "",
