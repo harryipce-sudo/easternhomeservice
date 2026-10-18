@@ -48,6 +48,15 @@ function tag(value) { const label = value === "not-applicable" ? "Not applicable
 function paymentButton(record) { const value = record.job.payment === "paid" ? "paid" : "unpaid"; const overdue = invoiceOverdue(record); const label = value === "paid" ? "Paid" : overdue.late ? `Late · ${overdue.days}d` : "Unpaid"; return `<button class="tag payment-toggle ${overdue.late ? "late" : value}" type="button" data-payment-toggle="${escapeHtml(record.id)}" aria-label="Change payment status for ${escapeHtml(record.address)}">${label}</button>`; }
 function markupAmountExGst(job) { const total = Number(job.quote) || 0; const percentage = Number(job.markup) || 0; const subtotal = total / 1.1; return percentage > 0 ? subtotal - (subtotal / (1 + percentage / 100)) : 0; }
 function markupTag(job) { return job.markupStatus === "included" ? `<span class="markup-badge included">Markup included · ${Number(job.markup).toFixed(1)}% · ${currency(markupAmountExGst(job))} ex. GST</span>` : `<span class="markup-badge not-recorded">No markup recorded</span>`; }
+function invoiceEmailActions(record, pending) {
+  if (pending) return "—";
+  const email = record.job.invoice?.email || {};
+  const hasPdf = Boolean(record.job.invoice?.sourceDocument?.path);
+  const history = email.sentAt ? `<small class="invoice-email-history">Sent ${escapeHtml(new Date(email.sentAt).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }))}</small>` : email.status === "failed" ? '<small class="invoice-email-history">Last attempt failed</small>' : "";
+  const unavailable = hasPdf ? "" : " disabled title=\"Import the Odoo PDF before emailing this invoice\"";
+  const reminder = record.job.payment === "paid" ? "" : `<button class="quiet-button" type="button" data-invoice-reminder="${escapeHtml(record.id)}"${unavailable}>Send reminder</button>`;
+  return `<div class="invoice-email-actions"><button class="quiet-button" type="button" data-invoice-email="${escapeHtml(record.id)}"${unavailable}>Send invoice</button>${reminder}${history}</div>`;
+}
 function renderJobs() { const items = filtered(); const boardItems = boardRecords(items); $("#jobs-body").innerHTML = items.map((record) => { const j = record.job; return `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(j.number)}</td><td class="address">${escapeHtml(record.address)}</td><td class="detail">${escapeHtml(j.detail || "—")}</td><td class="money">${currency(j.quote)}</td><td>${markupTag(j)}</td><td>${tag(j.status)}</td><td>${tag(j.payment)}</td><td>${tag(j.referral)}</td><td>${escapeHtml(j.invoiceNumber || "—")}</td><td>${escapeHtml(j.invoiceDate || "—")}</td></tr>`; }).join(""); $("#jobs-empty").style.display = items.length ? "none" : "block"; $("#result-count").textContent = `${boardItems.length} job${boardItems.length === 1 ? "" : "s"}`; $("#quote-total").textContent = currency(boardItems.filter((record) => record.job.status === "quoted").reduce((sum, record) => sum + record.job.quote, 0)); $("#markup-total").textContent = currency(items.filter((record) => record.job.payment === "paid").reduce((sum, record) => sum + markupAmountExGst(record.job), 0)); $("#invoice-total").textContent = currency(boardItems.filter((record) => record.job.status === "invoiced").reduce((sum, record) => sum + record.job.quote, 0)); }
 const baseBoardStages = ["quoted", "confirmed", "scheduled", "completed", "invoiced", "follow_up"];
 const boardLabels = { quoted:"Quotes", confirmed:"Confirmed", scheduled:"Scheduled", completed:"Completed", invoiced:"Invoiced", follow_up:"Follow up" };
@@ -590,7 +599,7 @@ function renderQuotes() {
   const filterLabel = { pending:"Pending for invoice", late:"Late unpaid invoices", unpaid:"Unpaid invoices", paid:"Paid invoices", "unpaid-referral":"Unpaid referral payable", "paid-referral":"Paid referral payable" }[state.invoiceFilter];
   const periodLabel = [state.invoiceFY, state.invoiceQuarter ? `Q${state.invoiceQuarter}` : ""].filter(Boolean).join(" · ");
   $("#invoice-filter-note").innerHTML = periodLabel || filterLabel ? `Showing <strong>${escapeHtml(periodLabel || "All financial years")}</strong>${filterLabel ? ` · <strong>${escapeHtml(filterLabel)}</strong>` : ""} · <button type="button" data-invoice-filter="all">Clear filters</button>` : "";
-  $("#invoices-body").innerHTML = filteredInvoices.map((record) => { const pending = record.job.status === "completed"; const overdue = invoiceOverdue(record); const key = invoiceKey(record.job.invoiceNumber); const issue = pending ? "" : reviewIssue(record); const issueClass = `${pending ? "" : !key ? "invoice-review-missing" : invoiceCounts.get(key) > 1 ? "invoice-review-duplicate" : issue ? "invoice-review-odoo" : ""}${overdue.late ? " invoice-overdue" : ""}`.trim(); const sourceId = record.job.invoice?.sourceDocument?.importId; const documentLink = sourceId ? `<br><a href="./api/invoice-documents/${encodeURIComponent(sourceId)}" target="_blank" rel="noopener" data-source-document>View original PDF</a>` : ""; return `<tr class="${issueClass}" data-id="${escapeHtml(record.id)}"><td>${escapeHtml(pending ? "Pending" : record.job.invoiceNumber || "—")}${documentLink}${issue ? `<span class="invoice-review-badge">${escapeHtml(issue)}</span>` : ""}</td><td>${escapeHtml(record.customerName || "—")}</td><td>${escapeHtml(record.address)}</td><td>${displayDate(record.job.invoiceDate)}</td><td>${overdue.dueDate ? displayDate(overdue.dueDate) : "—"}</td><td>${escapeHtml(record.job.payment === "paid" ? record.job.paymentDate || "—" : "—")}</td><td>${pending ? tag("pending") : paymentButton(record)}</td><td>${referralPayable(record) > 0 ? currency(referralPayable(record)) : "—"}</td><td>${currency(record.job.quote)}</td></tr>`; }).join("") || `<tr><td colspan="9">No matching invoices.</td></tr>`;
+  $("#invoices-body").innerHTML = filteredInvoices.map((record) => { const pending = record.job.status === "completed"; const overdue = invoiceOverdue(record); const key = invoiceKey(record.job.invoiceNumber); const issue = pending ? "" : reviewIssue(record); const issueClass = `${pending ? "" : !key ? "invoice-review-missing" : invoiceCounts.get(key) > 1 ? "invoice-review-duplicate" : issue ? "invoice-review-odoo" : ""}${overdue.late ? " invoice-overdue" : ""}`.trim(); const sourceId = record.job.invoice?.sourceDocument?.importId; const documentLink = sourceId ? `<br><a href="./api/invoice-documents/${encodeURIComponent(sourceId)}" target="_blank" rel="noopener" data-source-document>View original PDF</a>` : ""; return `<tr class="${issueClass}" data-id="${escapeHtml(record.id)}"><td>${escapeHtml(pending ? "Pending" : record.job.invoiceNumber || "—")}${documentLink}${issue ? `<span class="invoice-review-badge">${escapeHtml(issue)}</span>` : ""}</td><td>${escapeHtml(record.customerName || "—")}</td><td>${escapeHtml(record.address)}</td><td>${displayDate(record.job.invoiceDate)}</td><td>${overdue.dueDate ? displayDate(overdue.dueDate) : "—"}</td><td>${escapeHtml(record.job.payment === "paid" ? record.job.paymentDate || "—" : "—")}</td><td>${pending ? tag("pending") : paymentButton(record)}</td><td>${referralPayable(record) > 0 ? currency(referralPayable(record)) : "—"}</td><td>${currency(record.job.quote)}</td><td>${invoiceEmailActions(record, pending)}</td></tr>`; }).join("") || `<tr><td colspan="10">No matching invoices.</td></tr>`;
 }
 function setView(view) { const labels = { jobs:["Job Board","All work in one shared job register."],calendar:["Calendar","Scheduled jobs from the shared register."],clients:["Clients","All clients from saved quotes."],invoices:["Invoices","Completed or invoiced jobs from the shared register."],"client-portal":["Client portal","BRW Group read-only invoice view and referral summary."],accounting:["Accounting","Income, expenses and outstanding invoices by financial year."],profit:["Profit Summary","Paid income, referral payable and operating expenses by financial year."],archive:["Archive","Archived cards are kept here until you restore them."],settings:["Settings","Shared tracker settings."] }; if (!labels[view]) view = "jobs"; state.view = view; try { localStorage.setItem("tracker-view", view); } catch {} document.querySelectorAll(".nav-link[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view)); document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active", section.id === `view-${view}`)); $("#page-title").textContent = labels[view][0]; $("#page-description").textContent = labels[view][1]; $("#add-job").style.display = view === "jobs" ? "inline-block" : "none"; if (view === "invoices") renderQuotes(); if (view === "client-portal") renderClientPortal(); if (view === "archive") renderArchive(); if (view === "profit") renderProfit(); if (view === "accounting") renderAccounting(); }
 document.addEventListener("DOMContentLoaded", () => { $("#search").addEventListener("input", (e) => { state.search = e.target.value; render(); }); $("#sort").addEventListener("change", (e) => { state.sort=e.target.value; render(); }); $("#jobs-body").addEventListener("click", (e) => { const row=e.target.closest("tr[data-id]"); if(row) openDrawer(state.records.find((record)=>record.id===row.dataset.id)); }); $("#invoices-body").addEventListener("click", (e) => { const control = e.target.closest("[data-payment-toggle]"); if (control) togglePayment(control.dataset.paymentToggle); }); $("#invoice-summary").addEventListener("click", (e) => { const control = e.target.closest("[data-invoice-filter]"); if (!control) return; state.invoiceFilter = state.invoiceFilter === control.dataset.invoiceFilter ? "all" : control.dataset.invoiceFilter; renderQuotes(); }); $("#invoice-filter-note").addEventListener("click", (e) => { if (e.target.closest("[data-invoice-filter='all']")) { state.invoiceFilter = "all"; state.invoiceFY = ""; state.invoiceQuarter = ""; renderQuotes(); } }); $("#invoice-fy").addEventListener("change", (e) => { state.invoiceFY = e.target.value; renderQuotes(); }); $("#invoice-quarter").addEventListener("change", (e) => { state.invoiceQuarter = e.target.value; renderQuotes(); }); $("#archive-body").addEventListener("click", (e) => { const deleteControl = e.target.closest("[data-delete-card]"); const restoreControl = e.target.closest("[data-restore-card]"); if (deleteControl) permanentlyDeleteArchivedJob(deleteControl.dataset.deleteCard); else if (restoreControl) restoreJob(restoreControl.dataset.restoreCard); }); $("#payment-date-cancel").addEventListener("click",closePaymentDateModal); $("#payment-date-skip").addEventListener("click",()=>{ const id = state.paymentRecordId; closePaymentDateModal(); if (id) setPayment(id,"paid",""); }); $("#payment-date-save").addEventListener("click",()=>{ const id = state.paymentRecordId; const date = $("#payment-date").value; closePaymentDateModal(); if (id) setPayment(id,"paid",date); }); $("#add-job").addEventListener("click",()=>openDrawer()); $("#close-drawer").addEventListener("click",closeDrawer); $("#cancel-edit").addEventListener("click",closeDrawer); $("#job-form").addEventListener("submit",saveJob); $("#job-quote").addEventListener("input", updateMarkupAmount); $("#job-markup").addEventListener("input", updateMarkupAmount); $("#job-markup-amount").addEventListener("input", updateMarkupPercentage); $("#refresh-button").addEventListener("click",loadRecords); $("#sidebar-toggle").addEventListener("click", () => { const open = document.body.classList.toggle("sidebar-open"); $("#sidebar-toggle").setAttribute("aria-expanded", String(open)); $("#sidebar-toggle").setAttribute("aria-label", open ? "Hide sidebar" : "Show sidebar"); $("#sidebar-toggle").textContent = open ? "‹" : "›"; }); document.querySelectorAll(".nav-link[data-view]").forEach((button)=>button.addEventListener("click",()=>{ setView(button.dataset.view); loadRecords(); })); document.addEventListener("visibilitychange", () => { if (!document.hidden) loadRecords(); }); setView(state.view); loadRecords(); window.setInterval(loadRecords, 30000); });
@@ -856,9 +865,86 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Opening an invoice row shows the same job detail drawer used by the Jobs page.
   $("#invoices-body").addEventListener("click", (event) => {
-    if (event.target.closest("[data-payment-toggle], [data-source-document]")) return;
+    if (event.target.closest("[data-payment-toggle], [data-source-document], [data-invoice-email], [data-invoice-reminder]")) return;
     const row = event.target.closest("tr[data-id]");
     if (row) openDrawer(state.records.find((record) => record.id === row.dataset.id));
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = $("#invoice-email-modal");
+  const form = $("#invoice-email-form");
+  const status = $("#invoice-email-status");
+  const send = $("#invoice-email-send");
+  let activeRecord = null;
+  let activeKind = "invoice";
+  const setStatus = (text = "", type = "") => { status.textContent = text; status.className = `invoice-email-status ${type}`.trim(); };
+  const close = () => { modal.classList.remove("open"); activeRecord = null; setStatus(); };
+  const invoiceNumber = (record) => record?.job?.invoiceNumber || record?.job?.invoice?.number || "invoice";
+  const open = (record, kind) => {
+    if (!record) return;
+    activeRecord = record;
+    activeKind = kind === "reminder" ? "reminder" : "invoice";
+    const number = invoiceNumber(record);
+    const dueDate = invoiceDueDate(record);
+    const amount = currency(record.job.quote || record.job.invoice?.total || 0);
+    const prior = record.job.invoice?.email || {};
+    $("#invoice-email-title").textContent = activeKind === "reminder" ? "Send payment reminder" : "Send invoice email";
+    $("#invoice-email-copy").textContent = activeKind === "reminder" ? `Invoice ${number} is unpaid. The stored Odoo PDF will be attached.` : `Invoice ${number}. The stored Odoo PDF will be attached.`;
+    $("#invoice-email-to").value = Array.isArray(prior.recipient) ? prior.recipient.join(", ") : (record.email || "");
+    $("#invoice-email-cc").value = Array.isArray(prior.cc) ? prior.cc.join(", ") : "";
+    $("#invoice-email-subject").value = activeKind === "reminder" ? `Reminder: invoice ${number} payment due` : `Invoice ${number} from Eastern Home Service`;
+    $("#invoice-email-message").value = activeKind === "reminder"
+      ? `Hello,\n\nThis is a friendly reminder that invoice ${number} for ${amount} is due ${dueDate ? displayDate(dueDate) : "soon"}. Please see the attached invoice.`
+      : `Hello,\n\nPlease find invoice ${number} attached.\n\nKind regards,\nEastern Home Service`;
+    setStatus();
+    send.disabled = false;
+    modal.classList.add("open");
+    $("#invoice-email-to").focus();
+  };
+  $("#invoices-body").addEventListener("click", (event) => {
+    const reminder = event.target.closest("[data-invoice-reminder]");
+    const invoice = event.target.closest("[data-invoice-email]");
+    const id = reminder?.dataset.invoiceReminder || invoice?.dataset.invoiceEmail;
+    if (!id) return;
+    event.preventDefault();
+    event.stopPropagation();
+    open(state.records.find((record) => record.id === id), reminder ? "reminder" : "invoice");
+  });
+  $("#invoice-email-close").addEventListener("click", close);
+  $("#invoice-email-cancel").addEventListener("click", close);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!activeRecord || !form.reportValidity()) return;
+    send.disabled = true;
+    setStatus("Sending invoice email…");
+    try {
+      const response = await fetch("./api/send-invoice-email", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({
+          recordId:activeRecord.id,
+          kind:activeKind,
+          to:$("#invoice-email-to").value.trim(),
+          cc:$("#invoice-email-cc").value.trim(),
+          subject:$("#invoice-email-subject").value.trim(),
+          message:$("#invoice-email-message").value.trim()
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Unable to send the invoice email.");
+      const email = data.record?.email || {};
+      state.records = state.records.map((record) => record.id === activeRecord.id
+        ? normalise({ ...record, job:{ ...record.job, invoice:{ ...record.job.invoice, email } } })
+        : record);
+      activeRecord = state.records.find((record) => record.id === activeRecord.id) || activeRecord;
+      renderQuotes();
+      setStatus("Email sent and recorded in the tracker.", "success");
+      window.setTimeout(close, 900);
+    } catch (error) {
+      setStatus(error.message || "Unable to send the invoice email.", "error");
+      send.disabled = false;
+    }
   });
 });
 
