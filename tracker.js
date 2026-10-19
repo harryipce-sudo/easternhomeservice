@@ -908,6 +908,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const setStatus = (text = "", type = "") => { status.textContent = text; status.className = `invoice-email-status ${type}`.trim(); };
   const close = () => { modal.classList.remove("open"); activeRecord = null; setStatus(); };
   const invoiceNumber = (record) => record?.job?.invoiceNumber || record?.job?.invoice?.number || "invoice";
+  const savedEmailOptions = () => Object.entries(clientContacts()).filter(([, email]) => email).sort(([a],[b]) => a.localeCompare(b));
+  const renderSavedEmailOptions = () => { $("#invoice-email-saved-options").innerHTML = savedEmailOptions().map(([client, email]) => `<option value="${escapeHtml(`${client} — ${email}`)}"></option>`).join(""); };
+  const emailFromSearch = (value) => String(value || "").match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0] || "";
   const readPhotos = () => {
     const files = [...$("#invoice-email-photos").files];
     if (files.length > 8 || files.reduce((sum, file) => sum + file.size, 0) > 3 * 1024 * 1024) throw new Error("Choose up to 8 JPG, PNG or WebP photos, 3 MB total.");
@@ -922,6 +925,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const dueDate = invoiceDueDate(record);
     const amount = currency(record.job.quote || record.job.invoice?.total || 0);
     const prior = record.job.invoice?.email || {};
+    renderSavedEmailOptions();
+    $("#invoice-email-saved-search").value = clientEmail(record.customerName) ? `${savedClientName(record.customerName)} — ${clientEmail(record.customerName)}` : "";
     $("#invoice-email-title").textContent = activeKind === "reminder" ? "Send payment reminder" : "Send invoice email";
     $("#invoice-email-copy").textContent = activeKind === "reminder" ? `Invoice ${number} is unpaid. The stored Odoo PDF will be attached.` : `Invoice ${number}. The stored Odoo PDF will be attached.`;
     $("#invoice-email-to").value = Array.isArray(prior.recipient) ? prior.recipient.join(", ") : (clientEmail(record.customerName) || record.email || "");
@@ -950,6 +955,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#invoice-email-close").addEventListener("click", close);
   $("#invoice-email-cancel").addEventListener("click", close);
+  $("#invoice-email-saved-search").addEventListener("input", (event) => { const email = emailFromSearch(event.target.value); if (email) $("#invoice-email-to").value = email; });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!activeRecord || !form.reportValidity()) return;
@@ -977,7 +983,12 @@ document.addEventListener("DOMContentLoaded", () => {
         : record);
       activeRecord = state.records.find((record) => record.id === activeRecord.id) || activeRecord;
       renderQuotes();
-      setStatus("Email sent and recorded in the tracker.", "success");
+      const sentTo = emailFromSearch($("#invoice-email-to").value);
+      if (sentTo) {
+        try { await saveClientEmail(activeRecord.customerName, sentTo); }
+        catch (saveError) { console.warn("Invoice email was sent but the saved client email could not be updated.", saveError); }
+      }
+      setStatus("Email sent, recorded in the tracker, and saved for this client.", "success");
       window.setTimeout(close, 900);
     } catch (error) {
       setStatus(error.message || "Unable to send the invoice email.", "error");
