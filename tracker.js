@@ -1064,6 +1064,21 @@ document.addEventListener("DOMContentLoaded", () => {
     if (input) saveClientEmail(name, input.value);
   });
   const invoiceModal = $("#invoice-builder-modal");
+  const previewModal = document.createElement("div");
+  previewModal.className = "invoice-builder-modal";
+  previewModal.id = "invoice-preview-modal";
+  previewModal.setAttribute("role", "dialog");
+  previewModal.setAttribute("aria-modal", "true");
+  previewModal.setAttribute("aria-labelledby", "invoice-preview-title");
+  previewModal.innerHTML = `<div class="invoice-builder-dialog invoice-preview-dialog"><div class="invoice-builder-head"><div><h2 id="invoice-preview-title">Invoice preview</h2><p>Review the A4 invoice before printing or saving.</p></div><button class="icon-button" type="button" id="invoice-preview-close" aria-label="Close invoice preview">×</button></div><div class="invoice-preview-body" id="invoice-preview-paper-slot"></div><div class="invoice-builder-actions"><button class="quiet-button" type="button" id="invoice-preview-done">Back to editing</button><button class="primary-button" type="button" id="invoice-preview-print">Print / Save PDF</button></div></div>`;
+  document.body.append(previewModal);
+  $("#invoice-preview-paper-slot").append($("#invoice-paper"));
+  const previewButton = document.createElement("button");
+  previewButton.className = "quiet-button";
+  previewButton.type = "button";
+  previewButton.id = "invoice-preview-open";
+  previewButton.textContent = "Preview invoice";
+  $("#invoice-print").before(previewButton);
   const invoiceFields = ["#invoice-client", "#invoice-address", "#invoice-number", "#invoice-date", "#invoice-due-date", "#invoice-terms", "#invoice-description", "#invoice-quantity", "#invoice-unit-price", "#invoice-note"];
   const dateForInvoice = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—";
   const dueDateFor = (date, days) => { if (!date) return ""; const value = new Date(`${date}T00:00:00`); value.setDate(value.getDate() + Math.max(0, Number(days) || 0)); return value.toISOString().slice(0,10); };
@@ -1193,7 +1208,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // and only split when a real rendered A4 page overflows.
     renderPages();
   }
-  const closeInvoiceBuilder = () => invoiceModal.classList.remove("open");
+  const closeInvoicePreview = () => previewModal.classList.remove("open");
+  const closeInvoiceBuilder = () => { closeInvoicePreview(); invoiceModal.classList.remove("open"); };
   function renderProfessionalPrintInvoice(lines, subtotal, gst, total) {
     const client = escapeHtml($("#invoice-client").value || "Client");
     const address = escapeHtml($("#invoice-address").value || "Billing address");
@@ -1257,6 +1273,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-terms").addEventListener("change", refreshDueDate);
   $("#invoice-builder-close").addEventListener("click", closeInvoiceBuilder);
   $("#invoice-builder-cancel").addEventListener("click", closeInvoiceBuilder);
+  $("#invoice-preview-open").addEventListener("click", () => { renderInvoicePreview(); previewModal.classList.add("open"); });
+  $("#invoice-preview-close").addEventListener("click", closeInvoicePreview);
+  $("#invoice-preview-done").addEventListener("click", closeInvoicePreview);
+  $("#invoice-preview-print").addEventListener("click", () => window.print());
   $("#job-create-invoice").addEventListener("click", openInvoiceBuilder);
   $("#invoice-print").addEventListener("click", () => window.print());
   $("#invoice-save").addEventListener("click", async () => {
