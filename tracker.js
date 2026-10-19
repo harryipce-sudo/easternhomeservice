@@ -255,6 +255,10 @@ async function saveClientEmail(name, email, append = false) {
     renderClients();
   } catch (error) { window.alert("The client email could not be saved. Please try again."); console.warn(error); }
 }
+async function saveClientEmails(name, emails) {
+  const uniqueEmails = [...new Set((emails || []).map((email) => String(email || "").trim().toLowerCase()).filter(Boolean))];
+  for (const email of uniqueEmails) await saveClientEmail(name, email, true);
+}
 function renderClients() { const clients = [...new Map(activeRecords().filter((r) => r.customerName && r.customerName !== "-").map((r) => [savedClientName(r.customerName), r])).entries()]; $("#client-list").innerHTML = clients.map(([name, record]) => `<article class="client-item"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(record.phone || "No phone")} · ${escapeHtml(record.address || "No address")}</span><label style="display:grid;gap:5px;margin-top:10px;font-size:12px;font-weight:700;color:#425267">Invoice email<input type="email" data-client-email="${escapeHtml(name)}" value="${escapeHtml(clientEmail(name))}" placeholder="accounts@client.com" autocomplete="email"></label>${clientEmails(name).length > 1 ? `<small style="margin-top:6px;color:#637083">Also saved: ${escapeHtml(clientEmails(name).slice(1).join(", "))}</small>` : ""}<button class="quiet-button" type="button" data-save-client-email="${escapeHtml(name)}" style="margin-top:8px">Save email</button></article>`).join("") || `<div class="empty" style="display:block">Clients will appear when quotes are saved.</div>`; }
 function renderTasks() { const active = activeRecords().filter((record) => !["completed"].includes(record.job.status)); $("#task-list").innerHTML = active.map((record) => `<article class="task-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.detail || "No job detail added")}</span><div class="task-meta"><em>${escapeHtml(record.job.status === "quoted" ? "Follow up quote" : record.job.status === "confirmed" ? "Schedule the job" : "Complete scheduled work")}</em><b>Quote ${currency(record.job.quote)}</b></div></article>`).join("") || `<div class="empty" style="display:block">No active tasks.</div>`; }
 function renderReports() { const all = activeRecords(); const paid = all.filter((record) => record.job.payment === "paid"); $("#report-grid").innerHTML = `<article class="report-card"><span>Total quotations</span><strong>${currency(all.reduce((sum, r) => sum + r.job.quote, 0))}</strong></article><article class="report-card"><span>Paid jobs</span><strong>${paid.length}</strong></article><article class="report-card"><span>Completed jobs</span><strong>${all.filter((r) => r.job.status === "completed").length}</strong></article>`; }
@@ -971,7 +975,7 @@ document.addEventListener("DOMContentLoaded", () => {
     field.addEventListener("focus", (event) => renderEmailSuggestions(fieldId, event.target.value));
     field.addEventListener("input", (event) => renderEmailSuggestions(fieldId, event.target.value));
     field.addEventListener("keydown", (event) => { if (event.key === "Escape") { $(`#${fieldId}-suggestions`).hidden = true; event.target.setAttribute("aria-expanded", "false"); } });
-    field.addEventListener("change", (event) => { if (activeRecord) emailsFromValue(event.target.value).filter((email) => email.toLowerCase() !== INTERNAL_EMAIL_COPY).forEach((email) => saveClientEmail(activeRecord.customerName, email, true)); });
+    field.addEventListener("change", (event) => { if (activeRecord) void saveClientEmails(activeRecord.customerName, emailsFromValue(event.target.value).filter((email) => email.toLowerCase() !== INTERNAL_EMAIL_COPY)); });
     field.addEventListener("blur", () => window.setTimeout(() => { $(`#${fieldId}-suggestions`).hidden = true; field.setAttribute("aria-expanded", "false"); }, 150));
     $(`#${fieldId}-suggestions`).addEventListener("click", (event) => { const option = event.target.closest("[data-email-suggestion]"); if (!option) return; const email = option.dataset.emailSuggestion; if (fieldId === "invoice-email-to") field.value = email; else { const values = emailsFromValue(field.value); if (!values.some((value) => value.toLowerCase() === email.toLowerCase())) values.push(email); field.value = values.join(", "); } $(`#${fieldId}-suggestions`).hidden = true; field.setAttribute("aria-expanded", "false"); field.focus(); });
   });
@@ -1003,9 +1007,9 @@ document.addEventListener("DOMContentLoaded", () => {
         : record);
       activeRecord = state.records.find((record) => record.id === activeRecord.id) || activeRecord;
       renderQuotes();
-      const sentTo = emailFromSearch($("#invoice-email-to").value);
-      if (sentTo) {
-        try { await saveClientEmail(activeRecord.customerName, sentTo, true); }
+      const sentRecipients = ["#invoice-email-to", "#invoice-email-cc", "#invoice-email-bcc"].flatMap((selector) => emailsFromValue($(selector).value)).filter((email) => email.toLowerCase() !== INTERNAL_EMAIL_COPY);
+      if (sentRecipients.length) {
+        try { await saveClientEmails(activeRecord.customerName, sentRecipients); }
         catch (saveError) { console.warn("Invoice email was sent but the saved client email could not be updated.", saveError); }
       }
       setStatus("Email sent, recorded in the tracker, and saved for this client.", "success");
