@@ -1067,6 +1067,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const invoiceFields = ["#invoice-client", "#invoice-address", "#invoice-number", "#invoice-date", "#invoice-due-date", "#invoice-terms", "#invoice-description", "#invoice-quantity", "#invoice-unit-price", "#invoice-note"];
   const dateForInvoice = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—";
   const dueDateFor = (date, days) => { if (!date) return ""; const value = new Date(`${date}T00:00:00`); value.setDate(value.getDate() + Math.max(0, Number(days) || 0)); return value.toISOString().slice(0,10); };
+  let draftInvoiceLines = [];
+  const legacyDescription = $("#invoice-description").closest("label");
+  const legacyPricing = $("#invoice-quantity").closest(".two-col");
+  legacyDescription.hidden = true;
+  legacyPricing.hidden = true;
+  $("#invoice-client").setAttribute("list", "invoice-client-options");
+  $("#invoice-client").setAttribute("placeholder", "Search or enter client name");
+  $("#invoice-client").previousSibling.textContent = "Customer";
+  const clientOptions = document.createElement("datalist");
+  clientOptions.id = "invoice-client-options";
+  $("#invoice-client").after(clientOptions);
+  const lineEditor = document.createElement("section");
+  lineEditor.className = "invoice-editor-lines";
+  lineEditor.innerHTML = `<div class="invoice-editor-lines-head"><strong>Invoice lines</strong><button class="quiet-button" type="button" id="invoice-add-line">+ Add a line</button></div><div class="invoice-editor-line-table"><table><thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>GST</th><th>Amount</th><th></th></tr></thead><tbody id="invoice-editor-lines-body"></tbody></table></div>`;
+  legacyDescription.before(lineEditor);
+  const defaultInvoiceLine = (line = {}) => ({ description:String(line.description || ""), quantity:Math.max(0, Number(line.quantity) || 0), unitPrice:Math.max(0, Number(line.unitPrice) || 0) });
+  const invoiceLineAmount = (line) => line.quantity * line.unitPrice;
+  const readInvoiceLines = () => [...document.querySelectorAll("#invoice-editor-lines-body tr")].map((row) => defaultInvoiceLine({ description:row.querySelector("[data-line-description]").value, quantity:row.querySelector("[data-line-quantity]").value, unitPrice:row.querySelector("[data-line-price]").value })).filter((line) => line.description || line.quantity || line.unitPrice);
+  const renderInvoiceLineEditor = () => {
+    $("#invoice-editor-lines-body").innerHTML = draftInvoiceLines.map((line, index) => `<tr data-invoice-line="${index}"><td><textarea data-line-description rows="2" aria-label="Line ${index + 1} description">${escapeHtml(line.description)}</textarea></td><td><input data-line-quantity type="number" min="0" step="0.01" value="${line.quantity || ""}" aria-label="Line ${index + 1} quantity"></td><td><input data-line-price type="number" min="0" step="0.01" value="${line.unitPrice || ""}" aria-label="Line ${index + 1} unit price"></td><td>10% GST</td><td>${currency(invoiceLineAmount(line))}</td><td><button class="icon-button" type="button" data-remove-invoice-line="${index}" aria-label="Remove line ${index + 1}">×</button></td></tr>`).join("");
+  };
+  const syncLegacyInvoiceFields = (lines) => { const subtotal = lines.reduce((sum, line) => sum + invoiceLineAmount(line), 0); $("#invoice-description").value = lines.map((line) => line.description).filter(Boolean).join("\n"); $("#invoice-quantity").value = "1"; $("#invoice-unit-price").value = subtotal.toFixed(2); return subtotal; };
+  $("#invoice-add-line").addEventListener("click", () => { draftInvoiceLines.push(defaultInvoiceLine({ quantity:1 })); renderInvoiceLineEditor(); renderInvoicePreview(); });
+  $("#invoice-editor-lines-body").addEventListener("input", () => { draftInvoiceLines = readInvoiceLines(); renderInvoicePreview(); });
+  $("#invoice-editor-lines-body").addEventListener("click", (event) => { const button = event.target.closest("[data-remove-invoice-line]"); if (!button || draftInvoiceLines.length <= 1) return; draftInvoiceLines.splice(Number(button.dataset.removeInvoiceLine), 1); renderInvoiceLineEditor(); renderInvoicePreview(); });
   const splitInvoiceDescription = (text, maxLength = 260) => {
     const chunks = [];
     String(text || "—").split(/\r?\n+/).forEach((paragraph) => {
@@ -1169,10 +1194,20 @@ document.addEventListener("DOMContentLoaded", () => {
     renderPages();
   }
   const closeInvoiceBuilder = () => invoiceModal.classList.remove("open");
+  function renderProfessionalPrintInvoice(lines, subtotal, gst, total) {
+    const client = escapeHtml($("#invoice-client").value || "Client");
+    const address = escapeHtml($("#invoice-address").value || "Billing address");
+    const number = escapeHtml($("#invoice-number").value || "Draft");
+    const date = escapeHtml(dateForInvoice($("#invoice-date").value));
+    const dueDate = escapeHtml(dateForInvoice($("#invoice-due-date").value));
+    const terms = escapeHtml(`${$("#invoice-terms").value || 0} Days`);
+    const note = escapeHtml($("#invoice-note").value || "");
+    const rows = lines.map((line) => `<tr><td>${escapeHtml(line.description || "—")}</td><td>${line.quantity.toFixed(line.quantity % 1 ? 2 : 0)}</td><td>${currency(line.unitPrice)}</td><td>10% GST</td><td>${currency(invoiceLineAmount(line))}</td></tr>`).join("") || `<tr><td>—</td><td>0</td><td>${currency(0)}</td><td>10% GST</td><td>${currency(0)}</td></tr>`;
+    $("#invoice-print-pages").innerHTML = `<article class="invoice-paper invoice-print-page invoice-print-final"><header class="invoice-paper-header"><div class="invoice-company">Melbourne VIC Australia<br><strong>ABN: 67651973711</strong></div><div class="invoice-brand"><img src="./assets/eastern-home-service-logo-clean.png" alt="Eastern Home Services"></div></header><h2 class="invoice-title">Tax Invoice ${number}</h2><div class="invoice-customer"><strong>${client}</strong><br>${address}</div><div class="invoice-meta"><div><span>Invoice Date</span><strong>${date}</strong></div><div><span>Due Date</span><strong>${dueDate}</strong></div></div><table class="invoice-lines invoice-print-grid"><thead><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><div class="invoice-payment-terms">Payment terms: ${terms}</div><div class="invoice-totals"><div><span>Untaxed Amount</span><strong>${currency(subtotal)}</strong></div><div><span>GST 10%</span><strong>${currency(gst)}</strong></div><div class="grand"><span>Total</span><strong>${currency(total)}</strong></div></div><footer class="invoice-footer"><p><strong>Payment Communication: ${number}</strong></p><p><strong>Note:</strong><br>${note}</p><p><strong>Bank Detail</strong><br>SWIFT: CTBAAU2S<br>Bank Name: Commonwealth Bank<br>Account Name: Eastern Group VIC<br>BSB: 063 109<br>Account Number: 13349243 (AUD ONLY)<br>Bank Address: 28 Main Street, Box Hill, VIC 3128<br>"Please mark \"AUD only\" on bank instruction."</p></footer><div class="invoice-page-footer"><strong>Your Home Maintenance and Service Solution</strong><br><small>Page 1 / 1</small></div></article>`;
+  }
   function renderInvoicePreview() {
-    const quantity = Math.max(0, Number($("#invoice-quantity").value) || 0);
-    const unitPrice = Math.max(0, Number($("#invoice-unit-price").value) || 0);
-    const subtotal = quantity * unitPrice;
+    const lines = readInvoiceLines();
+    const subtotal = syncLegacyInvoiceFields(lines);
     const gst = subtotal * .1;
     const total = subtotal + gst;
     $("#invoice-preview-number").textContent = $("#invoice-number").value || "Draft";
@@ -1181,14 +1216,14 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-preview-date").textContent = dateForInvoice($("#invoice-date").value);
     $("#invoice-preview-due-date").textContent = dateForInvoice($("#invoice-due-date").value);
     $("#invoice-preview-terms-copy").textContent = `${$("#invoice-terms").value || 0} Days`;
-    const descriptionChunks = splitInvoiceDescription($("#invoice-description").value);
-    $("#invoice-lines-body").innerHTML = descriptionChunks.map((chunk, index) => `<tr${index ? ' class="invoice-description-continuation"' : ""}><td>${escapeHtml(chunk)}</td><td>${index ? "" : quantity.toFixed(quantity % 1 ? 2 : 0)}</td><td>${index ? "" : currency(unitPrice)}</td><td>${index ? "" : "10% GST"}</td><td>${index ? "" : currency(subtotal)}</td></tr>`).join("");
+    const descriptionChunks = lines.map((line) => `${line.description || "—"} — Qty ${line.quantity || 0} × ${currency(line.unitPrice)} = ${currency(invoiceLineAmount(line))}`);
+    $("#invoice-lines-body").innerHTML = lines.map((line) => `<tr><td>${escapeHtml(line.description || "—")}</td><td>${line.quantity.toFixed(line.quantity % 1 ? 2 : 0)}</td><td>${currency(line.unitPrice)}</td><td>10% GST</td><td>${currency(invoiceLineAmount(line))}</td></tr>`).join("") || `<tr><td>—</td><td>0</td><td>${currency(0)}</td><td>10% GST</td><td>${currency(0)}</td></tr>`;
     $("#invoice-preview-subtotal").textContent = currency(subtotal);
     $("#invoice-preview-gst").textContent = currency(gst);
     $("#invoice-preview-total").textContent = currency(total);
     $("#invoice-preview-reference").textContent = $("#invoice-number").value || "—";
     $("#invoice-preview-note").textContent = $("#invoice-note").value || "";
-    renderPrintInvoicePages(descriptionChunks, quantity, unitPrice, subtotal, gst, total);
+    renderProfessionalPrintInvoice(lines, subtotal, gst, total);
   }
   function openInvoiceBuilder() {
     if (!state.selected) { window.alert("Save the job first, then create its invoice."); return; }
@@ -1204,9 +1239,9 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-date").value = date;
     $("#invoice-terms").value = terms;
     $("#invoice-due-date").value = isExistingInvoice && invoice.dueDate ? invoice.dueDate : dueDateFor(date, terms);
-    $("#invoice-description").value = invoice.description || job.detail || "";
-    $("#invoice-quantity").value = invoice.quantity || 1;
-    $("#invoice-unit-price").value = Number.isFinite(Number(invoice.unitPrice)) ? Number(invoice.unitPrice).toFixed(2) : (Number(job.quote || 0) / 1.1).toFixed(2);
+    draftInvoiceLines = Array.isArray(invoice.lineItems) && invoice.lineItems.length ? invoice.lineItems.map(defaultInvoiceLine) : [defaultInvoiceLine({ description:invoice.description || job.detail || "", quantity:invoice.quantity || 1, unitPrice:Number.isFinite(Number(invoice.unitPrice)) ? invoice.unitPrice : (Number(job.quote || 0) / 1.1) })];
+    clientOptions.innerHTML = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+    renderInvoiceLineEditor();
     $("#invoice-note").value = invoice.note || "Price including labour and materials cost. Not including rubbish disposal unless mentioned.";
     $("#invoice-builder-title").textContent = isExistingInvoice ? "View / edit tax invoice" : "Create tax invoice";
     $("#invoice-builder-title").nextElementSibling.textContent = isExistingInvoice ? "Update the invoice details, then save your changes to the shared tracker." : "Review the details, then save the invoice to the shared tracker.";
@@ -1215,6 +1250,7 @@ document.addEventListener("DOMContentLoaded", () => {
     invoiceModal.classList.add("open");
   }
   invoiceFields.forEach((selector) => $(selector).addEventListener("input", renderInvoicePreview));
+  $("#invoice-client").addEventListener("change", () => { const match = state.records.find((record) => savedClientName(record.customerName).toLowerCase() === $("#invoice-client").value.trim().toLowerCase()); if (match && !$("#invoice-address").value.trim()) $("#invoice-address").value = match.address || ""; renderInvoicePreview(); });
   const refreshDueDate = () => { $("#invoice-due-date").value = dueDateFor($("#invoice-date").value, $("#invoice-terms").value); renderInvoicePreview(); };
   $("#invoice-date").addEventListener("change", refreshDueDate);
   $("#invoice-terms").addEventListener("input", refreshDueDate);
@@ -1225,18 +1261,19 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-print").addEventListener("click", () => window.print());
   $("#invoice-save").addEventListener("click", async () => {
     if (!state.selected || !$("#invoice-builder-form").reportValidity()) return;
-    const quantity = Math.max(0, Number($("#invoice-quantity").value) || 0);
-    const unitPrice = Math.max(0, Number($("#invoice-unit-price").value) || 0);
-    const total = quantity * unitPrice * 1.1;
-    const invoice = { number:$("#invoice-number").value.trim(), date:$("#invoice-date").value, dueDate:$("#invoice-due-date").value, termsDays:Number($("#invoice-terms").value), client:$("#invoice-client").value.trim(), address:$("#invoice-address").value.trim(), description:$("#invoice-description").value.trim(), quantity, unitPrice, note:$("#invoice-note").value.trim(), status:"issued" };
-    const record = { ...state.selected, customerName:invoice.client || state.selected.customerName, address:invoice.address || state.selected.address, totalQuote:currency(total), subtotalExGst:currency(quantity * unitPrice), gstTotal:currency(quantity * unitPrice * .1), jobStage:"invoiced", job:{ ...state.selected.job, detail:invoice.description || state.selected.job.detail, quote:total, status:"invoiced", boardOrder:-Date.now(), invoiceNumber:invoice.number, invoiceDate:invoice.date, invoice } };
+    const lineItems = readInvoiceLines();
+    if (!lineItems.length || lineItems.some((line) => !line.description || line.quantity <= 0)) { window.alert("Add at least one invoice line with a description and quantity."); return; }
+    const subtotal = lineItems.reduce((sum, line) => sum + invoiceLineAmount(line), 0);
+    const total = subtotal * 1.1;
+    const invoice = { number:$("#invoice-number").value.trim(), date:$("#invoice-date").value, dueDate:$("#invoice-due-date").value, termsDays:Number($("#invoice-terms").value), client:$("#invoice-client").value.trim(), address:$("#invoice-address").value.trim(), description:lineItems.map((line) => line.description).join("\n"), lineItems, quantity:1, unitPrice:subtotal, note:$("#invoice-note").value.trim(), status:"issued" };
+    const record = { ...state.selected, customerName:invoice.client || state.selected.customerName, address:invoice.address || state.selected.address, totalQuote:currency(total), subtotalExGst:currency(subtotal), gstTotal:currency(subtotal * .1), jobStage:"invoiced", job:{ ...state.selected.job, detail:invoice.description || state.selected.job.detail, quote:total, status:"invoiced", boardOrder:-Date.now(), invoiceNumber:invoice.number, invoiceDate:invoice.date, invoice } };
     try {
       const saved = normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }));
       state.records = state.records.map((item) => item.id === saved.id ? saved : item);
       state.selected = saved;
       $("#job-invoice").value = invoice.number;
       $("#job-invoice-date").value = invoice.date;
-      $("#job-quote").value = (total / 1.1).toFixed(2);
+      $("#job-quote").value = subtotal.toFixed(2);
       updateMarkupAmount();
       closeInvoiceBuilder(); closeDrawer(); setView("invoices"); render();
     } catch (error) { window.alert("Unable to save this invoice to the shared tracker. Check the cloud connection and try again."); console.warn(error); }
