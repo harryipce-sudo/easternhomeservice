@@ -51,9 +51,19 @@ function emailContent({ record, kind, message }) {
   const job = record.payload?.job || {};
   const invoice = job.invoice || {};
   const invoiceNumber = String(job.invoiceNumber || invoice.number || "Invoice");
-  const amount = money(job.quote || invoice.total);
+  const total = Math.max(0, Number(job.quote || invoice.total) || 0);
+  const received = job.payment === "paid" ? total : Math.min(total, Math.max(0, Number(job.paymentAmount) || 0));
+  const balance = Math.max(0, total - received);
+  const amount = money(balance);
   const dueDate = displayDate(invoice.dueDate || "");
-  const intro = kind === "reminder" ? `Invoice ${invoiceNumber} remains unpaid. Amount due: ${amount}. Due date: ${dueDate}.` : `Invoice ${invoiceNumber} is ready for your review. Amount due: ${amount}${dueDate !== "Not available" ? `. Due date: ${dueDate}.` : "."}`;
+  const hasPartPayment = received > 0 && balance > 0;
+  const intro = kind === "reminder"
+    ? hasPartPayment
+      ? `Invoice ${invoiceNumber} has received ${money(received)}. Remaining balance due: ${amount}. Due date: ${dueDate}.`
+      : `Invoice ${invoiceNumber} remains unpaid. Amount due: ${amount}. Due date: ${dueDate}.`
+    : hasPartPayment
+      ? `Invoice ${invoiceNumber} has received ${money(received)}. Remaining balance: ${amount}${dueDate !== "Not available" ? `. Due date: ${dueDate}.` : "."}`
+      : `Invoice ${invoiceNumber} is ready for your review. Amount due: ${amount}${dueDate !== "Not available" ? `. Due date: ${dueDate}.` : "."}`;
   const text = `${message.trim()}\n\n${intro}`.trim();
   return {
     invoiceNumber,

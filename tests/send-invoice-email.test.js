@@ -84,3 +84,34 @@ test("rejects malformed CC addresses before any email is sent", async () => {
     restoreEnv(originalEnv);
   }
 });
+
+test("uses the remaining balance in a partially paid reminder", async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = { RESEND_API_KEY:process.env.RESEND_API_KEY, RESEND_FROM_EMAIL:process.env.RESEND_FROM_EMAIL, SUPABASE_URL:process.env.SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY };
+  const partialRecord = { ...invoiceRecord, payload:{ job:{ ...invoiceRecord.payload.job, payment:"partially-paid", paymentAmount:500 } } };
+  const calls = [];
+  process.env.RESEND_API_KEY = "test-key";
+  process.env.RESEND_FROM_EMAIL = "Eastern Home Service <invoices@example.com>";
+  process.env.SUPABASE_URL = "https://supabase.example";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url:String(url), options });
+    if (String(url).includes("quote_records?select=")) return response(200, [partialRecord]);
+    if (String(url).includes("/storage/v1/object/")) return new Response(Buffer.from("%PDF-test"), { status:200 });
+    if (String(url) === "https://api.resend.com/emails") return response(200, { id:"email-2" });
+    if (String(url).includes("quote_records?id=eq.record-1")) return response(200, [partialRecord]);
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  try {
+    const res = makeResponse();
+    await handler({ method:"POST", body:{ recordId:"record-1", kind:"reminder", to:"accounts@example.com", subject:"Reminder", message:"Please arrange payment." } }, res);
+    assert.equal(res.statusCode, 200);
+    const resend = calls.find((call) => call.url === "https://api.resend.com/emails");
+    const payload = JSON.parse(resend.options.body);
+    assert.match(payload.text, /has received \$500\.00/i);
+    assert.match(payload.text, /Remaining balance due: \$1,898\.00/i);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+});
