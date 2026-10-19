@@ -32,6 +32,13 @@ const invoiceOverdue = (record) => {
   return { late:days > 0, dueDate, days:Math.max(0, days) };
 };
 const savedClientName = (value) => /^brw$/i.test(String(value || "").trim()) ? "BRW Group" : String(value || "").trim();
+const invoiceActivityEntries = (record) => {
+  const entries = [...(record?.job?.activity || []), ...(record?.job?.invoice?.activity || [])].filter((entry) => entry && entry.message);
+  // Older invoices were created before the timeline existed. Their saved
+  // record date is still a trustworthy first activity, so show it once.
+  if (record?.submittedAt && !entries.some((entry) => /job created/i.test(entry.message))) entries.push({ at:record.submittedAt, type:"created", message:"Job created." });
+  return entries;
+};
 const normalise = (record) => {
   const job = record.job && typeof record.job === "object" ? record.job : {};
   return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, markupStatus: job.markupStatus || (Number(job.markup) > 0 ? "included" : "not-recorded"), status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", invoice: job.invoice && typeof job.invoice === "object" ? job.invoice : {}, activity: Array.isArray(job.activity) ? job.activity : [], archived: job.archived === true, groupKey: job.groupKey || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
@@ -55,7 +62,7 @@ function invoiceEmailActions(record, pending) {
   const history = email.sentAt ? `<small class="invoice-email-history">Sent ${escapeHtml(new Date(email.sentAt).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }))}</small>` : email.status === "failed" ? '<small class="invoice-email-history">Last attempt failed</small>' : "";
   const unavailable = hasPdf ? "" : " disabled title=\"Import the Odoo PDF before emailing this invoice\"";
   const reminder = record.job.payment === "paid" ? "" : `<button class="quiet-button" type="button" data-invoice-reminder="${escapeHtml(record.id)}"${unavailable}>Send reminder</button>`;
-  const activity = [...(record.job.activity || []), ...(record.job.invoice?.activity || [])];
+  const activity = invoiceActivityEntries(record);
   const activityButton = `<button class="quiet-button" type="button" data-invoice-activity="${escapeHtml(record.id)}">Activity${activity.length ? ` (${activity.length})` : ""}</button>`;
   return `<div class="invoice-email-actions"><button class="quiet-button" type="button" data-invoice-email="${escapeHtml(record.id)}"${unavailable}>Send invoice</button>${reminder}${activityButton}${history}</div>`;
 }
@@ -963,8 +970,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function openInvoiceActivity(record) {
   if (!record) return;
-  const entries = [...(record.job.activity || []), ...(record.job.invoice?.activity || [])]
-    .filter((entry) => entry && entry.message)
+  const entries = invoiceActivityEntries(record)
     .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
   $("#invoice-activity-copy").textContent = `${record.job.invoiceNumber || "Invoice"} · ${record.address || "Address not recorded"}`;
   $("#invoice-activity-list").innerHTML = entries.map((entry) => `<li><time>${escapeHtml(new Date(entry.at).toLocaleString("en-AU", { dateStyle:"medium", timeStyle:"short" }))}</time>${escapeHtml(entry.message)}</li>`).join("");
