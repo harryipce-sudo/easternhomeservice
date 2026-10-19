@@ -34,7 +34,7 @@ const invoiceOverdue = (record) => {
 const savedClientName = (value) => /^brw$/i.test(String(value || "").trim()) ? "BRW Group" : String(value || "").trim();
 const normalise = (record) => {
   const job = record.job && typeof record.job === "object" ? record.job : {};
-  return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, markupStatus: job.markupStatus || (Number(job.markup) > 0 ? "included" : "not-recorded"), status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", invoice: job.invoice && typeof job.invoice === "object" ? job.invoice : {}, archived: job.archived === true, groupKey: job.groupKey || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
+  return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, markupStatus: job.markupStatus || (Number(job.markup) > 0 ? "included" : "not-recorded"), status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", invoice: job.invoice && typeof job.invoice === "object" ? job.invoice : {}, activity: Array.isArray(job.activity) ? job.activity : [], archived: job.archived === true, groupKey: job.groupKey || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
 };
 async function request(path = "", options = {}) { const response = await fetch(`${API}${path}`, { headers: { "Content-Type":"application/json", ...(options.headers || {}) }, ...options }); if (!response.ok) throw new Error(await response.text()); return response.status === 204 ? null : response.json(); }
 async function loadRecords() { if (syncRequest) return syncRequest; $("#sync-state").innerHTML = "<span></span> Syncing shared data"; syncRequest = (async () => { try { const raw = await request(); state.boardSettings = raw.find((record) => record.recordType === "tracker-board-settings") || null; await importApprovedAccountingEntries(); state.customBoards = Array.isArray(state.boardSettings?.job?.boards) ? state.boardSettings.job.boards.filter((board) => board?.id && board?.label) : []; state.boardOrder = Array.isArray(state.boardSettings?.job?.boardOrder) ? state.boardSettings.job.boardOrder : []; state.hiddenBoards = Array.isArray(state.boardSettings?.job?.hiddenBoards) ? state.boardSettings.job.hiddenBoards : []; state.customBoards.forEach((board) => { boardLabels[board.id] = board.label; }); state.records = raw.filter((record) => record.recordType !== "tracker-board-settings").map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } finally { syncRequest = null; } })(); return syncRequest; }
@@ -55,7 +55,7 @@ function invoiceEmailActions(record, pending) {
   const history = email.sentAt ? `<small class="invoice-email-history">Sent ${escapeHtml(new Date(email.sentAt).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }))}</small>` : email.status === "failed" ? '<small class="invoice-email-history">Last attempt failed</small>' : "";
   const unavailable = hasPdf ? "" : " disabled title=\"Import the Odoo PDF before emailing this invoice\"";
   const reminder = record.job.payment === "paid" ? "" : `<button class="quiet-button" type="button" data-invoice-reminder="${escapeHtml(record.id)}"${unavailable}>Send reminder</button>`;
-  const activity = record.job.invoice?.activity || [];
+  const activity = [...(record.job.activity || []), ...(record.job.invoice?.activity || [])];
   const activityButton = `<button class="quiet-button" type="button" data-invoice-activity="${escapeHtml(record.id)}">Activity${activity.length ? ` (${activity.length})` : ""}</button>`;
   return `<div class="invoice-email-actions"><button class="quiet-button" type="button" data-invoice-email="${escapeHtml(record.id)}"${unavailable}>Send invoice</button>${reminder}${activityButton}${history}</div>`;
 }
@@ -914,7 +914,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   $("#invoices-body").addEventListener("click", (event) => {
     const activity = event.target.closest("[data-invoice-activity]");
-    if (activity) { const entries = state.records.find((record) => record.id === activity.dataset.invoiceActivity)?.job?.invoice?.activity || []; alert(entries.length ? entries.slice().reverse().map((entry) => `${new Date(entry.at).toLocaleString("en-AU")} — ${entry.message}`).join("\n\n") : "No invoice activity recorded yet."); return; }
+    if (activity) { openInvoiceActivity(state.records.find((record) => record.id === activity.dataset.invoiceActivity)); return; }
     const reminder = event.target.closest("[data-invoice-reminder]");
     const invoice = event.target.closest("[data-invoice-email]");
     const id = reminder?.dataset.invoiceReminder || invoice?.dataset.invoiceEmail;
@@ -948,7 +948,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) throw new Error(data.error || "Unable to send the invoice email.");
       const email = data.record?.email || {};
       state.records = state.records.map((record) => record.id === activeRecord.id
-        ? normalise({ ...record, job:{ ...record.job, invoice:{ ...record.job.invoice, email } } })
+        ? normalise({ ...record, job:{ ...record.job, invoice:{ ...record.job.invoice, email, activity:data.record?.activity || record.job.invoice?.activity || [] } } })
         : record);
       activeRecord = state.records.find((record) => record.id === activeRecord.id) || activeRecord;
       renderQuotes();
@@ -960,6 +960,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+function openInvoiceActivity(record) {
+  if (!record) return;
+  const entries = [...(record.job.activity || []), ...(record.job.invoice?.activity || [])]
+    .filter((entry) => entry && entry.message)
+    .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+  $("#invoice-activity-copy").textContent = `${record.job.invoiceNumber || "Invoice"} · ${record.address || "Address not recorded"}`;
+  $("#invoice-activity-list").innerHTML = entries.map((entry) => `<li><time>${escapeHtml(new Date(entry.at).toLocaleString("en-AU", { dateStyle:"medium", timeStyle:"short" }))}</time>${escapeHtml(entry.message)}</li>`).join("");
+  $("#invoice-activity-empty").hidden = entries.length > 0;
+  $("#invoice-activity-modal").classList.add("open");
+}
+function closeInvoiceActivity() { $("#invoice-activity-modal").classList.remove("open"); }
+$("#invoice-activity-close").addEventListener("click", closeInvoiceActivity);
+$("#invoice-activity-done").addEventListener("click", closeInvoiceActivity);
 
 document.addEventListener("DOMContentLoaded", () => {
   const invoiceModal = $("#invoice-builder-modal");

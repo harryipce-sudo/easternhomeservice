@@ -150,7 +150,7 @@ module.exports = async (req, res) => {
     });
     const sentAt = new Date().toISOString();
     const updated = await updateEmailStatus(config, record, { status:"sent", sentAt, recipient:recipients, cc, kind, messageId:String(resend?.id || ""), photoCount:photos.length });
-    return res.status(200).json({ ok:true, sentAt, record:{ id:updated.id, email:updated.payload?.job?.invoice?.email || {} } });
+    return res.status(200).json({ ok:true, sentAt, record:{ id:updated.id, email:updated.payload?.job?.invoice?.email || {}, activity:updated.payload?.job?.invoice?.activity || [] } });
   } catch (error) {
     if (record) {
       try {

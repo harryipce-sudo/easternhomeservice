@@ -58,6 +58,36 @@ function normalizeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function appendJobActivity(record, message) {
+  const job = record.job && typeof record.job === "object" ? record.job : {};
+  const activity = Array.isArray(job.activity) ? job.activity : [];
+  return {
+    ...record,
+    job: {
+      ...job,
+      activity: [...activity, { at:new Date().toISOString(), type:"tracker", message }].slice(-100)
+    }
+  };
+}
+
+function activityForChange(previous, next) {
+  const before = previous?.payload?.job && typeof previous.payload.job === "object" ? previous.payload.job : {};
+  const after = next.job && typeof next.job === "object" ? next.job : {};
+  const messages = [];
+  if (before.status !== after.status) messages.push(`Job moved from ${before.status || "New"} to ${after.status || "New"}.`);
+  if (before.payment !== after.payment || before.paymentDate !== after.paymentDate) {
+    messages.push(after.payment === "paid" ? `Payment marked paid${after.paymentDate ? ` on ${after.paymentDate}` : ""}.` : "Payment marked unpaid.");
+  }
+  if (before.invoiceNumber !== after.invoiceNumber) {
+    messages.push(after.invoiceNumber ? `Invoice ${after.invoiceNumber} attached to this job.` : "Invoice number removed from this job.");
+  }
+  const fieldsChanged = ["number", "detail", "quote", "markup", "scheduledDate", "referral"].some((field) => String(before[field] ?? "") !== String(after[field] ?? ""))
+    || String(previous?.customer_name || "") !== String(next.customerName || "")
+    || String(previous?.address || "") !== String(next.address || "");
+  if (fieldsChanged && !messages.length) messages.push("Job details updated.");
+  return messages;
+}
+
 function mapRecordToRow(record) {
   const blindItems = normalizeArray(record.blindItems);
   const curtainItems = normalizeArray(record.curtainItems);
@@ -182,7 +212,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === "POST") {
-      const record = await readJsonBody(req);
+      const record = appendJobActivity(await readJsonBody(req), "Job created.");
       const response = await fetchSupabase("quote_records", {
         method: "POST",
         body: JSON.stringify(mapRecordToRow(record))
@@ -229,7 +259,14 @@ module.exports = async (req, res) => {
         return;
       }
 
-      const record = await readJsonBody(req);
+      let record = await readJsonBody(req);
+      // Read the existing row first so the timeline records meaningful changes
+      // even when the edit is made from another browser or device.
+      const existingResponse = await fetchSupabase(`quote_records?id=eq.${encodeURIComponent(id)}&select=*`);
+      const existingRows = existingResponse.ok ? JSON.parse(await existingResponse.text()) : [];
+      const existing = existingRows[0];
+      const messages = existing ? activityForChange(existing, record) : ["Job updated."];
+      messages.forEach((message) => { record = appendJobActivity(record, message); });
       const response = await fetchSupabase(`quote_records?id=eq.${encodeURIComponent(id)}`, {
         method: "PATCH",
         body: JSON.stringify(mapRecordToRow({ ...record, id })),
