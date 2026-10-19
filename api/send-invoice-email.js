@@ -84,8 +84,9 @@ async function updateEmailStatus(config, record, values) {
   const job = payload.job && typeof payload.job === "object" ? payload.job : {};
   const invoice = job.invoice && typeof job.invoice === "object" ? job.invoice : {};
   const activity = Array.isArray(invoice.activity) ? invoice.activity : [];
-  const event = values.status === "sent" ? `${values.kind === "reminder" ? "Payment reminder" : "Invoice email"} sent to ${(values.recipient || []).join(", ")}${values.photoCount ? ` with ${values.photoCount} evidence photo(s)` : ""}.` : "Invoice email sending failed.";
-  const nextPayload = { ...payload, job:{ ...job, invoice:{ ...invoice, email:{ ...(invoice.email || {}), ...values }, activity:[...activity, { at:new Date().toISOString(), type:"email", message:event }].slice(-100) } } };
+  const recipientDetails = [`To: ${(values.recipient || []).join(", ")}`, values.cc?.length ? `CC: ${values.cc.join(", ")}` : "", values.bcc?.length ? `BCC: ${values.bcc.join(", ")}` : ""].filter(Boolean).join(" · ");
+  const event = values.status === "sent" ? `${values.kind === "reminder" ? "Payment reminder" : "Invoice email"} sent. ${recipientDetails}${values.photoCount ? ` · ${values.photoCount} evidence photo(s) attached` : ""}.` : "Invoice email sending failed.";
+  const nextPayload = { ...payload, job:{ ...job, invoice:{ ...invoice, email:{ ...(invoice.email || {}), ...values }, activity:[...activity, { at:new Date().toISOString(), type:"email", message:event, recipient:values.recipient || [], cc:values.cc || [], bcc:values.bcc || [] }].slice(-100) } } };
   const response = await supabaseFetch(config, `/rest/v1/quote_records?id=eq.${encodeURIComponent(record.id)}`, {
     method:"PATCH",
     headers:{ "Content-Type":"application/json", Prefer:"return=representation" },
