@@ -36,3 +36,9 @@ No actionable P0, P1 or P2 visual issues found in the tested desktop state. Exis
 2. The initial preview used a text-only brand. It now uses the supplied Eastern Home Services logo and the PDF's header, dates, payment terms and totals layout.
 
 final result: passed
+
+## Separate editor and preview QA — 19 October 2026
+
+- Source intent: the user requested direct invoice-line entry, with the editable invoice and the A4 preview in separate windows.
+- Live verification: opened tracker invoice 25228, selected **Create A4 invoice**, then **Preview invoice**. No changes were saved.
+- Result: passed. The edit window shows client, dates, note, and separate Description / Qty / Unit price / GST / Amount line rows. The A4 paper opens only in the separate **Invoice preview** window, where the three line items and their individual prices remain readable.
