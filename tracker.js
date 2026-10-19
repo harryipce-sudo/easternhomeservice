@@ -909,7 +909,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const close = () => { modal.classList.remove("open"); activeRecord = null; setStatus(); };
   const invoiceNumber = (record) => record?.job?.invoiceNumber || record?.job?.invoice?.number || "invoice";
   const savedEmailOptions = () => Object.entries(clientContacts()).filter(([, email]) => email).sort(([a],[b]) => a.localeCompare(b));
-  const renderSavedEmailOptions = () => { $("#invoice-email-saved-options").innerHTML = savedEmailOptions().map(([client, email]) => `<option value="${escapeHtml(`${client} — ${email}`)}"></option>`).join(""); };
+  const renderSavedEmailOptions = (search = "") => {
+    const term = String(search || "").trim().toLowerCase();
+    const options = savedEmailOptions().filter(([client, email]) => !term || `${client} ${email}`.toLowerCase().includes(term));
+    $("#invoice-email-saved-select").innerHTML = `<option value="">Select a saved client email</option>${options.map(([client, email]) => `<option value="${escapeHtml(email)}">${escapeHtml(`${client} — ${email}`)}</option>`).join("")}`;
+  };
   const emailFromSearch = (value) => String(value || "").match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0] || "";
   const readPhotos = () => {
     const files = [...$("#invoice-email-photos").files];
@@ -926,7 +930,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const amount = currency(record.job.quote || record.job.invoice?.total || 0);
     const prior = record.job.invoice?.email || {};
     renderSavedEmailOptions();
-    $("#invoice-email-saved-search").value = clientEmail(record.customerName) ? `${savedClientName(record.customerName)} — ${clientEmail(record.customerName)}` : "";
+    $("#invoice-email-saved-search").value = "";
     $("#invoice-email-title").textContent = activeKind === "reminder" ? "Send payment reminder" : "Send invoice email";
     $("#invoice-email-copy").textContent = activeKind === "reminder" ? `Invoice ${number} is unpaid. The stored Odoo PDF will be attached.` : `Invoice ${number}. The stored Odoo PDF will be attached.`;
     $("#invoice-email-to").value = Array.isArray(prior.recipient) ? prior.recipient.join(", ") : (clientEmail(record.customerName) || record.email || "");
@@ -955,7 +959,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#invoice-email-close").addEventListener("click", close);
   $("#invoice-email-cancel").addEventListener("click", close);
-  $("#invoice-email-saved-search").addEventListener("input", (event) => { const email = emailFromSearch(event.target.value); if (email) $("#invoice-email-to").value = email; });
+  $("#invoice-email-saved-search").addEventListener("input", (event) => renderSavedEmailOptions(event.target.value));
+  $("#invoice-email-saved-select").addEventListener("change", (event) => { if (event.target.value) $("#invoice-email-to").value = event.target.value; });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!activeRecord || !form.reportValidity()) return;
