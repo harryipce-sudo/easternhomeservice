@@ -3,6 +3,7 @@ const { getSupabaseConfig, supabaseFetch, allInvoiceRows } = require("./_invoice
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const MAX_RECIPIENTS = 20;
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+const REQUIRED_INTERNAL_CC = "easternhomeservice@gmail.com";
 
 async function readJsonBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
@@ -119,6 +120,7 @@ module.exports = async (req, res) => {
   let record;
   let recipients = [];
   let cc = [];
+  let bcc = [];
   let kind = "invoice";
   try {
     const body = await readJsonBody(req);
@@ -128,7 +130,8 @@ module.exports = async (req, res) => {
     const message = String(body.message || "").trim().slice(0, 10000);
     if (!recordId || !subject || !message) return res.status(400).json({ error:"Recipient, subject and message are required." });
     recipients = parseAddresses(body.to);
-    cc = String(body.cc || "").trim() ? parseAddresses(body.cc) : [];
+    cc = [...new Set([...(String(body.cc || "").trim() ? parseAddresses(body.cc) : []), REQUIRED_INTERNAL_CC])].filter((address) => !recipients.includes(address));
+    bcc = String(body.bcc || "").trim() ? parseAddresses(body.bcc) : [];
     const rows = await allInvoiceRows(config);
     record = rows.find((row) => String(row.id) === recordId);
     if (!record || record?.payload?.job?.status !== "invoiced") return res.status(404).json({ error:"Invoice not found." });
@@ -142,6 +145,7 @@ module.exports = async (req, res) => {
       from:emailConfig.from,
       to:recipients,
       cc:cc.length ? cc : undefined,
+      bcc:bcc.length ? bcc : undefined,
       reply_to:emailConfig.replyTo ? [emailConfig.replyTo] : undefined,
       subject,
       html:content.html,
@@ -149,12 +153,12 @@ module.exports = async (req, res) => {
       attachments:[attachment, ...photos]
     });
     const sentAt = new Date().toISOString();
-    const updated = await updateEmailStatus(config, record, { status:"sent", sentAt, recipient:recipients, cc, kind, messageId:String(resend?.id || ""), photoCount:photos.length });
+    const updated = await updateEmailStatus(config, record, { status:"sent", sentAt, recipient:recipients, cc, bcc, kind, messageId:String(resend?.id || ""), photoCount:photos.length });
     return res.status(200).json({ ok:true, sentAt, record:{ id:updated.id, email:updated.payload?.job?.invoice?.email || {}, activity:updated.payload?.job?.invoice?.activity || [] } });
   } catch (error) {
     if (record) {
       try {
-        await updateEmailStatus(config, record, { status:"failed", attemptedAt:new Date().toISOString(), recipient:recipients, cc, kind });
+        await updateEmailStatus(config, record, { status:"failed", attemptedAt:new Date().toISOString(), recipient:recipients, cc, bcc, kind });
       } catch (_) {
         // The original error is more useful to the user than a status-write failure.
       }

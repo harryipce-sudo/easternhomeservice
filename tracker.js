@@ -5,6 +5,7 @@ const savedView = (() => {
 const state = { records: [], search: "", sort: "newest", view: savedView, layout: "board", selected: null, drawerStage: "quoted", drawerImportedInvoice:null, invoiceFilter: "all", invoiceSearch:"", invoiceFY: "", invoiceQuarter: "", profitFY: "", accountingFY: "", expandedGroups: new Set(), customBoards: [], boardOrder: [], hiddenBoards: [], boardSettings: null };
 let syncRequest = null;
 const $ = (selector) => document.querySelector(selector);
+const INTERNAL_EMAIL_COPY = "easternhomeservice@gmail.com";
 const currency = (value) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value) || 0);
 const displayDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }) : "—";
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
@@ -911,15 +912,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const close = () => { modal.classList.remove("open"); activeRecord = null; setStatus(); };
   const invoiceNumber = (record) => record?.job?.invoiceNumber || record?.job?.invoice?.number || "invoice";
   const savedEmailOptions = () => Object.keys(clientContacts()).flatMap((client) => clientEmails(client).map((email) => [client, email])).sort(([a],[b]) => a.localeCompare(b));
-  const renderEmailSuggestions = (search = "") => {
-    const term = String(search || "").trim().toLowerCase();
+  const renderEmailSuggestions = (fieldId, search = "") => {
+    const term = String(search || "").split(/[;,\n]/).at(-1).trim().toLowerCase();
     const options = savedEmailOptions().filter(([client, email]) => !term || `${client} ${email}`.toLowerCase().includes(term)).slice(0, 8);
-    const suggestions = $("#invoice-email-suggestions");
-    suggestions.innerHTML = options.length ? options.map(([client, email]) => `<button class="invoice-email-suggestion" type="button" role="option" data-email-suggestion="${escapeHtml(email)}"><span class="invoice-email-avatar">${escapeHtml(client.charAt(0).toUpperCase() || "C")}</span><span><strong>${escapeHtml(client)}</strong><small>${escapeHtml(email)}</small></span></button>`).join("") : `<div class="invoice-email-suggestion-empty">${term ? "No saved email matches this search. Enter a full email address and leave this field to save it for this client." : "No client emails saved yet. Enter a full email address and leave this field to save it for this client."}</div>`;
+    const suggestions = $(`#${fieldId}-suggestions`);
+    suggestions.innerHTML = options.length ? options.map(([client, email]) => `<button class="invoice-email-suggestion" type="button" role="option" data-email-suggestion="${escapeHtml(email)}" data-recipient-field="${escapeHtml(fieldId)}"><span class="invoice-email-avatar">${escapeHtml(client.charAt(0).toUpperCase() || "C")}</span><span><strong>${escapeHtml(client)}</strong><small>${escapeHtml(email)}</small></span></button>`).join("") : `<div class="invoice-email-suggestion-empty">${term ? "No saved email matches this search. Enter a full email address and leave this field to save it for this client." : "No client emails saved yet. Enter a full email address and leave this field to save it for this client."}</div>`;
     suggestions.hidden = false;
-    $("#invoice-email-to").setAttribute("aria-expanded", String(options.length > 0));
+    $(`#${fieldId}`).setAttribute("aria-expanded", String(options.length > 0));
   };
   const emailFromSearch = (value) => String(value || "").match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0] || "";
+  const emailsFromValue = (value) => String(value || "").match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g) || [];
   const readPhotos = () => {
     const files = [...$("#invoice-email-photos").files];
     if (files.length > 8 || files.reduce((sum, file) => sum + file.size, 0) > 3 * 1024 * 1024) throw new Error("Choose up to 8 JPG, PNG or WebP photos, 3 MB total.");
@@ -937,7 +939,9 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-email-title").textContent = activeKind === "reminder" ? "Send payment reminder" : "Send invoice email";
     $("#invoice-email-copy").textContent = activeKind === "reminder" ? `Invoice ${number} is unpaid. The stored Odoo PDF will be attached.` : `Invoice ${number}. The stored Odoo PDF will be attached.`;
     $("#invoice-email-to").value = Array.isArray(prior.recipient) ? prior.recipient.join(", ") : (clientEmail(record.customerName) || record.email || "");
-    $("#invoice-email-cc").value = Array.isArray(prior.cc) ? prior.cc.join(", ") : "";
+    const priorCc = Array.isArray(prior.cc) ? prior.cc : [];
+    $("#invoice-email-cc").value = [...new Set([...priorCc, INTERNAL_EMAIL_COPY])].join(", ");
+    $("#invoice-email-bcc").value = Array.isArray(prior.bcc) ? prior.bcc.join(", ") : "";
     $("#invoice-email-subject").value = activeKind === "reminder" ? `Reminder: invoice ${number} payment due` : `Invoice ${number} from Eastern Home Service`;
     $("#invoice-email-message").value = activeKind === "reminder"
       ? `Hello,\n\nThis is a friendly reminder that invoice ${number} for ${amount} is due${dueDate ? ` (${displayDate(dueDate)})` : ""}. Please arrange payment at your earliest convenience.\n\nThe invoice PDF is attached. If payment has already been made, please reply with the payment date or reference.\n\nKind regards,\nEastern Home Service`
@@ -962,12 +966,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#invoice-email-close").addEventListener("click", close);
   $("#invoice-email-cancel").addEventListener("click", close);
-  $("#invoice-email-to").addEventListener("focus", (event) => renderEmailSuggestions(event.target.value));
-  $("#invoice-email-to").addEventListener("input", (event) => renderEmailSuggestions(event.target.value));
-  $("#invoice-email-to").addEventListener("keydown", (event) => { if (event.key === "Escape") { $("#invoice-email-suggestions").hidden = true; event.target.setAttribute("aria-expanded", "false"); } });
-  $("#invoice-email-suggestions").addEventListener("click", (event) => { const option = event.target.closest("[data-email-suggestion]"); if (!option) return; $("#invoice-email-to").value = option.dataset.emailSuggestion; $("#invoice-email-suggestions").hidden = true; $("#invoice-email-to").setAttribute("aria-expanded", "false"); $("#invoice-email-to").focus(); });
-  $("#invoice-email-to").addEventListener("change", (event) => { const email = emailFromSearch(event.target.value); if (activeRecord && email && email.toLowerCase() === event.target.value.trim().toLowerCase()) saveClientEmail(activeRecord.customerName, email, true); });
-  $("#invoice-email-to").addEventListener("blur", () => window.setTimeout(() => { $("#invoice-email-suggestions").hidden = true; $("#invoice-email-to").setAttribute("aria-expanded", "false"); }, 150));
+  ["invoice-email-to", "invoice-email-cc", "invoice-email-bcc"].forEach((fieldId) => {
+    const field = $(`#${fieldId}`);
+    field.addEventListener("focus", (event) => renderEmailSuggestions(fieldId, event.target.value));
+    field.addEventListener("input", (event) => renderEmailSuggestions(fieldId, event.target.value));
+    field.addEventListener("keydown", (event) => { if (event.key === "Escape") { $(`#${fieldId}-suggestions`).hidden = true; event.target.setAttribute("aria-expanded", "false"); } });
+    field.addEventListener("change", (event) => { if (activeRecord) emailsFromValue(event.target.value).filter((email) => email.toLowerCase() !== INTERNAL_EMAIL_COPY).forEach((email) => saveClientEmail(activeRecord.customerName, email, true)); });
+    field.addEventListener("blur", () => window.setTimeout(() => { $(`#${fieldId}-suggestions`).hidden = true; field.setAttribute("aria-expanded", "false"); }, 150));
+    $(`#${fieldId}-suggestions`).addEventListener("click", (event) => { const option = event.target.closest("[data-email-suggestion]"); if (!option) return; const email = option.dataset.emailSuggestion; if (fieldId === "invoice-email-to") field.value = email; else { const values = emailsFromValue(field.value); if (!values.some((value) => value.toLowerCase() === email.toLowerCase())) values.push(email); field.value = values.join(", "); } $(`#${fieldId}-suggestions`).hidden = true; field.setAttribute("aria-expanded", "false"); field.focus(); });
+  });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!activeRecord || !form.reportValidity()) return;
@@ -983,6 +990,7 @@ document.addEventListener("DOMContentLoaded", () => {
           kind:activeKind,
           to:$("#invoice-email-to").value.trim(),
           cc:$("#invoice-email-cc").value.trim(),
+          bcc:$("#invoice-email-bcc").value.trim(),
           subject:$("#invoice-email-subject").value.trim(),
           message:$("#invoice-email-message").value.trim(), photos:await photos
         })

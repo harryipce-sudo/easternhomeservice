@@ -54,12 +54,13 @@ test("sends a private invoice PDF with multiple CC recipients and records the re
   };
   try {
     const res = makeResponse();
-    await handler({ method:"POST", body:{ recordId:"record-1", kind:"reminder", to:"accounts@example.com", cc:"manager@example.com; team@example.com", subject:"Reminder", message:"Please arrange payment." } }, res);
+    await handler({ method:"POST", body:{ recordId:"record-1", kind:"reminder", to:"accounts@example.com", cc:"manager@example.com; team@example.com", bcc:"owner@example.com", subject:"Reminder", message:"Please arrange payment." } }, res);
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.ok, true);
     const resend = calls.find((call) => call.url === "https://api.resend.com/emails");
     const payload = JSON.parse(resend.options.body);
-    assert.deepEqual(payload.cc, ["manager@example.com", "team@example.com"]);
+    assert.deepEqual(payload.cc, ["manager@example.com", "team@example.com", "easternhomeservice@gmail.com"]);
+    assert.deepEqual(payload.bcc, ["owner@example.com"]);
     assert.equal(payload.attachments[0].filename, "INV-25228.pdf");
     assert.match(payload.text, /amount due/i);
   } finally {
