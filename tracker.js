@@ -1221,6 +1221,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-terms").addEventListener("change", refreshDueDate);
   $("#invoice-builder-close").addEventListener("click", closeInvoiceBuilder);
   $("#invoice-builder-cancel").addEventListener("click", closeInvoiceBuilder);
+  $("#job-create-invoice").addEventListener("click", openInvoiceBuilder);
   $("#invoice-print").addEventListener("click", () => window.print());
   $("#invoice-save").addEventListener("click", async () => {
     if (!state.selected || !$("#invoice-builder-form").reportValidity()) return;
