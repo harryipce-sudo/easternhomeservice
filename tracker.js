@@ -55,7 +55,9 @@ function invoiceEmailActions(record, pending) {
   const history = email.sentAt ? `<small class="invoice-email-history">Sent ${escapeHtml(new Date(email.sentAt).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }))}</small>` : email.status === "failed" ? '<small class="invoice-email-history">Last attempt failed</small>' : "";
   const unavailable = hasPdf ? "" : " disabled title=\"Import the Odoo PDF before emailing this invoice\"";
   const reminder = record.job.payment === "paid" ? "" : `<button class="quiet-button" type="button" data-invoice-reminder="${escapeHtml(record.id)}"${unavailable}>Send reminder</button>`;
-  return `<div class="invoice-email-actions"><button class="quiet-button" type="button" data-invoice-email="${escapeHtml(record.id)}"${unavailable}>Send invoice</button>${reminder}${history}</div>`;
+  const activity = record.job.invoice?.activity || [];
+  const activityButton = `<button class="quiet-button" type="button" data-invoice-activity="${escapeHtml(record.id)}">Activity${activity.length ? ` (${activity.length})` : ""}</button>`;
+  return `<div class="invoice-email-actions"><button class="quiet-button" type="button" data-invoice-email="${escapeHtml(record.id)}"${unavailable}>Send invoice</button>${reminder}${activityButton}${history}</div>`;
 }
 function renderJobs() { const items = filtered(); const boardItems = boardRecords(items); $("#jobs-body").innerHTML = items.map((record) => { const j = record.job; return `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(j.number)}</td><td class="address">${escapeHtml(record.address)}</td><td class="detail">${escapeHtml(j.detail || "—")}</td><td class="money">${currency(j.quote)}</td><td>${markupTag(j)}</td><td>${tag(j.status)}</td><td>${tag(j.payment)}</td><td>${tag(j.referral)}</td><td>${escapeHtml(j.invoiceNumber || "—")}</td><td>${escapeHtml(j.invoiceDate || "—")}</td></tr>`; }).join(""); $("#jobs-empty").style.display = items.length ? "none" : "block"; $("#result-count").textContent = `${boardItems.length} job${boardItems.length === 1 ? "" : "s"}`; $("#quote-total").textContent = currency(boardItems.filter((record) => record.job.status === "quoted").reduce((sum, record) => sum + record.job.quote, 0)); $("#markup-total").textContent = currency(items.filter((record) => record.job.payment === "paid").reduce((sum, record) => sum + markupAmountExGst(record.job), 0)); $("#invoice-total").textContent = currency(boardItems.filter((record) => record.job.status === "invoiced").reduce((sum, record) => sum + record.job.quote, 0)); }
 const baseBoardStages = ["quoted", "confirmed", "scheduled", "completed", "invoiced", "follow_up"];
@@ -865,7 +867,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Opening an invoice row shows the same job detail drawer used by the Jobs page.
   $("#invoices-body").addEventListener("click", (event) => {
-    if (event.target.closest("[data-payment-toggle], [data-source-document], [data-invoice-email], [data-invoice-reminder]")) return;
+    if (event.target.closest("[data-payment-toggle], [data-source-document], [data-invoice-email], [data-invoice-reminder], [data-invoice-activity]")) return;
     const row = event.target.closest("tr[data-id]");
     if (row) openDrawer(state.records.find((record) => record.id === row.dataset.id));
   });
@@ -881,6 +883,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const setStatus = (text = "", type = "") => { status.textContent = text; status.className = `invoice-email-status ${type}`.trim(); };
   const close = () => { modal.classList.remove("open"); activeRecord = null; setStatus(); };
   const invoiceNumber = (record) => record?.job?.invoiceNumber || record?.job?.invoice?.number || "invoice";
+  const readPhotos = () => {
+    const files = [...$("#invoice-email-photos").files];
+    if (files.length > 8 || files.reduce((sum, file) => sum + file.size, 0) > 3 * 1024 * 1024) throw new Error("Choose up to 8 JPG, PNG or WebP photos, 3 MB total.");
+    if (files.some((file) => !["image/jpeg","image/png","image/webp"].includes(file.type))) throw new Error("Evidence photos must be JPG, PNG or WebP.");
+    return Promise.all(files.map((file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(new Error(`Unable to read ${file.name}.`)); reader.onload = () => resolve({ filename:file.name, content:String(reader.result).split(",")[1], type:file.type }); reader.readAsDataURL(file); })));
+  };
   const open = (record, kind) => {
     if (!record) return;
     activeRecord = record;
@@ -895,14 +903,18 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-email-cc").value = Array.isArray(prior.cc) ? prior.cc.join(", ") : "";
     $("#invoice-email-subject").value = activeKind === "reminder" ? `Reminder: invoice ${number} payment due` : `Invoice ${number} from Eastern Home Service`;
     $("#invoice-email-message").value = activeKind === "reminder"
-      ? `Hello,\n\nThis is a friendly reminder that invoice ${number} for ${amount} is due ${dueDate ? displayDate(dueDate) : "soon"}. Please see the attached invoice.`
-      : `Hello,\n\nPlease find invoice ${number} attached.\n\nKind regards,\nEastern Home Service`;
+      ? `Hello,\n\nThis is a friendly reminder that invoice ${number} for ${amount} is due${dueDate ? ` (${displayDate(dueDate)})` : ""}. Please arrange payment at your earliest convenience.\n\nThe invoice PDF is attached. If payment has already been made, please reply with the payment date or reference.\n\nKind regards,\nEastern Home Service`
+      : `Hello,\n\nPlease find attached invoice ${number} for ${amount}${dueDate ? `, due ${displayDate(dueDate)}` : ""}.\n\nThank you for your business. Please contact us if you have any questions.\n\nKind regards,\nEastern Home Service`;
+    $("#invoice-email-photos").value = "";
+    $("#invoice-email-photo-summary").textContent = "The original Odoo invoice PDF is attached. You may also attach selected evidence photos.";
     setStatus();
     send.disabled = false;
     modal.classList.add("open");
     $("#invoice-email-to").focus();
   };
   $("#invoices-body").addEventListener("click", (event) => {
+    const activity = event.target.closest("[data-invoice-activity]");
+    if (activity) { const entries = state.records.find((record) => record.id === activity.dataset.invoiceActivity)?.job?.invoice?.activity || []; alert(entries.length ? entries.slice().reverse().map((entry) => `${new Date(entry.at).toLocaleString("en-AU")} — ${entry.message}`).join("\n\n") : "No invoice activity recorded yet."); return; }
     const reminder = event.target.closest("[data-invoice-reminder]");
     const invoice = event.target.closest("[data-invoice-email]");
     const id = reminder?.dataset.invoiceReminder || invoice?.dataset.invoiceEmail;
@@ -919,6 +931,7 @@ document.addEventListener("DOMContentLoaded", () => {
     send.disabled = true;
     setStatus("Sending invoice email…");
     try {
+      const photos = readPhotos();
       const response = await fetch("./api/send-invoice-email", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
@@ -928,7 +941,7 @@ document.addEventListener("DOMContentLoaded", () => {
           to:$("#invoice-email-to").value.trim(),
           cc:$("#invoice-email-cc").value.trim(),
           subject:$("#invoice-email-subject").value.trim(),
-          message:$("#invoice-email-message").value.trim()
+          message:$("#invoice-email-message").value.trim(), photos:await photos
         })
       });
       const data = await response.json().catch(() => ({}));
