@@ -237,7 +237,22 @@ async function deleteBoard(id) {
   }
 }
 function renderCalendar() { const scheduled = activeRecords().filter((record) => record.job.scheduledDate).sort((a,b) => String(a.job.scheduledDate).localeCompare(String(b.job.scheduledDate))); $("#calendar-grid").innerHTML = scheduled.length ? scheduled.map((record) => `<article class="calendar-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.scheduledDate)} · ${escapeHtml(record.job.detail || "Job scheduled")}</span></article>`).join("") : `<div class="empty" style="display:block">Add a scheduled date to a job to see it here.</div>`; }
-function renderClients() { const clients = [...new Map(activeRecords().filter((r) => r.customerName && r.customerName !== "-").map((r) => [r.customerName, r])).values()]; $("#client-list").innerHTML = clients.map((record) => `<article class="client-item"><strong>${escapeHtml(record.customerName)}</strong><span>${escapeHtml(record.phone || "No phone")} · ${escapeHtml(record.address || "No address")}</span></article>`).join("") || `<div class="empty" style="display:block">Clients will appear when quotes are saved.</div>`; }
+function clientContacts() { return state.boardSettings?.job?.clientContacts && typeof state.boardSettings.job.clientContacts === "object" ? state.boardSettings.job.clientContacts : {}; }
+function clientEmail(name) { return String(clientContacts()[savedClientName(name)] || "").trim(); }
+async function saveClientEmail(name, email) {
+  const client = savedClientName(name);
+  const value = String(email || "").trim();
+  if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { window.alert("Enter a valid client email address."); return; }
+  const isNew = !state.boardSettings;
+  const contacts = { ...clientContacts() };
+  if (value) contacts[client] = value; else delete contacts[client];
+  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, clientContacts:contacts } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards:[], boardOrder:[], hiddenBoards:[], clientContacts:contacts } };
+  try {
+    state.boardSettings = await request(isNew ? "" : `?id=${encodeURIComponent(settings.id)}`, { method:isNew ? "POST" : "PATCH", body:JSON.stringify(settings) });
+    renderClients();
+  } catch (error) { window.alert("The client email could not be saved. Please try again."); console.warn(error); }
+}
+function renderClients() { const clients = [...new Map(activeRecords().filter((r) => r.customerName && r.customerName !== "-").map((r) => [savedClientName(r.customerName), r])).entries()]; $("#client-list").innerHTML = clients.map(([name, record]) => `<article class="client-item"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(record.phone || "No phone")} · ${escapeHtml(record.address || "No address")}</span><label style="display:grid;gap:5px;margin-top:10px;font-size:12px;font-weight:700;color:#425267">Invoice email<input type="email" data-client-email="${escapeHtml(name)}" value="${escapeHtml(clientEmail(name))}" placeholder="accounts@client.com" autocomplete="email"></label><button class="quiet-button" type="button" data-save-client-email="${escapeHtml(name)}" style="margin-top:8px">Save email</button></article>`).join("") || `<div class="empty" style="display:block">Clients will appear when quotes are saved.</div>`; }
 function renderTasks() { const active = activeRecords().filter((record) => !["completed"].includes(record.job.status)); $("#task-list").innerHTML = active.map((record) => `<article class="task-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.detail || "No job detail added")}</span><div class="task-meta"><em>${escapeHtml(record.job.status === "quoted" ? "Follow up quote" : record.job.status === "confirmed" ? "Schedule the job" : "Complete scheduled work")}</em><b>Quote ${currency(record.job.quote)}</b></div></article>`).join("") || `<div class="empty" style="display:block">No active tasks.</div>`; }
 function renderReports() { const all = activeRecords(); const paid = all.filter((record) => record.job.payment === "paid"); $("#report-grid").innerHTML = `<article class="report-card"><span>Total quotations</span><strong>${currency(all.reduce((sum, r) => sum + r.job.quote, 0))}</strong></article><article class="report-card"><span>Paid jobs</span><strong>${paid.length}</strong></article><article class="report-card"><span>Completed jobs</span><strong>${all.filter((r) => r.job.status === "completed").length}</strong></article>`; }
 function renderClientPortal() {
@@ -906,7 +921,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const prior = record.job.invoice?.email || {};
     $("#invoice-email-title").textContent = activeKind === "reminder" ? "Send payment reminder" : "Send invoice email";
     $("#invoice-email-copy").textContent = activeKind === "reminder" ? `Invoice ${number} is unpaid. The stored Odoo PDF will be attached.` : `Invoice ${number}. The stored Odoo PDF will be attached.`;
-    $("#invoice-email-to").value = Array.isArray(prior.recipient) ? prior.recipient.join(", ") : (record.email || "");
+    $("#invoice-email-to").value = Array.isArray(prior.recipient) ? prior.recipient.join(", ") : (clientEmail(record.customerName) || record.email || "");
     $("#invoice-email-cc").value = Array.isArray(prior.cc) ? prior.cc.join(", ") : "";
     $("#invoice-email-subject").value = activeKind === "reminder" ? `Reminder: invoice ${number} payment due` : `Invoice ${number} from Eastern Home Service`;
     $("#invoice-email-message").value = activeKind === "reminder"
@@ -982,6 +997,13 @@ $("#invoice-activity-close").addEventListener("click", closeInvoiceActivity);
 $("#invoice-activity-done").addEventListener("click", closeInvoiceActivity);
 
 document.addEventListener("DOMContentLoaded", () => {
+  $("#client-list").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-save-client-email]");
+    if (!button) return;
+    const name = button.dataset.saveClientEmail;
+    const input = document.querySelector(`[data-client-email="${CSS.escape(name)}"]`);
+    if (input) saveClientEmail(name, input.value);
+  });
   const invoiceModal = $("#invoice-builder-modal");
   const invoiceFields = ["#invoice-client", "#invoice-address", "#invoice-number", "#invoice-date", "#invoice-due-date", "#invoice-terms", "#invoice-description", "#invoice-quantity", "#invoice-unit-price", "#invoice-note"];
   const dateForInvoice = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—";
