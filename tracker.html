@@ -270,9 +270,10 @@
         <label>Address<textarea id="job-address" rows="2" required></textarea></label>
         <label>Job details<textarea id="job-detail" rows="5"></textarea></label>
         <label>Contact number<input id="job-phone" type="tel" placeholder="e.g. 04xx xxx xxx" autocomplete="tel"></label>
-        <label>Email<input id="job-email" type="email" placeholder="client@example.com" autocomplete="email"></label>
-        <label>CC emails<input id="job-email-cc" type="text" placeholder="Separate addresses with commas" autocomplete="off"></label>
-        <label>BCC emails<input id="job-email-bcc" type="text" placeholder="Separate addresses with commas" autocomplete="off"></label>
+        <label>Email<input id="job-email" type="email" list="job-email-options" placeholder="Choose or enter an email" autocomplete="email"></label>
+        <label>CC emails<input id="job-email-cc" type="text" list="job-email-options" placeholder="Choose or separate addresses with commas" autocomplete="off"></label>
+        <label>BCC emails<input id="job-email-bcc" type="text" list="job-email-options" placeholder="Choose or separate addresses with commas" autocomplete="off"></label>
+        <datalist id="job-email-options"></datalist>
         <div class="two-col gst-row"><label>Quotation (ex. GST)<input id="job-quote" type="number" min="0" step="0.01"></label><label>Total (inc. GST)<input id="job-total" type="number" readonly aria-label="Total amount"></label></div>
         <div class="two-col gst-row"><label>Markup %<input id="job-markup" type="number" min="0" step="0.1" value="50"></label><label>Markup $ (ex. GST)<input id="job-markup-amount" type="number" min="0" step="0.01" aria-label="Markup amount excluding GST"></label></div>
         <label>Payment status<select id="job-payment"><option value="unpaid">Unpaid</option><option value="deposit-paid">Deposit paid</option><option value="partially-paid">Partially paid</option><option value="paid">Paid in full</option></select></label>
