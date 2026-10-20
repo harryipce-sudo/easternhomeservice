@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const handler = require("../api/send-invoice-email");
+const { createInvoicePdf } = require("../api/_generated-invoice-pdf");
 
 function response(status = 200, body = {}) {
   return new Response(JSON.stringify(body), { status, headers:{ "Content-Type":"application/json" } });
@@ -152,4 +153,34 @@ test("generates and attaches a PDF for a Tracker-created invoice", async () => {
     global.fetch = originalFetch;
     restoreEnv(originalEnv);
   }
+});
+
+test("keeps description-only invoice lines in generated PDFs", async () => {
+  const bytes = await createInvoicePdf({
+    status:"invoiced",
+    invoiceNumber:"25285",
+    invoice:{
+      number:"25285",
+      date:"2026-10-20",
+      dueDate:"2026-11-03",
+      termsDays:15,
+      client:"Louis",
+      address:"191 Gillies St, Fairfield",
+      lineItems:[
+        { description:"Repair two leaking taps", quantity:1, unitPrice:300 },
+        { description:"Replace outdoor garden tap", quantity:0, unitPrice:0 }
+      ],
+      subtotal:300,
+      gst:30,
+      total:330
+    }
+  });
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const document = await pdfjs.getDocument({ data:new Uint8Array(bytes) }).promise;
+  const page = await document.getPage(1);
+  const content = await page.getTextContent();
+  const text = content.items.map((item) => item.str).join(" ");
+  assert.match(text, /Repair two leaking taps/);
+  assert.match(text, /Replace outdoor garden tap/);
+  assert.doesNotMatch(text, /\$0\.00/);
 });

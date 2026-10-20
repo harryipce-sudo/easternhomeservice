@@ -13,7 +13,18 @@ function money(value) { return new Intl.NumberFormat("en-AU", { style:"currency"
 function date(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—"; }
 function normalLines(job, invoice) {
   const source = Array.isArray(invoice.lineItems) && invoice.lineItems.length ? invoice.lineItems : [{ description:invoice.description || job.detail || "Service", quantity:invoice.quantity || 1, unitPrice:invoice.unitPrice ?? ((Number(job.quote) || 0) / 1.1) }];
-  return source.filter((line) => String(line?.description || "").trim());
+  // Detail-only lines are valid: they let one priced service cover several
+  // tasks. Keep them in the PDF even when their quantity and unit price are 0.
+  return source.reduce((lines, line) => {
+    const description = String(line?.description || "").trim();
+    if (!description) return lines;
+    lines.push({
+      description,
+      quantity:Math.max(0, Number(line?.quantity) || 0),
+      unitPrice:Math.max(0, Number(line?.unitPrice) || 0)
+    });
+    return lines;
+  }, []);
 }
 function lineHeight(doc, item, width) { doc.font("Helvetica-Bold").fontSize(9); return Math.max(32, doc.heightOfString(String(item.description || ""), { width, lineGap:2 }) + 16); }
 
