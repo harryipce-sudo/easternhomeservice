@@ -62,10 +62,11 @@ function invoiceEmailActions(record, pending) {
   const hasPdf = Boolean(record.job.invoice?.sourceDocument?.path);
   const history = email.sentAt ? `<small class="invoice-email-history">Sent ${escapeHtml(new Date(email.sentAt).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }))}</small>` : email.status === "failed" ? '<small class="invoice-email-history">Last attempt failed</small>' : "";
   const unavailable = hasPdf ? "" : " disabled title=\"Import the Odoo PDF before emailing this invoice\"";
+  const view = `<button class="quiet-button" type="button" data-view-invoice="${escapeHtml(record.id)}">View invoice</button>`;
   const reminder = record.job.payment === "paid" ? "" : `<button class="quiet-button" type="button" data-invoice-reminder="${escapeHtml(record.id)}"${unavailable}>Send reminder</button>`;
   const activity = invoiceActivityEntries(record);
   const activityButton = `<button class="quiet-button" type="button" data-invoice-activity="${escapeHtml(record.id)}">Activity${activity.length ? ` (${activity.length})` : ""}</button>`;
-  return `<div class="invoice-email-actions"><button class="quiet-button" type="button" data-invoice-email="${escapeHtml(record.id)}"${unavailable}>Send invoice</button>${reminder}${activityButton}${history}</div>`;
+  return `<div class="invoice-email-actions">${view}<button class="quiet-button" type="button" data-invoice-email="${escapeHtml(record.id)}"${unavailable}>Send invoice</button>${reminder}${activityButton}${history}</div>`;
 }
 function renderJobs() { const items = filtered(); const boardItems = boardRecords(items); $("#jobs-body").innerHTML = items.map((record) => { const j = record.job; return `<tr data-id="${escapeHtml(record.id)}"><td>${escapeHtml(j.number)}</td><td class="address">${escapeHtml(record.address)}</td><td class="detail">${escapeHtml(j.detail || "—")}</td><td class="money">${currency(j.quote)}</td><td>${markupTag(j)}</td><td>${tag(j.status)}</td><td>${tag(j.payment)}</td><td>${tag(j.referral)}</td><td>${escapeHtml(j.invoiceNumber || "—")}</td><td>${escapeHtml(j.invoiceDate || "—")}</td></tr>`; }).join(""); $("#jobs-empty").style.display = items.length ? "none" : "block"; $("#result-count").textContent = `${boardItems.length} job${boardItems.length === 1 ? "" : "s"}`; $("#quote-total").textContent = currency(boardItems.filter((record) => record.job.status === "quoted").reduce((sum, record) => sum + record.job.quote, 0)); $("#markup-total").textContent = currency(items.filter((record) => record.job.payment === "paid").reduce((sum, record) => sum + markupAmountExGst(record.job), 0)); $("#invoice-total").textContent = currency(boardItems.filter((record) => record.job.status === "invoiced").reduce((sum, record) => sum + record.job.quote, 0)); }
 const baseBoardStages = ["quoted", "confirmed", "scheduled", "completed", "invoiced", "follow_up"];
@@ -932,7 +933,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Opening an invoice row shows the same job detail drawer used by the Jobs page.
   $("#invoices-body").addEventListener("click", (event) => {
-    if (event.target.closest("[data-payment-toggle], [data-source-document], [data-invoice-email], [data-invoice-reminder], [data-invoice-activity]")) return;
+    if (event.target.closest("[data-payment-toggle], [data-source-document], [data-view-invoice], [data-invoice-email], [data-invoice-reminder], [data-invoice-activity]")) return;
     const row = event.target.closest("tr[data-id]");
     if (row) openDrawer(state.records.find((record) => record.id === row.dataset.id));
   });
@@ -1301,6 +1302,14 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-preview-done").addEventListener("click", closeInvoicePreview);
   $("#invoice-preview-print").addEventListener("click", () => window.print());
   $("#job-create-invoice").addEventListener("click", openInvoiceBuilder);
+  $("#invoices-body").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-view-invoice]");
+    if (!button) return;
+    const record = state.records.find((item) => item.id === button.dataset.viewInvoice);
+    if (!record) return;
+    state.selected = record;
+    openInvoiceBuilder();
+  });
   $("#invoice-print").addEventListener("click", () => window.print());
   $("#invoice-save").addEventListener("click", async () => {
     if (!state.selected || !$("#invoice-builder-form").reportValidity()) return;
