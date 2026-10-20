@@ -1,10 +1,84 @@
 const { getSupabaseConfig, supabaseFetch, allInvoiceRows } = require("./_invoice-import-utils");
-const { createInvoicePdf } = require("./_generated-invoice-pdf");
+const fs = require("fs");
+const path = require("path");
+const PDFDocument = require("pdfkit");
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const MAX_RECIPIENTS = 20;
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 const REQUIRED_INTERNAL_CC = "easternhomeservice@gmail.com";
+
+// Kept with the active email handler so the deployed function always renders
+// the same saved invoice lines that it emails.
+function createEmailInvoicePdf(job = {}) {
+  return new Promise((resolve, reject) => {
+    const invoice = job.invoice || {};
+    const number = String(job.invoiceNumber || invoice.number || "Invoice");
+    const source = Array.isArray(invoice.lineItems) && invoice.lineItems.length
+      ? invoice.lineItems
+      : [{ description:invoice.description || job.detail || "Service", quantity:invoice.quantity || 1, unitPrice:invoice.unitPrice || 0 }];
+    const lines = source.reduce((result, line) => {
+      const description = String(line?.description || "").trim();
+      if (description) result.push({ description, quantity:Math.max(0, Number(line?.quantity) || 0), unitPrice:Math.max(0, Number(line?.unitPrice) || 0) });
+      return result;
+    }, []);
+    const subtotal = Number(invoice.subtotal ?? lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)) || 0;
+    const gst = Number(invoice.gst ?? subtotal * 0.1) || 0;
+    const total = Number(invoice.total ?? subtotal + gst) || 0;
+    const moneyValue = (value) => new Intl.NumberFormat("en-AU", { style:"currency", currency:"AUD" }).format(Number(value) || 0);
+    const displayDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—";
+    const doc = new PDFDocument({ size:"A4", margin:0, info:{ Title:`Tax Invoice ${number}`, Author:"Eastern Home Service", Subject:"Email invoice detail lines v3" } });
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("error", reject);
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    const width = 595.28; const height = 841.89; const margin = 34; const tableWidth = width - margin * 2;
+    const cols = { quantity:332, price:390, tax:462, amount:520 };
+    const navy = "#073f78"; const ink = "#16263b"; const muted = "#5d6878";
+    doc.fillColor(ink).font("Helvetica").fontSize(9).text("Melbourne VIC Australia", margin, 22);
+    doc.font("Helvetica-Bold").text("ABN: 67651973711", margin, 36);
+    const logo = path.join(process.cwd(), "assets", "eastern-home-service-logo-clean.png");
+    if (fs.existsSync(logo)) doc.image(logo, width - margin - 102, 28, { fit:[102, 76] });
+    doc.fillColor(navy).font("Helvetica").fontSize(25).text(`Tax Invoice ${number}`, margin, 166, { width:width - margin * 2, align:"center" });
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text(String(invoice.client || "Client"), margin, 202);
+    doc.font("Helvetica").text(String(invoice.address || ""), margin, 218, { width:280, lineGap:2 });
+    doc.fillColor("#96a69e").font("Helvetica-Bold").fontSize(9).text("Invoice Date", margin, 260);
+    doc.fillColor(ink).fontSize(10).text(displayDate(invoice.date || job.invoiceDate), margin, 276);
+    doc.strokeColor("#b7c7bf").lineWidth(1).moveTo(202, 253).lineTo(202, 303).stroke();
+    doc.fillColor("#96a69e").font("Helvetica-Bold").fontSize(9).text("Due Date", 214, 260);
+    doc.fillColor(ink).fontSize(10).text(displayDate(invoice.dueDate), 214, 276);
+    let y = 326;
+    doc.fillColor("#aebdb4").rect(margin, y, tableWidth, 30).fill();
+    doc.fillColor("#172333").font("Helvetica").fontSize(8);
+    doc.text("Description", margin + 5, y + 11, { width:cols.quantity - margin - 10 });
+    [["Quantity", cols.quantity, 50], ["Unit Price", cols.price, 58], ["Taxes", cols.tax, 44], ["Amount", cols.amount, 38]].forEach(([label, x, w]) => doc.text(label, x, y + 11, { width:w, align:"right" }));
+    y += 30;
+    lines.forEach((line) => {
+      doc.font("Helvetica-Bold").fontSize(9);
+      const rowHeight = Math.max(32, doc.heightOfString(line.description, { width:cols.quantity - margin - 14, lineGap:2 }) + 16);
+      if (y + rowHeight > 520) return;
+      doc.fillColor(ink).text(line.description, margin + 5, y + 10, { width:cols.quantity - margin - 14, lineGap:2 });
+      if (line.quantity > 0 && line.unitPrice > 0) {
+        doc.font("Helvetica").fontSize(10);
+        doc.text(line.quantity.toFixed(line.quantity % 1 ? 2 : 0), cols.quantity, y + 11, { width:50, align:"right" });
+        doc.text(moneyValue(line.unitPrice), cols.price, y + 11, { width:58, align:"right" });
+        doc.text("10% GST", cols.tax, y + 11, { width:44, align:"right" });
+        doc.text(moneyValue(line.quantity * line.unitPrice), cols.amount, y + 11, { width:38, align:"right" });
+      }
+      y += rowHeight; doc.strokeColor("#9ba8b6").lineWidth(0.6).moveTo(margin, y).lineTo(width - margin, y).stroke();
+    });
+    const termsY = Math.min(y + 18, 545); const totalsY = Math.max(termsY + 72, 505);
+    doc.fillColor(ink).font("Helvetica").fontSize(9).text(`Payment terms: ${Number(invoice.termsDays) || 0} Days`, margin, termsY);
+    [["Untaxed Amount", subtotal, 0], ["GST 10%", gst, 28]].forEach(([label, value, offset]) => { doc.font("Helvetica").fontSize(10).text(label, 404, totalsY + offset, { width:100 }); doc.font("Helvetica-Bold").text(moneyValue(value), 500, totalsY + offset, { width:61, align:"right" }); });
+    doc.strokeColor(navy).lineWidth(1).moveTo(400, totalsY + 52).lineTo(561, totalsY + 52).stroke();
+    doc.fillColor(navy).font("Helvetica-Bold").fontSize(12).text("Total", 404, totalsY + 63, { width:100 }); doc.text(moneyValue(total), 485, totalsY + 63, { width:76, align:"right" }); doc.strokeColor(navy).moveTo(400, totalsY + 84).lineTo(561, totalsY + 84).stroke();
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8).text(`Payment Communication: ${number}`, margin, 586);
+    doc.text("Note:", margin, 616); doc.fillColor(muted).font("Helvetica").text(String(invoice.note || "Price includes labour and material costs. Not including rubbish disposal unless mentioned."), margin, 630, { width:360, lineGap:2 });
+    doc.fillColor(ink).font("Helvetica-Bold").text("Bank Detail", margin, 677); doc.fillColor(muted).font("Helvetica").text("SWIFT: CTBAAU2S\nBank Name: Commonwealth Bank\nAccount Name: Eastern Group VIC\nBSB: 063 109\nAccount Number: 13349243 (AUD ONLY)\nBank Address: 28 Main Street, Box Hill, VIC 3128\n\"Please mark 'AUD only' on bank instruction.\"", margin, 691, { lineGap:3 });
+    doc.fillColor(ink).font("Helvetica-Bold").text("Your Home Maintenance and Service Solution", margin, height - 45, { width:width - margin * 2, align:"right" }); doc.fillColor(muted).font("Helvetica").fontSize(7).text("Page 1 / 1", margin, height - 32, { width:width - margin * 2, align:"right" });
+    doc.end();
+  });
+}
 
 async function readJsonBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
@@ -112,7 +186,7 @@ async function loadPdf(config, source, invoiceNumber) {
 }
 
 async function generatedPdf(record, invoiceNumber) {
-  const bytes = await createInvoicePdf(record?.payload?.job || {});
+  const bytes = await createEmailInvoicePdf(record?.payload?.job || {});
   if (!bytes.length || bytes.length > MAX_ATTACHMENT_BYTES) {
     throw Object.assign(new Error("The generated invoice PDF is too large to attach by email."), { statusCode:413 });
   }

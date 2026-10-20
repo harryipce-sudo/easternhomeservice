@@ -2,7 +2,6 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const handler = require("../api/send-invoice-email");
-const { createInvoicePdf } = require("../api/_generated-invoice-pdf");
 
 function response(status = 200, body = {}) {
   return new Response(JSON.stringify(body), { status, headers:{ "Content-Type":"application/json" } });
@@ -126,7 +125,7 @@ test("generates and attaches a PDF for a Tracker-created invoice", async () => {
   const originalEnv = { RESEND_API_KEY:process.env.RESEND_API_KEY, RESEND_FROM_EMAIL:process.env.RESEND_FROM_EMAIL, SUPABASE_URL:process.env.SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY };
   const trackerInvoice = {
     id:"record-direct",
-    payload:{ job:{ status:"invoiced", payment:"unpaid", invoiceNumber:"25285", invoiceDate:"2026-10-20", quote:330, invoice:{ number:"25285", date:"2026-10-20", dueDate:"2026-11-03", termsDays:14, client:"Louis", address:"191 Gillies St, Fairfield", lineItems:[{ description:"Repair two leaking taps", quantity:1, unitPrice:300 }], subtotal:300, gst:30, total:330 } } }
+    payload:{ job:{ status:"invoiced", payment:"unpaid", invoiceNumber:"25285", invoiceDate:"2026-10-20", quote:330, invoice:{ number:"25285", date:"2026-10-20", dueDate:"2026-11-03", termsDays:14, client:"Louis", address:"191 Gillies St, Fairfield", lineItems:[{ description:"Repair two leaking taps", quantity:1, unitPrice:300 }, { description:"Replace outdoor garden tap", quantity:0, unitPrice:0 }], subtotal:300, gst:30, total:330 } } }
   };
   const calls = [];
   process.env.RESEND_API_KEY = "test-key";
@@ -147,40 +146,18 @@ test("generates and attaches a PDF for a Tracker-created invoice", async () => {
     const resend = calls.find((call) => call.url === "https://api.resend.com/emails");
     const attachment = JSON.parse(resend.options.body).attachments[0];
     assert.equal(attachment.filename, "25285.pdf");
-    assert.match(Buffer.from(attachment.content, "base64").toString("utf8", 0, 8), /^%PDF-/);
+    const bytes = Buffer.from(attachment.content, "base64");
+    assert.match(bytes.toString("utf8", 0, 8), /^%PDF-/);
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const document = await pdfjs.getDocument({ data:new Uint8Array(bytes) }).promise;
+    const page = await document.getPage(1);
+    const content = await page.getTextContent();
+    const text = content.items.map((item) => item.str).join(" ");
+    assert.match(text, /Replace outdoor garden tap/);
+    assert.doesNotMatch(text, /\$0\.00/);
     assert.equal(calls.some((call) => call.url.includes("/storage/v1/object/")), false);
   } finally {
     global.fetch = originalFetch;
     restoreEnv(originalEnv);
   }
-});
-
-test("keeps description-only invoice lines in generated PDFs", async () => {
-  const bytes = await createInvoicePdf({
-    status:"invoiced",
-    invoiceNumber:"25285",
-    invoice:{
-      number:"25285",
-      date:"2026-10-20",
-      dueDate:"2026-11-03",
-      termsDays:15,
-      client:"Louis",
-      address:"191 Gillies St, Fairfield",
-      lineItems:[
-        { description:"Repair two leaking taps", quantity:1, unitPrice:300 },
-        { description:"Replace outdoor garden tap", quantity:0, unitPrice:0 }
-      ],
-      subtotal:300,
-      gst:30,
-      total:330
-    }
-  });
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const document = await pdfjs.getDocument({ data:new Uint8Array(bytes) }).promise;
-  const page = await document.getPage(1);
-  const content = await page.getTextContent();
-  const text = content.items.map((item) => item.str).join(" ");
-  assert.match(text, /Repair two leaking taps/);
-  assert.match(text, /Replace outdoor garden tap/);
-  assert.doesNotMatch(text, /\$0\.00/);
 });
