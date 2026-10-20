@@ -1098,6 +1098,14 @@ document.addEventListener("DOMContentLoaded", () => {
   previewModal.setAttribute("aria-labelledby", "invoice-preview-title");
   previewModal.innerHTML = `<div class="invoice-builder-dialog invoice-preview-dialog"><div class="invoice-builder-head"><div><h2 id="invoice-preview-title">Invoice preview</h2><p>Review the A4 invoice before printing or saving.</p></div><button class="icon-button" type="button" id="invoice-preview-close" aria-label="Close invoice preview">×</button></div><div class="invoice-preview-body" id="invoice-preview-paper-slot"></div><div class="invoice-builder-actions"><button class="quiet-button" type="button" id="invoice-preview-done">Back to editing</button><button class="primary-button" type="button" id="invoice-preview-print">Print / Save PDF</button></div></div>`;
   document.body.append(previewModal);
+  const invoiceItemModal = document.createElement("div");
+  invoiceItemModal.className = "payment-date-modal";
+  invoiceItemModal.id = "invoice-item-modal";
+  invoiceItemModal.setAttribute("role", "dialog");
+  invoiceItemModal.setAttribute("aria-modal", "true");
+  invoiceItemModal.setAttribute("aria-labelledby", "invoice-item-title");
+  invoiceItemModal.innerHTML = `<div class="payment-date-dialog"><h3 id="invoice-item-title">Add item under this price</h3><p>This item will be listed under the current invoice line. It will not add another quantity or unit price.</p><form id="invoice-item-form"><label>Item details<textarea id="invoice-item-description" rows="4" required placeholder="e.g. Supply and install a new garden tap"></textarea></label><div class="payment-date-actions"><button class="quiet-button" type="button" id="invoice-item-cancel">Cancel</button><button class="primary-button" type="submit">Add item</button></div></form></div>`;
+  document.body.append(invoiceItemModal);
   $("#invoice-preview-paper-slot").append($("#invoice-paper"));
   const previewButton = document.createElement("button");
   previewButton.className = "quiet-button";
@@ -1109,6 +1117,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const dateForInvoice = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—";
   const dueDateFor = (date, days) => { if (!date) return ""; const value = new Date(`${date}T00:00:00`); value.setDate(value.getDate() + Math.max(0, Number(days) || 0)); return value.toISOString().slice(0,10); };
   let draftInvoiceLines = [];
+  let invoiceItemTarget = null;
   const legacyDescription = $("#invoice-description").closest("label");
   const legacyPricing = $("#invoice-quantity").closest(".two-col");
   legacyDescription.hidden = true;
@@ -1140,18 +1149,28 @@ document.addEventListener("DOMContentLoaded", () => {
       const index = Number(row?.dataset.invoiceLine);
       if (!Number.isInteger(index)) return;
       draftInvoiceLines = readInvoiceLines();
-      const description = String(draftInvoiceLines[index]?.description || "").trimEnd();
-      draftInvoiceLines[index].description = `${description}${description ? "\n\n" : ""}• `;
-      const textarea = row.querySelector("[data-line-description]");
-      textarea.value = draftInvoiceLines[index].description;
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-      renderInvoicePreview();
+      invoiceItemTarget = index;
+      $("#invoice-item-description").value = "";
+      invoiceItemModal.classList.add("open");
+      $("#invoice-item-description").focus();
       return;
     }
     const button = event.target.closest("[data-remove-invoice-line]");
     if (!button || draftInvoiceLines.length <= 1) return;
     draftInvoiceLines.splice(Number(button.dataset.removeInvoiceLine), 1);
+    renderInvoiceLineEditor();
+    renderInvoicePreview();
+  });
+  const closeInvoiceItemModal = () => { invoiceItemTarget = null; invoiceItemModal.classList.remove("open"); };
+  $("#invoice-item-cancel").addEventListener("click", closeInvoiceItemModal);
+  $("#invoice-item-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!Number.isInteger(invoiceItemTarget)) return;
+    const item = $("#invoice-item-description").value.trim();
+    if (!item) return;
+    const description = String(draftInvoiceLines[invoiceItemTarget]?.description || "").trimEnd();
+    draftInvoiceLines[invoiceItemTarget].description = `${description}${description ? "\n\n" : ""}• ${item}`;
+    closeInvoiceItemModal();
     renderInvoiceLineEditor();
     renderInvoicePreview();
   });
