@@ -57,7 +57,9 @@ function createInvoicePdf(job = {}) {
   text(470, 728, "Due date", 9, true, "0.32 0.39 0.47");
   text(470, 712, date(invoice.dueDate), 10, true);
 
-  let y = 658;
+  // Start invoice rows below the header band. Starting at the header baseline
+  // made the first description overlap the column names in generated PDFs.
+  let y = 625;
   content.push("0.68 0.74 0.72 rg 46 641 503 22 re f");
   text(52, 648, "Description", 8, true); text(355, 648, "Qty", 8, true); text(402, 648, "Unit price", 8, true); text(470, 648, "GST", 8, true); text(510, 648, "Amount", 8, true);
   validLines.slice(0, 12).forEach((item) => {
