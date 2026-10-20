@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/send-invoice-email.js": {
-      "includeFiles": "{assets/eastern-home-service-logo-clean.png,node_modules/pdfkit/js/standard-fonts/**}"
+      "includeFiles": "{api/_generated-invoice-pdf.js,assets/eastern-home-service-logo-clean.png,node_modules/pdfkit/js/standard-fonts/**}"
     }
   },
   "headers": [
