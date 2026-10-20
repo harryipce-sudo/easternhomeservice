@@ -1,4 +1,5 @@
 const { getSupabaseConfig, supabaseFetch, allInvoiceRows } = require("./_invoice-import-utils");
+const { createInvoicePdf } = require("./_generated-invoice-pdf");
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const MAX_RECIPIENTS = 20;
@@ -110,6 +111,14 @@ async function loadPdf(config, source, invoiceNumber) {
   return { filename:safeFilename(invoiceNumber), content:bytes.toString("base64") };
 }
 
+function generatedPdf(record, invoiceNumber) {
+  const bytes = createInvoicePdf(record?.payload?.job || {});
+  if (!bytes.length || bytes.length > MAX_ATTACHMENT_BYTES) {
+    throw Object.assign(new Error("The generated invoice PDF is too large to attach by email."), { statusCode:413 });
+  }
+  return { filename:safeFilename(invoiceNumber), content:bytes.toString("base64") };
+}
+
 async function sendWithResend(config, payload) {
   const response = await fetch("https://api.resend.com/emails", {
     method:"POST",
@@ -150,7 +159,9 @@ module.exports = async (req, res) => {
 
     const source = record.payload?.job?.invoice?.sourceDocument;
     const content = emailContent({ record, kind, message });
-    const attachment = await loadPdf(config, source || {}, content.invoiceNumber);
+    const attachment = source?.path
+      ? await loadPdf(config, source, content.invoiceNumber)
+      : generatedPdf(record, content.invoiceNumber);
     const photos = photoAttachments(body.photos);
     const resend = await sendWithResend(emailConfig, {
       from:emailConfig.from,

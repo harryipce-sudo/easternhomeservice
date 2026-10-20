@@ -60,8 +60,9 @@ function invoiceEmailActions(record, pending) {
   if (pending) return "—";
   const email = record.job.invoice?.email || {};
   const hasPdf = Boolean(record.job.invoice?.sourceDocument?.path);
+  const canGeneratePdf = Boolean(record.job.invoiceNumber && Number(record.job.quote || record.job.invoice?.total) > 0);
   const history = email.sentAt ? `<small class="invoice-email-history">Sent ${escapeHtml(new Date(email.sentAt).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }))}</small>` : email.status === "failed" ? '<small class="invoice-email-history">Last attempt failed</small>' : "";
-  const unavailable = hasPdf ? "" : " disabled title=\"Import the Odoo PDF before emailing this invoice\"";
+  const unavailable = hasPdf || canGeneratePdf ? "" : " disabled title=\"Save the invoice details before emailing it.\"";
   const view = `<button class="quiet-button" type="button" data-view-invoice="${escapeHtml(record.id)}">View invoice</button>`;
   const reminder = record.job.payment === "paid" ? "" : `<button class="quiet-button" type="button" data-invoice-reminder="${escapeHtml(record.id)}"${unavailable}>Send reminder</button>`;
   const activity = invoiceActivityEntries(record);
@@ -982,7 +983,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const amount = currency(payment.balance);
     const prior = record.job.invoice?.email || {};
     $("#invoice-email-title").textContent = activeKind === "reminder" ? "Send payment reminder" : "Send invoice email";
-    $("#invoice-email-copy").textContent = payment.isPartPaid ? `Invoice ${number}. ${currency(payment.paid)} received; ${amount} remains. The stored Odoo PDF will be attached.` : activeKind === "reminder" ? `Invoice ${number} is unpaid. The stored Odoo PDF will be attached.` : `Invoice ${number}. The stored Odoo PDF will be attached.`;
+    const pdfCopy = record.job.invoice?.sourceDocument?.path ? "The stored Odoo PDF will be attached." : "A PDF will be generated from this Tracker invoice and attached.";
+    $("#invoice-email-copy").textContent = payment.isPartPaid ? `Invoice ${number}. ${currency(payment.paid)} received; ${amount} remains. ${pdfCopy}` : activeKind === "reminder" ? `Invoice ${number} is unpaid. ${pdfCopy}` : `Invoice ${number}. ${pdfCopy}`;
     $("#invoice-email-to").value = Array.isArray(prior.recipient) ? prior.recipient.join(", ") : (record.job.email || clientEmail(record.customerName) || record.email || "");
     const priorCc = Array.isArray(prior.cc) ? prior.cc : emailsFromValue(record.job.emailCc);
     $("#invoice-email-cc").value = [...new Set([...priorCc, INTERNAL_EMAIL_COPY])].join(", ");

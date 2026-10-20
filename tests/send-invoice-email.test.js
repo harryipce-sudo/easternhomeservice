@@ -119,3 +119,37 @@ test("uses the remaining balance in a partially paid reminder", async () => {
     restoreEnv(originalEnv);
   }
 });
+
+test("generates and attaches a PDF for a Tracker-created invoice", async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = { RESEND_API_KEY:process.env.RESEND_API_KEY, RESEND_FROM_EMAIL:process.env.RESEND_FROM_EMAIL, SUPABASE_URL:process.env.SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY };
+  const trackerInvoice = {
+    id:"record-direct",
+    payload:{ job:{ status:"invoiced", payment:"unpaid", invoiceNumber:"25285", invoiceDate:"2026-10-20", quote:330, invoice:{ number:"25285", date:"2026-10-20", dueDate:"2026-11-03", termsDays:14, client:"Louis", address:"191 Gillies St, Fairfield", lineItems:[{ description:"Repair two leaking taps", quantity:1, unitPrice:300 }], subtotal:300, gst:30, total:330 } } }
+  };
+  const calls = [];
+  process.env.RESEND_API_KEY = "test-key";
+  process.env.RESEND_FROM_EMAIL = "Eastern Home Service <invoices@example.com>";
+  process.env.SUPABASE_URL = "https://supabase.example";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url:String(url), options });
+    if (String(url).includes("quote_records?select=")) return response(200, [trackerInvoice]);
+    if (String(url) === "https://api.resend.com/emails") return response(200, { id:"email-direct" });
+    if (String(url).includes("quote_records?id=eq.record-direct")) return response(200, [trackerInvoice]);
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  try {
+    const res = makeResponse();
+    await handler({ method:"POST", body:{ recordId:"record-direct", to:"client@example.com", subject:"Invoice 25285", message:"Please find your invoice attached." } }, res);
+    assert.equal(res.statusCode, 200);
+    const resend = calls.find((call) => call.url === "https://api.resend.com/emails");
+    const attachment = JSON.parse(resend.options.body).attachments[0];
+    assert.equal(attachment.filename, "25285.pdf");
+    assert.match(Buffer.from(attachment.content, "base64").toString("utf8", 0, 8), /^%PDF-1\.4/);
+    assert.equal(calls.some((call) => call.url.includes("/storage/v1/object/")), false);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+});
