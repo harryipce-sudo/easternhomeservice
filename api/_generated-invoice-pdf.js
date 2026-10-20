@@ -13,7 +13,7 @@ function money(value) { return new Intl.NumberFormat("en-AU", { style:"currency"
 function date(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU") : "—"; }
 function normalLines(job, invoice) {
   const source = Array.isArray(invoice.lineItems) && invoice.lineItems.length ? invoice.lineItems : [{ description:invoice.description || job.detail || "Service", quantity:invoice.quantity || 1, unitPrice:invoice.unitPrice ?? ((Number(job.quote) || 0) / 1.1) }];
-  return source.filter((line) => String(line?.description || "").trim() && Number(line?.quantity) > 0);
+  return source.filter((line) => String(line?.description || "").trim());
 }
 function lineHeight(doc, item, width) { doc.font("Helvetica-Bold").fontSize(9); return Math.max(32, doc.heightOfString(String(item.description || ""), { width, lineGap:2 }) + 16); }
 
@@ -67,8 +67,9 @@ function createInvoicePdf(job = {}) {
     lines.forEach((item) => {
       const rowHeight = lineHeight(doc, item, columns.quantity - margin - 14);
       if (y + rowHeight > 520) return;
+      const hasPrice = Number(item.quantity) > 0 && Number(item.unitPrice) > 0;
       doc.fillColor(INK).font("Helvetica-Bold").fontSize(9).text(String(item.description), margin + 5, y + 10, { width:columns.quantity - margin - 14, lineGap:2 });
-      doc.font("Helvetica").fontSize(10); doc.text(Number(item.quantity || 0).toFixed(Number(item.quantity || 0) % 1 ? 2 : 0), columns.quantity, y + 11, { width:50, align:"right" }); doc.text(money(item.unitPrice), columns.price, y + 11, { width:58, align:"right" }); doc.text("10% GST", columns.tax, y + 11, { width:44, align:"right" }); doc.text(money(Number(item.quantity || 0) * Number(item.unitPrice || 0)), columns.amount, y + 11, { width:38, align:"right" });
+      if (hasPrice) { doc.font("Helvetica").fontSize(10); doc.text(Number(item.quantity).toFixed(Number(item.quantity) % 1 ? 2 : 0), columns.quantity, y + 11, { width:50, align:"right" }); doc.text(money(item.unitPrice), columns.price, y + 11, { width:58, align:"right" }); doc.text("10% GST", columns.tax, y + 11, { width:44, align:"right" }); doc.text(money(Number(item.quantity) * Number(item.unitPrice)), columns.amount, y + 11, { width:38, align:"right" }); }
       y += rowHeight; doc.strokeColor(RULE).lineWidth(0.6).moveTo(margin, y).lineTo(width - margin, y).stroke();
     });
     const termsY = Math.min(y + 18, 545);
