@@ -125,7 +125,7 @@ test("generates and attaches a PDF for a Tracker-created invoice", async () => {
   const originalEnv = { RESEND_API_KEY:process.env.RESEND_API_KEY, RESEND_FROM_EMAIL:process.env.RESEND_FROM_EMAIL, SUPABASE_URL:process.env.SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY };
   const trackerInvoice = {
     id:"record-direct",
-    payload:{ job:{ status:"invoiced", payment:"unpaid", invoiceNumber:"25285", invoiceDate:"2026-10-20", quote:330, invoice:{ number:"25285", date:"2026-10-20", dueDate:"2026-11-03", termsDays:14, client:"Louis", address:"191 Gillies St, Fairfield", lineItems:[{ description:"Repair two leaking taps", quantity:1, unitPrice:300 }, { description:"Replace outdoor garden tap", quantity:0, unitPrice:0 }], subtotal:300, gst:30, total:330 } } }
+    payload:{ job:{ status:"invoiced", payment:"unpaid", invoiceNumber:"25285", invoiceDate:"2026-10-20", quote:330, invoice:{ number:"25285", date:"2026-10-20", dueDate:"2026-11-03", termsDays:14, client:"Louis", address:"191 Gillies St, Fairfield", lineItems:[{ description:"1. Repair Two Leaking Taps\n\nReplace the washers in both leaking taps.\n\nTest both taps to ensure they operate correctly without leaking.", quantity:1, unitPrice:300 }, { description:"2. Replace Outdoor Garden Tap\n\nRemove the existing garden tap.\n\nSupply and install a new garden tap.\n\nTest for leaks and correct operation.", quantity:0, unitPrice:0 }], subtotal:300, gst:30, total:330 } } }
   };
   const calls = [];
   process.env.RESEND_API_KEY = "test-key";
@@ -153,7 +153,7 @@ test("generates and attaches a PDF for a Tracker-created invoice", async () => {
     const page = await document.getPage(1);
     const content = await page.getTextContent();
     const text = content.items.map((item) => item.str).join(" ");
-    assert.match(text, /Replace outdoor garden tap/);
+    assert.match(text, /Replace Outdoor Garden Tap/);
     assert.doesNotMatch(text, /\$0\.00/);
     assert.equal(calls.some((call) => call.url.includes("/storage/v1/object/")), false);
   } finally {

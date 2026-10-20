@@ -56,7 +56,10 @@ function createEmailInvoicePdf(job = {}) {
     lines.forEach((line) => {
       doc.font("Helvetica-Bold").fontSize(9);
       const rowHeight = Math.max(32, doc.heightOfString(line.description, { width:cols.quantity - margin - 14, lineGap:2 }) + 16);
-      if (y + rowHeight > 520) return;
+      // Keep enough table space for a priced service followed by its
+      // description-only detail line. The previous cutoff silently dropped
+      // the second row when both descriptions were several lines long.
+      if (y + rowHeight > 570) return;
       doc.fillColor(ink).text(line.description, margin + 5, y + 10, { width:cols.quantity - margin - 14, lineGap:2 });
       if (line.quantity > 0 && line.unitPrice > 0) {
         doc.font("Helvetica").fontSize(10);
