@@ -146,7 +146,7 @@ test("generates and attaches a PDF for a Tracker-created invoice", async () => {
     const resend = calls.find((call) => call.url === "https://api.resend.com/emails");
     const attachment = JSON.parse(resend.options.body).attachments[0];
     assert.equal(attachment.filename, "25285.pdf");
-    assert.match(Buffer.from(attachment.content, "base64").toString("utf8", 0, 8), /^%PDF-1\.4/);
+    assert.match(Buffer.from(attachment.content, "base64").toString("utf8", 0, 8), /^%PDF-/);
     assert.equal(calls.some((call) => call.url.includes("/storage/v1/object/")), false);
   } finally {
     global.fetch = originalFetch;

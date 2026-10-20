@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/send-invoice-email.js": {
+      "includeFiles": "assets/eastern-home-service-logo-clean.png"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

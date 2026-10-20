@@ -111,8 +111,8 @@ async function loadPdf(config, source, invoiceNumber) {
   return { filename:safeFilename(invoiceNumber), content:bytes.toString("base64") };
 }
 
-function generatedPdf(record, invoiceNumber) {
-  const bytes = createInvoicePdf(record?.payload?.job || {});
+async function generatedPdf(record, invoiceNumber) {
+  const bytes = await createInvoicePdf(record?.payload?.job || {});
   if (!bytes.length || bytes.length > MAX_ATTACHMENT_BYTES) {
     throw Object.assign(new Error("The generated invoice PDF is too large to attach by email."), { statusCode:413 });
   }
@@ -161,7 +161,7 @@ module.exports = async (req, res) => {
     const content = emailContent({ record, kind, message });
     const attachment = source?.path
       ? await loadPdf(config, source, content.invoiceNumber)
-      : generatedPdf(record, content.invoiceNumber);
+      : await generatedPdf(record, content.invoiceNumber);
     const photos = photoAttachments(body.photos);
     const resend = await sendWithResend(emailConfig, {
       from:emailConfig.from,
