@@ -1123,6 +1123,7 @@ document.addEventListener("DOMContentLoaded", () => {
   legacyDescription.before(lineEditor);
   const defaultInvoiceLine = (line = {}) => ({ description:String(line.description || ""), quantity:Math.max(0, Number(line.quantity) || 0), unitPrice:Math.max(0, Number(line.unitPrice) || 0) });
   const invoiceLineAmount = (line) => line.quantity * line.unitPrice;
+  const isInvoiceLineReady = (line) => Boolean(String(line.description || "").trim()) && Number(line.quantity) > 0;
   const readInvoiceLines = () => [...document.querySelectorAll("#invoice-editor-lines-body tr")].map((row) => defaultInvoiceLine({ description:row.querySelector("[data-line-description]").value, quantity:row.querySelector("[data-line-quantity]").value, unitPrice:row.querySelector("[data-line-price]").value }));
   const renderInvoiceLineEditor = () => {
     $("#invoice-editor-lines-body").innerHTML = draftInvoiceLines.map((line, index) => `<tr data-invoice-line="${index}"><td><textarea data-line-description rows="2" aria-label="Line ${index + 1} description">${escapeHtml(line.description)}</textarea></td><td><input data-line-quantity type="number" min="0" step="0.01" value="${line.quantity || ""}" aria-label="Line ${index + 1} quantity"></td><td><input data-line-price type="number" min="0" step="0.01" value="${line.unitPrice || ""}" aria-label="Line ${index + 1} unit price"></td><td>10% GST</td><td>${currency(invoiceLineAmount(line))}</td><td><button class="icon-button" type="button" data-remove-invoice-line="${index}" aria-label="Remove line ${index + 1}">×</button></td></tr>`).join("");
@@ -1242,11 +1243,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const dueDate = escapeHtml(dateForInvoice($("#invoice-due-date").value));
     const terms = escapeHtml(`${$("#invoice-terms").value || 0} Days`);
     const note = escapeHtml($("#invoice-note").value || "");
-    const rows = lines.map((line) => `<tr><td>${escapeHtml(line.description || "—")}</td><td>${line.quantity.toFixed(line.quantity % 1 ? 2 : 0)}</td><td>${currency(line.unitPrice)}</td><td>10% GST</td><td>${currency(invoiceLineAmount(line))}</td></tr>`).join("") || `<tr><td>—</td><td>0</td><td>${currency(0)}</td><td>10% GST</td><td>${currency(0)}</td></tr>`;
+    const rows = lines.filter(isInvoiceLineReady).map((line) => `<tr><td>${escapeHtml(line.description)}</td><td>${line.quantity.toFixed(line.quantity % 1 ? 2 : 0)}</td><td>${currency(line.unitPrice)}</td><td>10% GST</td><td>${currency(invoiceLineAmount(line))}</td></tr>`).join("");
     $("#invoice-print-pages").innerHTML = `<article class="invoice-paper invoice-print-page invoice-print-final"><header class="invoice-paper-header"><div class="invoice-company">Melbourne VIC Australia<br><strong>ABN: 67651973711</strong></div><div class="invoice-brand"><img src="./assets/eastern-home-service-logo-clean.png" alt="Eastern Home Services"></div></header><h2 class="invoice-title">Tax Invoice ${number}</h2><div class="invoice-customer"><strong>${client}</strong><br>${address}</div><div class="invoice-meta"><div><span>Invoice Date</span><strong>${date}</strong></div><div><span>Due Date</span><strong>${dueDate}</strong></div></div><table class="invoice-lines invoice-print-grid"><thead><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><div class="invoice-payment-terms">Payment terms: ${terms}</div><div class="invoice-totals"><div><span>Untaxed Amount</span><strong>${currency(subtotal)}</strong></div><div><span>GST 10%</span><strong>${currency(gst)}</strong></div><div class="grand"><span>Total</span><strong>${currency(total)}</strong></div></div><footer class="invoice-footer"><p><strong>Payment Communication: ${number}</strong></p><p><strong>Note:</strong><br>${note}</p><p><strong>Bank Detail</strong><br>SWIFT: CTBAAU2S<br>Bank Name: Commonwealth Bank<br>Account Name: Eastern Group VIC<br>BSB: 063 109<br>Account Number: 13349243 (AUD ONLY)<br>Bank Address: 28 Main Street, Box Hill, VIC 3128<br>"Please mark \"AUD only\" on bank instruction."</p></footer><div class="invoice-page-footer"><strong>Your Home Maintenance and Service Solution</strong><br><small>Page 1 / 1</small></div></article>`;
   }
   function renderInvoicePreview() {
-    const lines = readInvoiceLines().filter((line) => line.description || line.quantity || line.unitPrice);
+    const lines = readInvoiceLines().filter(isInvoiceLineReady);
     const subtotal = syncLegacyInvoiceFields(lines);
     const gst = subtotal * .1;
     const total = subtotal + gst;
@@ -1313,7 +1314,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-print").addEventListener("click", () => window.print());
   $("#invoice-save").addEventListener("click", async () => {
     if (!state.selected || !$("#invoice-builder-form").reportValidity()) return;
-    const lineItems = readInvoiceLines().filter((line) => line.description || line.quantity || line.unitPrice);
+    const lineItems = readInvoiceLines().filter(isInvoiceLineReady);
     if (!lineItems.length || lineItems.some((line) => !line.description || line.quantity <= 0)) { window.alert("Add at least one invoice line with a description and quantity."); return; }
     const subtotal = lineItems.reduce((sum, line) => sum + invoiceLineAmount(line), 0);
     const total = subtotal * 1.1;
