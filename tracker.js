@@ -243,25 +243,47 @@ function renderCalendar() { const scheduled = activeRecords().filter((record) =>
 function clientContacts() { return state.boardSettings?.job?.clientContacts && typeof state.boardSettings.job.clientContacts === "object" ? state.boardSettings.job.clientContacts : {}; }
 function clientEmails(name) { const value = clientContacts()[savedClientName(name)]; return [...new Set((Array.isArray(value) ? value : [value]).map((email) => String(email || "").trim().toLowerCase()).filter(Boolean))]; }
 function clientEmail(name) { return clientEmails(name)[0] || ""; }
+async function persistClientContacts(contacts) {
+  const isNew = !state.boardSettings;
+  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, clientContacts:contacts } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards:[], boardOrder:[], hiddenBoards:[], clientContacts:contacts } };
+  state.boardSettings = await request(isNew ? "" : `?id=${encodeURIComponent(settings.id)}`, { method:isNew ? "POST" : "PATCH", body:JSON.stringify(settings) });
+  renderClients();
+  renderEmailSettings();
+}
 async function saveClientEmail(name, email, append = false) {
   const client = savedClientName(name);
   const value = String(email || "").trim();
-  if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { window.alert("Enter a valid client email address."); return; }
-  const isNew = !state.boardSettings;
+  if (!client) { window.alert("Enter a client name."); return false; }
+  if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { window.alert("Enter a valid client email address."); return false; }
   const contacts = { ...clientContacts() };
   const existing = clientEmails(client);
   if (value) contacts[client] = [value.toLowerCase(), ...existing.filter((item) => item.toLowerCase() !== value.toLowerCase())]; else delete contacts[client];
-  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, clientContacts:contacts } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards:[], boardOrder:[], hiddenBoards:[], clientContacts:contacts } };
   try {
-    state.boardSettings = await request(isNew ? "" : `?id=${encodeURIComponent(settings.id)}`, { method:isNew ? "POST" : "PATCH", body:JSON.stringify(settings) });
-    renderClients();
-  } catch (error) { window.alert("The client email could not be saved. Please try again."); console.warn(error); }
+    await persistClientContacts(contacts);
+    return true;
+  } catch (error) { window.alert("The client email could not be saved. Please try again."); console.warn(error); return false; }
+}
+async function deleteClientEmail(name, email) {
+  const client = savedClientName(name);
+  const contacts = { ...clientContacts() };
+  const remaining = clientEmails(client).filter((item) => item.toLowerCase() !== String(email || "").trim().toLowerCase());
+  if (remaining.length) contacts[client] = remaining; else delete contacts[client];
+  try {
+    await persistClientContacts(contacts);
+    return true;
+  } catch (error) { window.alert("The client email could not be deleted. Please try again."); console.warn(error); return false; }
 }
 async function saveClientEmails(name, emails) {
   const uniqueEmails = [...new Set((emails || []).map((email) => String(email || "").trim().toLowerCase()).filter(Boolean))];
   for (const email of uniqueEmails) await saveClientEmail(name, email, true);
 }
 function renderClients() { const clients = [...new Map(activeRecords().filter((r) => r.customerName && r.customerName !== "-").map((r) => [savedClientName(r.customerName), r])).entries()]; $("#client-list").innerHTML = clients.map(([name, record]) => `<article class="client-item"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(record.phone || "No phone")} · ${escapeHtml(record.address || "No address")}</span><label style="display:grid;gap:5px;margin-top:10px;font-size:12px;font-weight:700;color:#425267">Invoice email<input type="email" data-client-email="${escapeHtml(name)}" value="${escapeHtml(clientEmail(name))}" placeholder="accounts@client.com" autocomplete="email"></label>${clientEmails(name).length > 1 ? `<small style="margin-top:6px;color:#637083">Also saved: ${escapeHtml(clientEmails(name).slice(1).join(", "))}</small>` : ""}<button class="quiet-button" type="button" data-save-client-email="${escapeHtml(name)}" style="margin-top:8px">Save email</button></article>`).join("") || `<div class="empty" style="display:block">Clients will appear when quotes are saved.</div>`; }
+function renderEmailSettings() {
+  const list = $("#saved-email-list");
+  if (!list) return;
+  const entries = Object.entries(clientContacts()).flatMap(([client, emails]) => (Array.isArray(emails) ? emails : [emails]).map((email) => [savedClientName(client), String(email || "").trim().toLowerCase()])).filter(([, email]) => email).sort(([leftClient, leftEmail], [rightClient, rightEmail]) => leftClient.localeCompare(rightClient) || leftEmail.localeCompare(rightEmail));
+  list.innerHTML = entries.length ? entries.map(([client, email]) => `<div class="saved-email-row"><div><strong>${escapeHtml(client)}</strong><span>${escapeHtml(email)}</span></div><button class="saved-email-remove" type="button" data-delete-client-email="${escapeHtml(client)}" data-delete-email="${escapeHtml(email)}">Delete</button></div>`).join("") : `<div class="saved-email-empty">No saved email contacts yet.</div>`;
+}
 function renderTasks() { const active = activeRecords().filter((record) => !["completed"].includes(record.job.status)); $("#task-list").innerHTML = active.map((record) => `<article class="task-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.detail || "No job detail added")}</span><div class="task-meta"><em>${escapeHtml(record.job.status === "quoted" ? "Follow up quote" : record.job.status === "confirmed" ? "Schedule the job" : "Complete scheduled work")}</em><b>Quote ${currency(record.job.quote)}</b></div></article>`).join("") || `<div class="empty" style="display:block">No active tasks.</div>`; }
 function renderReports() { const all = activeRecords(); const paid = all.filter((record) => record.job.payment === "paid"); $("#report-grid").innerHTML = `<article class="report-card"><span>Total quotations</span><strong>${currency(all.reduce((sum, r) => sum + r.job.quote, 0))}</strong></article><article class="report-card"><span>Paid jobs</span><strong>${paid.length}</strong></article><article class="report-card"><span>Completed jobs</span><strong>${all.filter((r) => r.job.status === "completed").length}</strong></article>`; }
 function renderClientPortal() {
@@ -299,7 +321,7 @@ function closeExpenseModal() { $("#expense-modal").classList.remove("open"); }
 async function addExpense(event) { event.preventDefault(); const amount = Number($("#expense-amount").value); if (!(amount > 0)) return; const expense = { id:crypto.randomUUID(), date:$("#expense-date").value, category:$("#expense-category").value.trim(), description:$("#expense-description").value.trim(), amount }; closeExpenseModal(); await saveProfitExpenses([...profitExpenses(), expense]); }
 async function deleteExpense(id) { const expense = profitExpenses().find((item) => item.id === id); if (!expense || !window.confirm(`Delete the ${currency(expense.amount)} expense?`)) return; await saveProfitExpenses(profitExpenses().filter((item) => item.id !== id)); }
 function renderArchive() { const records = state.records.filter((record) => record.job.archived); $("#archive-body").innerHTML = records.map((record) => `<tr><td>${escapeHtml(record.job.number || "—")}</td><td class="address">${escapeHtml(record.address || "—")}</td><td class="detail">${escapeHtml(record.job.detail || "—")}</td><td>${tag(record.job.status)}</td><td class="money">${currency(record.job.quote)}</td><td><div class="archive-actions"><button class="quiet-button archive-restore" type="button" data-restore-card="${escapeHtml(record.id)}">Restore</button><button class="danger-button" type="button" data-delete-card="${escapeHtml(record.id)}">Permanently delete</button></div></td></tr>`).join("") || `<tr><td colspan="6" class="archive-empty">No archived cards.</td></tr>`; }
-function render() { renderJobs(); renderBoard(); renderBoardTargets(); renderCalendar(); renderClients(); renderQuotes(); renderClientPortal(); renderArchive(); renderProfit(); renderAccounting(); }
+function render() { renderJobs(); renderBoard(); renderBoardTargets(); renderCalendar(); renderClients(); renderQuotes(); renderClientPortal(); renderArchive(); renderProfit(); renderAccounting(); renderEmailSettings(); }
 async function placeJob(id, status, index) {
   const record = state.records.find((item) => item.id === id);
   if (!record) return;
@@ -722,7 +744,7 @@ function renderQuotes() {
   $("#invoice-filter-note").innerHTML = periodLabel || filterLabel ? `Showing <strong>${escapeHtml(periodLabel || "All financial years")}</strong>${filterLabel ? ` · <strong>${escapeHtml(filterLabel)}</strong>` : ""} · <button type="button" data-invoice-filter="all">Clear filters</button>` : "";
   $("#invoices-body").innerHTML = filteredInvoices.map((record) => { const pending = record.job.status === "completed"; const overdue = invoiceOverdue(record); const key = invoiceKey(record.job.invoiceNumber); const issue = pending ? "" : reviewIssue(record); const issueClass = `${pending ? "" : !key ? "invoice-review-missing" : invoiceCounts.get(key) > 1 ? "invoice-review-duplicate" : issue ? "invoice-review-odoo" : ""}${overdue.late ? " invoice-overdue" : ""}`.trim(); const sourceId = record.job.invoice?.sourceDocument?.importId; const documentLink = sourceId ? `<br><a href="./api/invoice-documents/${encodeURIComponent(sourceId)}" target="_blank" rel="noopener" data-source-document>View original PDF</a>` : ""; return `<tr class="${issueClass}" data-id="${escapeHtml(record.id)}"><td>${escapeHtml(pending ? "Pending" : record.job.invoiceNumber || "—")}${documentLink}${issue ? `<span class="invoice-review-badge">${escapeHtml(issue)}</span>` : ""}</td><td>${escapeHtml(record.customerName || "—")}</td><td>${escapeHtml(record.address)}</td><td>${displayDate(record.job.invoiceDate)}</td><td>${overdue.dueDate ? displayDate(overdue.dueDate) : "—"}</td><td>${escapeHtml(record.job.payment === "paid" ? record.job.paymentDate || "—" : "—")}</td><td>${pending ? tag("pending") : paymentButton(record)}</td><td>${referralPayable(record) > 0 ? currency(referralPayable(record)) : "—"}</td><td>${currency(record.job.quote)}</td><td>${invoiceEmailActions(record, pending)}</td></tr>`; }).join("") || `<tr><td colspan="10">No matching invoices.</td></tr>`;
 }
-function setView(view) { const labels = { jobs:["Job Board","All work in one shared job register."],calendar:["Calendar","Scheduled jobs from the shared register."],clients:["Clients","All clients from saved quotes."],invoices:["Invoices","Completed or invoiced jobs from the shared register."],"client-portal":["Client portal","BRW Group read-only invoice view and referral summary."],accounting:["Accounting","Income, expenses and outstanding invoices by financial year."],profit:["Profit Summary","Paid income, referral payable and operating expenses by financial year."],archive:["Archive","Archived cards are kept here until you restore them."],settings:["Settings","Shared tracker settings."] }; if (!labels[view]) view = "jobs"; state.view = view; try { localStorage.setItem("tracker-view", view); } catch {} document.querySelectorAll(".nav-link[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view)); document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active", section.id === `view-${view}`)); $("#page-title").textContent = labels[view][0]; $("#page-description").textContent = labels[view][1]; $("#add-job").style.display = view === "jobs" ? "inline-block" : "none"; if (view === "invoices") renderQuotes(); if (view === "client-portal") renderClientPortal(); if (view === "archive") renderArchive(); if (view === "profit") renderProfit(); if (view === "accounting") renderAccounting(); }
+function setView(view) { const labels = { jobs:["Job Board","All work in one shared job register."],calendar:["Calendar","Scheduled jobs from the shared register."],clients:["Clients","All clients from saved quotes."],invoices:["Invoices","Completed or invoiced jobs from the shared register."],"client-portal":["Client portal","BRW Group read-only invoice view and referral summary."],accounting:["Accounting","Income, expenses and outstanding invoices by financial year."],profit:["Profit Summary","Paid income, referral payable and operating expenses by financial year."],archive:["Archive","Archived cards are kept here until you restore them."],settings:["Settings","Shared tracker settings."] }; if (!labels[view]) view = "jobs"; state.view = view; try { localStorage.setItem("tracker-view", view); } catch {} document.querySelectorAll(".nav-link[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view)); document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active", section.id === `view-${view}`)); $("#page-title").textContent = labels[view][0]; $("#page-description").textContent = labels[view][1]; $("#add-job").style.display = view === "jobs" ? "inline-block" : "none"; if (view === "invoices") renderQuotes(); if (view === "client-portal") renderClientPortal(); if (view === "archive") renderArchive(); if (view === "profit") renderProfit(); if (view === "accounting") renderAccounting(); if (view === "settings") renderEmailSettings(); }
 document.addEventListener("DOMContentLoaded", () => { $("#invoice-search").addEventListener("input", (event) => { state.invoiceSearch = event.target.value; renderQuotes(); }); });
 document.addEventListener("DOMContentLoaded", () => { $("#job-payment-amount").addEventListener("input", updatePaymentBalance); });
 document.addEventListener("DOMContentLoaded", () => {
@@ -1146,6 +1168,31 @@ $("#invoice-activity-close").addEventListener("click", closeInvoiceActivity);
 $("#invoice-activity-done").addEventListener("click", closeInvoiceActivity);
 
 document.addEventListener("DOMContentLoaded", () => {
+  const savedEmailForm = $("#saved-email-form");
+  const savedEmailStatus = $("#saved-email-status");
+  savedEmailForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!savedEmailForm.reportValidity()) return;
+    savedEmailStatus.textContent = "Saving email…";
+    savedEmailStatus.className = "saved-email-status";
+    const saved = await saveClientEmail($("#saved-email-client").value, $("#saved-email-address").value);
+    if (!saved) { savedEmailStatus.textContent = "Email was not saved. Please check the details and try again."; savedEmailStatus.className = "saved-email-status error"; return; }
+    savedEmailForm.reset();
+    savedEmailStatus.textContent = "Saved email contact.";
+    savedEmailStatus.className = "saved-email-status success";
+  });
+  $("#saved-email-list").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-delete-client-email]");
+    if (!button) return;
+    const client = button.dataset.deleteClientEmail;
+    const email = button.dataset.deleteEmail;
+    if (!window.confirm(`Delete ${email} for ${client}?`)) return;
+    savedEmailStatus.textContent = "Deleting email…";
+    savedEmailStatus.className = "saved-email-status";
+    const deleted = await deleteClientEmail(client, email);
+    savedEmailStatus.textContent = deleted ? "Deleted email contact." : "Email could not be deleted. Please try again.";
+    savedEmailStatus.className = `saved-email-status ${deleted ? "success" : "error"}`;
+  });
   $("#client-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-save-client-email]");
     if (!button) return;
