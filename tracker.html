@@ -266,10 +266,13 @@
       <form id="job-form">
         <input id="record-id" type="hidden">
         <label>Job no.<input id="job-number" required placeholder="J-0001"></label>
-        <label>Client<select id="job-client"><option value="">Select a saved client</option></select><input id="job-new-client" type="text" placeholder="Enter new client name" autocomplete="organization" hidden></label>
-        <label>Address<textarea id="job-address" rows="2" required></textarea></label>
-        <label>Job details<textarea id="job-detail" rows="5"></textarea></label>
-        <label>Contact number<input id="job-phone" type="tel" placeholder="e.g. 04xx xxx xxx" autocomplete="tel"></label>
+        <label>Client<input id="job-client" type="text" list="job-client-options" placeholder="Search saved clients or enter a new client" autocomplete="organization"><span class="field-help">Choose a saved client or type a new name.</span></label>
+        <datalist id="job-client-options"></datalist>
+        <label>Address<input id="job-address" type="text" list="job-address-options" placeholder="Choose a saved address or enter a new one" required autocomplete="street-address"></label>
+        <datalist id="job-address-options"></datalist>
+        <label>Job details<textarea id="job-detail" rows="5"></textarea><select id="job-detail-options" aria-label="Choose saved job details"><option value="">Choose saved job details (optional)</option></select></label>
+        <label>Contact number<input id="job-phone" type="tel" list="job-phone-options" placeholder="Choose a saved number or enter a new one" autocomplete="tel"></label>
+        <datalist id="job-phone-options"></datalist>
         <label>Email<input id="job-email" type="email" list="job-email-options" placeholder="Choose or enter an email" autocomplete="email"></label>
         <label>CC emails<input id="job-email-cc" type="text" list="job-email-options" placeholder="Choose or separate addresses with commas" autocomplete="off"></label>
         <label>BCC emails<input id="job-email-bcc" type="text" list="job-email-options" placeholder="Choose or separate addresses with commas" autocomplete="off"></label>

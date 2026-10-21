@@ -504,8 +504,21 @@ function updatePaymentBalance() { const total = Math.max(0, Number($("#job-total
 function updateTaxAmounts() { const quotation = Math.max(0, Number($("#job-quote").value) || 0); const gst = quotation * 0.1; const total = quotation + gst; $("#job-total").value = total.toFixed(2); updatePaymentBalance(); return { quotation, gst, total }; }
 function updateMarkupAmount() { const { quotation } = updateTaxAmounts(); const percentage = Number($("#job-markup").value) || 0; const amount = percentage > 0 ? quotation - (quotation / (1 + percentage / 100)) : 0; $("#job-markup-amount").value = amount.toFixed(2); }
 function updateMarkupPercentage() { const { quotation } = updateTaxAmounts(); const amount = Math.max(0, Number($("#job-markup-amount").value) || 0); const percentage = quotation > amount && amount > 0 ? (amount / (quotation - amount)) * 100 : 0; $("#job-markup").value = percentage.toFixed(1); }
-function populateJobClientOptions(selected = "") { const clients = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter((name) => name && name !== "-"))].sort((a, b) => a.localeCompare(b)); const select = $("#job-client"); select.innerHTML = `<option value="">Select a saved client</option>${clients.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}`; select.value = clients.includes(savedClientName(selected)) ? savedClientName(selected) : ""; }
-function populateJobClientOptions(selected = "") { const clients = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter((name) => name && name !== "-"))].sort((a, b) => a.localeCompare(b)); const select = $("#job-client"); select.innerHTML = `<option value="">Select a saved client</option>${clients.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}<option value="__new_client__">Add new client</option>`; const client = savedClientName(selected); select.value = clients.includes(client) ? client : client ? "__new_client__" : ""; $("#job-new-client").hidden = select.value !== "__new_client__"; $("#job-new-client").value = select.value === "__new_client__" ? client : ""; }
+function savedJobValues(getValue) {
+  return [...new Set(state.records.map(getValue).map((value) => String(value || "").trim()).filter((value) => value && value !== "-"))]
+    .sort((a, b) => a.localeCompare(b));
+}
+function setJobDatalist(id, values) {
+  $(`#${id}`).innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+}
+function populateJobClientOptions(selected = "") {
+  setJobDatalist("job-client-options", savedJobValues((record) => savedClientName(record.customerName)));
+  $("#job-client").value = savedClientName(selected);
+  setJobDatalist("job-address-options", savedJobValues((record) => record.address));
+  setJobDatalist("job-phone-options", savedJobValues((record) => record.phone));
+  const details = savedJobValues((record) => record.job?.detail);
+  $("#job-detail-options").innerHTML = `<option value="">Choose saved job details (optional)</option>${details.map((detail) => `<option value="${escapeHtml(detail)}">${escapeHtml(detail.length > 88 ? `${detail.slice(0, 85)}…` : detail)}</option>`).join("")}`;
+}
 function populateJobEmailOptions(selectedClient = "") {
   const saved = new Map();
   const add = (client, value) => {
@@ -529,7 +542,12 @@ function populateJobEmailOptions(selectedClient = "") {
     .map(([email, client]) => `<option value="${escapeHtml(email)}" label="${escapeHtml(client)}"></option>`)
     .join("");
 }
-function updateNewClientInput() { const isNew = $("#job-client").value === "__new_client__"; $("#job-new-client").hidden = !isNew; if (isNew) $("#job-new-client").focus(); }
+function selectSavedClient() {
+  const client = $("#job-client").value.trim();
+  if (!client) return;
+  populateJobEmailOptions(client);
+  if (!$("#job-email").value.trim()) $("#job-email").value = clientEmail(client);
+}
 function ensureJobInvoiceDropzone() {
   if ($("#job-invoice-dropzone")) return;
   const zone = document.createElement("div");
@@ -587,7 +605,7 @@ function formRecord() {
   const gst = imported ? Number(importedFields.gst || tax.gst) : tax.gst;
   const status = state.drawerStage || state.selected?.job?.status || "quoted";
   const markup = Number($("#job-markup").value) || 0;
-  const client = ($("#job-client").value === "__new_client__" ? $("#job-new-client").value : $("#job-client").value).trim() || "-";
+  const client = $("#job-client").value.trim() || "-";
   const address = $("#job-address").value.trim();
   const detail = $("#job-detail").value.trim();
   const phone = $("#job-phone").value.trim();
@@ -670,7 +688,12 @@ function renderQuotes() {
 function setView(view) { const labels = { jobs:["Job Board","All work in one shared job register."],calendar:["Calendar","Scheduled jobs from the shared register."],clients:["Clients","All clients from saved quotes."],invoices:["Invoices","Completed or invoiced jobs from the shared register."],"client-portal":["Client portal","BRW Group read-only invoice view and referral summary."],accounting:["Accounting","Income, expenses and outstanding invoices by financial year."],profit:["Profit Summary","Paid income, referral payable and operating expenses by financial year."],archive:["Archive","Archived cards are kept here until you restore them."],settings:["Settings","Shared tracker settings."] }; if (!labels[view]) view = "jobs"; state.view = view; try { localStorage.setItem("tracker-view", view); } catch {} document.querySelectorAll(".nav-link[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view)); document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active", section.id === `view-${view}`)); $("#page-title").textContent = labels[view][0]; $("#page-description").textContent = labels[view][1]; $("#add-job").style.display = view === "jobs" ? "inline-block" : "none"; if (view === "invoices") renderQuotes(); if (view === "client-portal") renderClientPortal(); if (view === "archive") renderArchive(); if (view === "profit") renderProfit(); if (view === "accounting") renderAccounting(); }
 document.addEventListener("DOMContentLoaded", () => { $("#invoice-search").addEventListener("input", (event) => { state.invoiceSearch = event.target.value; renderQuotes(); }); });
 document.addEventListener("DOMContentLoaded", () => { $("#job-payment-amount").addEventListener("input", updatePaymentBalance); });
-document.addEventListener("DOMContentLoaded", () => { $("#job-client").addEventListener("change", () => { updateNewClientInput(); const client = $("#job-client").value; if (client && client !== "__new_client__") { populateJobEmailOptions(client); if (!$("#job-email").value.trim()) $("#job-email").value = clientEmail(client); } }); });
+document.addEventListener("DOMContentLoaded", () => {
+  $("#job-client").addEventListener("change", selectSavedClient);
+  $("#job-detail-options").addEventListener("change", (event) => {
+    if (event.target.value) $("#job-detail").value = event.target.value;
+  });
+});
 document.addEventListener("DOMContentLoaded", () => { $("#search").addEventListener("input", (e) => { state.search = e.target.value; render(); }); $("#sort").addEventListener("change", (e) => { state.sort=e.target.value; render(); }); $("#jobs-body").addEventListener("click", (e) => { const row=e.target.closest("tr[data-id]"); if(row) openDrawer(state.records.find((record)=>record.id===row.dataset.id)); }); $("#invoices-body").addEventListener("click", (e) => { const control = e.target.closest("[data-payment-toggle]"); if (control) togglePayment(control.dataset.paymentToggle); }); $("#invoice-summary").addEventListener("click", (e) => { const control = e.target.closest("[data-invoice-filter]"); if (!control) return; state.invoiceFilter = state.invoiceFilter === control.dataset.invoiceFilter ? "all" : control.dataset.invoiceFilter; renderQuotes(); }); $("#invoice-filter-note").addEventListener("click", (e) => { if (e.target.closest("[data-invoice-filter='all']")) { state.invoiceFilter = "all"; state.invoiceFY = ""; state.invoiceQuarter = ""; renderQuotes(); } }); $("#invoice-fy").addEventListener("change", (e) => { state.invoiceFY = e.target.value; renderQuotes(); }); $("#invoice-quarter").addEventListener("change", (e) => { state.invoiceQuarter = e.target.value; renderQuotes(); }); $("#archive-body").addEventListener("click", (e) => { const deleteControl = e.target.closest("[data-delete-card]"); const restoreControl = e.target.closest("[data-restore-card]"); if (deleteControl) permanentlyDeleteArchivedJob(deleteControl.dataset.deleteCard); else if (restoreControl) restoreJob(restoreControl.dataset.restoreCard); }); $("#payment-date-cancel").addEventListener("click",closePaymentDateModal); $("#payment-date-skip").addEventListener("click",()=>{ const id = state.paymentRecordId; closePaymentDateModal(); if (id) setPayment(id,"paid",""); }); $("#payment-date-save").addEventListener("click",()=>{ const id = state.paymentRecordId; const date = $("#payment-date").value; closePaymentDateModal(); if (id) setPayment(id,"paid",date); }); $("#add-job").addEventListener("click",()=>openDrawer()); $("#close-drawer").addEventListener("click",closeDrawer); $("#cancel-edit").addEventListener("click",closeDrawer); $("#job-form").addEventListener("submit",saveJob); $("#job-quote").addEventListener("input", updateMarkupAmount); $("#job-markup").addEventListener("input", updateMarkupAmount); $("#job-markup-amount").addEventListener("input", updateMarkupPercentage); $("#refresh-button").addEventListener("click",loadRecords); $("#sidebar-toggle").addEventListener("click", () => { const open = document.body.classList.toggle("sidebar-open"); $("#sidebar-toggle").setAttribute("aria-expanded", String(open)); $("#sidebar-toggle").setAttribute("aria-label", open ? "Hide sidebar" : "Show sidebar"); $("#sidebar-toggle").textContent = open ? "‹" : "›"; }); document.querySelectorAll(".nav-link[data-view]").forEach((button)=>button.addEventListener("click",()=>{ setView(button.dataset.view); loadRecords(); })); document.addEventListener("visibilitychange", () => { if (!document.hidden) loadRecords(); }); setView(state.view); loadRecords(); window.setInterval(loadRecords, 30000); });
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-layout]").forEach((button) => button.addEventListener("click", () => {
