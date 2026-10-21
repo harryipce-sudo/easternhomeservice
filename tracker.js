@@ -509,15 +509,11 @@ function savedJobValues(getValue) {
     .sort((a, b) => a.localeCompare(b));
 }
 function setJobDatalist(id, values) {
-  $(`#${id}`).innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+  const list = $(`#${id}`);
+  if (list) list.innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
 }
 function populateJobClientOptions(selected = "") {
-  setJobDatalist("job-client-options", savedJobValues((record) => savedClientName(record.customerName)));
   $("#job-client").value = savedClientName(selected);
-  setJobDatalist("job-address-options", savedJobValues((record) => record.address));
-  setJobDatalist("job-phone-options", savedJobValues((record) => record.phone));
-  const details = savedJobValues((record) => record.job?.detail);
-  $("#job-detail-options").innerHTML = `<option value="">Choose saved job details (optional)</option>${details.map((detail) => `<option value="${escapeHtml(detail)}">${escapeHtml(detail.length > 88 ? `${detail.slice(0, 85)}…` : detail)}</option>`).join("")}`;
 }
 function populateJobEmailOptions(selectedClient = "") {
   const saved = new Map();
@@ -536,17 +532,58 @@ function populateJobEmailOptions(selectedClient = "") {
     add(client, record.job?.emailCc);
     add(client, record.job?.emailBcc);
   });
-  const preferred = clientEmails(selectedClient).map((email) => [email, savedClientName(selectedClient)]);
-  const remaining = [...saved.entries()].filter(([email]) => !preferred.some(([preferredEmail]) => preferredEmail === email));
-  $("#job-email-options").innerHTML = [...preferred, ...remaining]
-    .map(([email, client]) => `<option value="${escapeHtml(email)}" label="${escapeHtml(client)}"></option>`)
-    .join("");
+  return [...saved.entries()];
 }
 function selectSavedClient() {
   const client = $("#job-client").value.trim();
   if (!client) return;
   populateJobEmailOptions(client);
   if (!$("#job-email").value.trim()) $("#job-email").value = clientEmail(client);
+}
+function jobSuggestionEntries(kind) {
+  if (kind === "client") return savedJobValues((record) => savedClientName(record.customerName)).map((value) => ({ value, label:value, detail:clientEmails(value).join(", ") || "Saved client" }));
+  if (kind === "address") return savedJobValues((record) => record.address).map((value) => ({ value, label:value, detail:"Saved job address" }));
+  if (kind === "phone") return savedJobValues((record) => record.phone).map((value) => ({ value, label:value, detail:"Saved contact number" }));
+  if (kind === "detail") return savedJobValues((record) => record.job?.detail).map((value) => ({ value, label:value.split(/\r?\n/)[0], detail:value }));
+  const emails = new Map();
+  const addEmail = (client, source) => (String(source || "").match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g) || []).forEach((email) => {
+    const value = email.trim().toLowerCase();
+    if (value && !emails.has(value)) emails.set(value, savedClientName(client) || "Saved client");
+  });
+  Object.keys(clientContacts()).forEach((client) => clientEmails(client).forEach((email) => addEmail(client, email)));
+  state.records.forEach((record) => { addEmail(record.customerName, record.email); addEmail(record.customerName, record.job?.email); addEmail(record.customerName, record.job?.emailCc); addEmail(record.customerName, record.job?.emailBcc); });
+  return [...emails.entries()].map(([value, client]) => ({ value, label:client, detail:value }));
+}
+function renderJobSuggestions(fieldId, kind) {
+  const field = $(`#${fieldId}`);
+  const suggestions = $(`#${fieldId}-suggestions`);
+  const rawTerm = field.value.split(/[;,\n]/).at(-1).trim().toLowerCase();
+  const entries = jobSuggestionEntries(kind).filter((entry) => !rawTerm || `${entry.label} ${entry.detail} ${entry.value}`.toLowerCase().includes(rawTerm)).slice(0, 8);
+  suggestions.innerHTML = entries.length ? entries.map((entry) => `<button class="job-suggestion" type="button" role="option" data-job-suggestion="${escapeHtml(entry.value)}" data-job-suggestion-field="${escapeHtml(fieldId)}"><span class="job-suggestion-icon">⌕</span><span><strong>${escapeHtml(entry.label)}</strong><small>${escapeHtml(entry.detail)}</small></span></button>`).join("") : `<div class="job-suggestion-empty">${rawTerm ? "No saved matches. Keep typing to add a new value." : "No saved values yet. Type a new value to save it with this job."}</div>`;
+  suggestions.hidden = false;
+  field.setAttribute("aria-expanded", String(entries.length > 0));
+}
+function selectJobSuggestion(fieldId, value) {
+  const field = $(`#${fieldId}`);
+  if (fieldId === "job-detail-search") { field.value = value; $("#job-detail").value = value; }
+  else if (["job-email-cc", "job-email-bcc"].includes(fieldId)) {
+    const existing = String(field.value || "").match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g) || [];
+    if (!existing.some((email) => email.toLowerCase() === value.toLowerCase())) existing.push(value);
+    field.value = existing.join(", ");
+  } else field.value = value;
+  $(`#${fieldId}-suggestions`).hidden = true;
+  field.setAttribute("aria-expanded", "false");
+  if (fieldId === "job-client") selectSavedClient();
+  field.focus();
+}
+function wireJobSuggestions(fieldId, kind) {
+  const field = $(`#${fieldId}`);
+  const suggestions = $(`#${fieldId}-suggestions`);
+  field.addEventListener("focus", () => renderJobSuggestions(fieldId, kind));
+  field.addEventListener("input", () => renderJobSuggestions(fieldId, kind));
+  field.addEventListener("keydown", (event) => { if (event.key === "Escape") { suggestions.hidden = true; field.setAttribute("aria-expanded", "false"); } });
+  field.addEventListener("blur", () => window.setTimeout(() => { suggestions.hidden = true; field.setAttribute("aria-expanded", "false"); }, 150));
+  suggestions.addEventListener("click", (event) => { const option = event.target.closest("[data-job-suggestion]"); if (option) selectJobSuggestion(fieldId, option.dataset.jobSuggestion); });
 }
 function ensureJobInvoiceDropzone() {
   if ($("#job-invoice-dropzone")) return;
@@ -690,9 +727,13 @@ document.addEventListener("DOMContentLoaded", () => { $("#invoice-search").addEv
 document.addEventListener("DOMContentLoaded", () => { $("#job-payment-amount").addEventListener("input", updatePaymentBalance); });
 document.addEventListener("DOMContentLoaded", () => {
   $("#job-client").addEventListener("change", selectSavedClient);
-  $("#job-detail-options").addEventListener("change", (event) => {
-    if (event.target.value) $("#job-detail").value = event.target.value;
-  });
+  wireJobSuggestions("job-client", "client");
+  wireJobSuggestions("job-address", "address");
+  wireJobSuggestions("job-detail-search", "detail");
+  wireJobSuggestions("job-phone", "phone");
+  wireJobSuggestions("job-email", "email");
+  wireJobSuggestions("job-email-cc", "email");
+  wireJobSuggestions("job-email-bcc", "email");
 });
 document.addEventListener("DOMContentLoaded", () => { $("#search").addEventListener("input", (e) => { state.search = e.target.value; render(); }); $("#sort").addEventListener("change", (e) => { state.sort=e.target.value; render(); }); $("#jobs-body").addEventListener("click", (e) => { const row=e.target.closest("tr[data-id]"); if(row) openDrawer(state.records.find((record)=>record.id===row.dataset.id)); }); $("#invoices-body").addEventListener("click", (e) => { const control = e.target.closest("[data-payment-toggle]"); if (control) togglePayment(control.dataset.paymentToggle); }); $("#invoice-summary").addEventListener("click", (e) => { const control = e.target.closest("[data-invoice-filter]"); if (!control) return; state.invoiceFilter = state.invoiceFilter === control.dataset.invoiceFilter ? "all" : control.dataset.invoiceFilter; renderQuotes(); }); $("#invoice-filter-note").addEventListener("click", (e) => { if (e.target.closest("[data-invoice-filter='all']")) { state.invoiceFilter = "all"; state.invoiceFY = ""; state.invoiceQuarter = ""; renderQuotes(); } }); $("#invoice-fy").addEventListener("change", (e) => { state.invoiceFY = e.target.value; renderQuotes(); }); $("#invoice-quarter").addEventListener("change", (e) => { state.invoiceQuarter = e.target.value; renderQuotes(); }); $("#archive-body").addEventListener("click", (e) => { const deleteControl = e.target.closest("[data-delete-card]"); const restoreControl = e.target.closest("[data-restore-card]"); if (deleteControl) permanentlyDeleteArchivedJob(deleteControl.dataset.deleteCard); else if (restoreControl) restoreJob(restoreControl.dataset.restoreCard); }); $("#payment-date-cancel").addEventListener("click",closePaymentDateModal); $("#payment-date-skip").addEventListener("click",()=>{ const id = state.paymentRecordId; closePaymentDateModal(); if (id) setPayment(id,"paid",""); }); $("#payment-date-save").addEventListener("click",()=>{ const id = state.paymentRecordId; const date = $("#payment-date").value; closePaymentDateModal(); if (id) setPayment(id,"paid",date); }); $("#add-job").addEventListener("click",()=>openDrawer()); $("#close-drawer").addEventListener("click",closeDrawer); $("#cancel-edit").addEventListener("click",closeDrawer); $("#job-form").addEventListener("submit",saveJob); $("#job-quote").addEventListener("input", updateMarkupAmount); $("#job-markup").addEventListener("input", updateMarkupAmount); $("#job-markup-amount").addEventListener("input", updateMarkupPercentage); $("#refresh-button").addEventListener("click",loadRecords); $("#sidebar-toggle").addEventListener("click", () => { const open = document.body.classList.toggle("sidebar-open"); $("#sidebar-toggle").setAttribute("aria-expanded", String(open)); $("#sidebar-toggle").setAttribute("aria-label", open ? "Hide sidebar" : "Show sidebar"); $("#sidebar-toggle").textContent = open ? "‹" : "›"; }); document.querySelectorAll(".nav-link[data-view]").forEach((button)=>button.addEventListener("click",()=>{ setView(button.dataset.view); loadRecords(); })); document.addEventListener("visibilitychange", () => { if (!document.hidden) loadRecords(); }); setView(state.view); loadRecords(); window.setInterval(loadRecords, 30000); });
 document.addEventListener("DOMContentLoaded", () => {
