@@ -320,6 +320,47 @@ function openExpenseModal() { $("#expense-date").value = new Date().toISOString(
 function closeExpenseModal() { $("#expense-modal").classList.remove("open"); }
 async function addExpense(event) { event.preventDefault(); const amount = Number($("#expense-amount").value); if (!(amount > 0)) return; const expense = { id:crypto.randomUUID(), date:$("#expense-date").value, category:$("#expense-category").value.trim(), description:$("#expense-description").value.trim(), amount }; closeExpenseModal(); await saveProfitExpenses([...profitExpenses(), expense]); }
 async function deleteExpense(id) { const expense = profitExpenses().find((item) => item.id === id); if (!expense || !window.confirm(`Delete the ${currency(expense.amount)} expense?`)) return; await saveProfitExpenses(profitExpenses().filter((item) => item.id !== id)); }
+function csvCells(line) { const cells = []; let value = ""; let quoted = false; for (let index = 0; index < line.length; index += 1) { const character = line[index]; if (character === '"') { if (quoted && line[index + 1] === '"') { value += '"'; index += 1; } else quoted = !quoted; } else if (character === "," && !quoted) { cells.push(value.trim()); value = ""; } else value += character; } cells.push(value.trim()); return cells; }
+function bankDate(value) { const text = String(value || "").trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text; const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return match ? `${match[3]}-${match[2].padStart(2,"0")}-${match[1].padStart(2,"0")}` : ""; }
+function bankImportKey(row) { const input = `${row.date}|${row.bankAmount}|${row.description}`; let hash = 2166136261; for (let index = 0; index < input.length; index += 1) { hash ^= input.charCodeAt(index); hash = Math.imul(hash, 16777619); } return `bank-csv-${(hash >>> 0).toString(36)}`; }
+function isSelfTransfer(description) { return /\btransfer\s+(?:to|from)\s+xx\d{3,}\b/i.test(String(description || "")); }
+function parseBankCsv(text) {
+  return String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).map(csvCells).map((cells) => ({ date:bankDate(cells[0]), bankAmount:Number(String(cells[1] || "").replace(/[$,\s]/g,"")), description:cells.slice(2).join(",").trim() })).filter((row) => row.date && Number.isFinite(row.bankAmount) && row.bankAmount !== 0 && row.description).map((row) => ({ ...row, importKey:bankImportKey(row), selfTransfer:isSelfTransfer(row.description) }));
+}
+function bankImportExists(importKey) { return [...profitExpenses(), ...accountingEntries()].some((item) => item.importKey === importKey); }
+let bankImportRows = [];
+function closeBankImport() { bankImportRows = []; $("#bank-import-file").value = ""; $("#bank-import-review").hidden = true; $("#bank-import-status").textContent = ""; $("#bank-import-modal").classList.remove("open"); }
+function renderBankImportReview() {
+  const eligible = bankImportRows.filter((row) => !row.selfTransfer && !row.exists);
+  const excluded = bankImportRows.filter((row) => row.selfTransfer);
+  const duplicates = bankImportRows.filter((row) => row.exists);
+  $("#bank-import-summary").innerHTML = `<strong>${bankImportRows.length} transactions found.</strong> ${eligible.length} can be imported, ${excluded.length} suspected self transfer${excluded.length === 1 ? "" : "s"} will be excluded, and ${duplicates.length} already imported transaction${duplicates.length === 1 ? "" : "s"} will be skipped.`;
+  $("#bank-self-transfer-confirm").hidden = excluded.length === 0;
+  $("#bank-self-transfer-copy").textContent = `${excluded.length} transaction${excluded.length === 1 ? " looks" : "s look"} like a transfer to or from a masked CommBank account. Confirm that they are self transfers. They will not be added to Tracker.`;
+  $("#bank-self-transfer-ack").checked = false;
+  $("#bank-import-rows").innerHTML = bankImportRows.map((row, index) => {
+    const skipped = row.selfTransfer || row.exists;
+    const type = row.selfTransfer ? "Self transfer · excluded" : row.exists ? "Already imported · skipped" : row.bankAmount > 0 ? "Other income" : "Expense";
+    return `<tr class="${skipped ? "bank-import-skipped" : ""}"><td><input type="checkbox" data-bank-row="${index}" ${skipped ? "disabled" : "checked"} aria-label="Include bank transaction"></td><td>${escapeHtml(displayDate(row.date))}</td><td>${escapeHtml(type)}</td><td class="money">${row.bankAmount < 0 ? "−" : ""}${currency(Math.abs(row.bankAmount))}</td><td>${escapeHtml(row.description)}</td></tr>`;
+  }).join("");
+  updateBankImportSave();
+  $("#bank-import-review").hidden = false;
+}
+function updateBankImportSave() { const eligibleSelected = [...document.querySelectorAll("[data-bank-row]:checked")].length; const selfTransfers = bankImportRows.filter((row) => row.selfTransfer).length; const confirmed = !selfTransfers || $("#bank-self-transfer-ack").checked; $("#bank-import-save").disabled = !eligibleSelected || !confirmed; $("#bank-import-save").textContent = eligibleSelected ? `Import ${eligibleSelected} selected transaction${eligibleSelected === 1 ? "" : "s"}` : "Import selected transactions"; }
+async function saveBankImport() {
+  const selected = [...document.querySelectorAll("[data-bank-row]:checked")].map((input) => bankImportRows[Number(input.dataset.bankRow)]).filter(Boolean);
+  if (!selected.length) return;
+  const expenses = [...profitExpenses()]; const entries = [...accountingEntries()];
+  selected.forEach((row) => {
+    const base = { id:crypto.randomUUID(), importKey:row.importKey, date:row.date, category:row.bankAmount < 0 ? "Bank expense" : "Bank receipt", description:row.description, bankAmount:Math.abs(row.bankAmount), amount:Number((Math.abs(row.bankAmount) / 1.1).toFixed(2)), taxTreatment:"estimated-gst-inclusive", source:"Bank CSV" };
+    if (row.bankAmount < 0) expenses.push(base); else entries.push({ ...base, type:"other-income" });
+  });
+  const previous = state.boardSettings;
+  const settings = { ...state.boardSettings, job:{ ...state.boardSettings.job, profitExpenses:expenses, accountingEntries:entries } };
+  $("#bank-import-save").disabled = true; $("#bank-import-status").textContent = "Importing transactions…";
+  try { state.boardSettings = await request(`?id=${encodeURIComponent(settings.id)}`, { method:"PATCH", body:JSON.stringify(settings) }); closeBankImport(); renderProfit(); renderAccounting(); }
+  catch (error) { state.boardSettings = previous; $("#bank-import-status").textContent = "The transactions could not be imported. Please try again."; $("#bank-import-save").disabled = false; console.warn(error); }
+}
 function renderArchive() { const records = state.records.filter((record) => record.job.archived); $("#archive-body").innerHTML = records.map((record) => `<tr><td>${escapeHtml(record.job.number || "—")}</td><td class="address">${escapeHtml(record.address || "—")}</td><td class="detail">${escapeHtml(record.job.detail || "—")}</td><td>${tag(record.job.status)}</td><td class="money">${currency(record.job.quote)}</td><td><div class="archive-actions"><button class="quiet-button archive-restore" type="button" data-restore-card="${escapeHtml(record.id)}">Restore</button><button class="danger-button" type="button" data-delete-card="${escapeHtml(record.id)}">Permanently delete</button></div></td></tr>`).join("") || `<tr><td colspan="6" class="archive-empty">No archived cards.</td></tr>`; }
 function render() { renderJobs(); renderBoard(); renderBoardTargets(); renderCalendar(); renderClients(); renderQuotes(); renderClientPortal(); renderArchive(); renderProfit(); renderAccounting(); renderEmailSettings(); }
 async function placeJob(id, status, index) {
@@ -1014,6 +1055,32 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#accounting-fy").addEventListener("change", (event) => { state.accountingFY = event.target.value; renderAccounting(); });
   $("#add-expense").addEventListener("click", openExpenseModal);
   $("#accounting-add-expense").addEventListener("click", openExpenseModal);
+  const bankModal = $("#bank-import-modal");
+  const bankFile = $("#bank-import-file");
+  const readBankFile = (file) => {
+    if (!file) return;
+    if (!/\.csv$/i.test(file.name) && file.type !== "text/csv") { $("#bank-import-status").textContent = "Choose a CSV file."; return; }
+    const reader = new FileReader();
+    reader.onerror = () => { $("#bank-import-status").textContent = "The CSV could not be read."; };
+    reader.onload = () => {
+      bankImportRows = parseBankCsv(reader.result).map((row) => ({ ...row, exists:bankImportExists(row.importKey) }));
+      if (!bankImportRows.length) { $("#bank-import-status").textContent = "No usable date, amount and description rows were found."; return; }
+      renderBankImportReview();
+      $("#bank-import-status").textContent = "Review the transactions before importing.";
+    };
+    reader.readAsText(file);
+  };
+  $("#accounting-import-bank").addEventListener("click", () => { bankModal.classList.add("open"); $("#bank-import-status").textContent = "Choose a CSV exported from your bank."; });
+  $("#bank-import-close").addEventListener("click", closeBankImport);
+  $("#bank-import-cancel").addEventListener("click", closeBankImport);
+  $("#bank-import-dropzone").addEventListener("click", () => bankFile.click());
+  $("#bank-import-dropzone").addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); bankFile.click(); } });
+  $("#bank-import-dropzone").addEventListener("dragover", (event) => event.preventDefault());
+  $("#bank-import-dropzone").addEventListener("drop", (event) => { event.preventDefault(); readBankFile(event.dataTransfer.files[0]); });
+  bankFile.addEventListener("change", () => readBankFile(bankFile.files[0]));
+  $("#bank-self-transfer-ack").addEventListener("change", updateBankImportSave);
+  $("#bank-import-rows").addEventListener("change", (event) => { if (event.target.matches("[data-bank-row]")) updateBankImportSave(); });
+  $("#bank-import-save").addEventListener("click", saveBankImport);
   $("#expense-cancel").addEventListener("click", closeExpenseModal);
   $("#expense-form").addEventListener("submit", addExpense);
   $("#expense-body").addEventListener("click", (event) => { const button = event.target.closest("[data-delete-expense]"); if (button) deleteExpense(button.dataset.deleteExpense); });
