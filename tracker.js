@@ -1387,6 +1387,18 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-preview-note").textContent = $("#invoice-note").value || "";
     renderProfessionalPrintInvoice(lines, subtotal, gst, total);
   }
+  const nextInvoiceNumber = () => {
+    const existingNumbers = state.records.flatMap((record) => [record.job?.invoiceNumber, record.job?.invoice?.number]);
+    const highest = existingNumbers.reduce((currentHighest, value) => {
+      const match = String(value || "").match(/(\d+)(?!.*\d)/);
+      return match ? Math.max(currentHighest, Number(match[1])) : currentHighest;
+    }, 999);
+    return String(highest + 1);
+  };
+  const invoiceNumberIsUsed = (number, recordId) => {
+    const key = String(number || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+    return key && state.records.some((record) => record.id !== recordId && [record.job?.invoiceNumber, record.job?.invoice?.number].some((value) => String(value || "").replace(/[^a-z0-9]/gi, "").toLowerCase() === key));
+  };
   function openInvoiceBuilder() {
     if (!state.selected) { window.alert("Save the job first, then create its invoice."); return; }
     const job = state.selected.job || {};
@@ -1397,7 +1409,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const terms = Number(invoice.termsDays) >= 0 ? invoice.termsDays : 30;
     $("#invoice-client").value = invoice.client || state.selected.customerName || "";
     $("#invoice-address").value = invoice.address || state.selected.address || "";
-    $("#invoice-number").value = invoice.number || job.invoiceNumber || "";
+    $("#invoice-number").value = invoice.number || job.invoiceNumber || nextInvoiceNumber();
     $("#invoice-date").value = date;
     $("#invoice-terms").value = terms;
     $("#invoice-due-date").value = isExistingInvoice && invoice.dueDate ? invoice.dueDate : dueDateFor(date, terms);
@@ -1435,11 +1447,13 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-print").addEventListener("click", () => window.print());
   $("#invoice-save").addEventListener("click", async () => {
     if (!state.selected || !$("#invoice-builder-form").reportValidity()) return;
+    const invoiceNumber = $("#invoice-number").value.trim();
+    if (invoiceNumberIsUsed(invoiceNumber, state.selected.id)) { window.alert(`Invoice number ${invoiceNumber} is already used. Please choose a different number.`); return; }
     const lineItems = readInvoiceLines().filter(isInvoiceLineReady);
     if (!lineItems.length) { window.alert("Add at least one invoice line with a description."); return; }
     const subtotal = lineItems.reduce((sum, line) => sum + invoiceLineAmount(line), 0);
     const total = subtotal * 1.1;
-    const invoice = { number:$("#invoice-number").value.trim(), date:$("#invoice-date").value, dueDate:$("#invoice-due-date").value, termsDays:Number($("#invoice-terms").value), client:$("#invoice-client").value.trim(), address:$("#invoice-address").value.trim(), description:lineItems.map((line) => line.description).join("\n"), lineItems, quantity:1, unitPrice:subtotal, note:$("#invoice-note").value.trim(), status:"issued" };
+    const invoice = { number:invoiceNumber, date:$("#invoice-date").value, dueDate:$("#invoice-due-date").value, termsDays:Number($("#invoice-terms").value), client:$("#invoice-client").value.trim(), address:$("#invoice-address").value.trim(), description:lineItems.map((line) => line.description).join("\n"), lineItems, quantity:1, unitPrice:subtotal, note:$("#invoice-note").value.trim(), status:"issued" };
     const record = { ...state.selected, customerName:invoice.client || state.selected.customerName, address:invoice.address || state.selected.address, totalQuote:currency(total), subtotalExGst:currency(subtotal), gstTotal:currency(subtotal * .1), jobStage:"invoiced", job:{ ...state.selected.job, detail:invoice.description || state.selected.job.detail, quote:total, status:"invoiced", boardOrder:-Date.now(), invoiceNumber:invoice.number, invoiceDate:invoice.date, invoice } };
     try {
       const saved = normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }));
