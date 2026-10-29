@@ -1504,7 +1504,9 @@ document.addEventListener("DOMContentLoaded", () => {
     draftInvoiceLines = Array.isArray(invoice.lineItems) && invoice.lineItems.length ? invoice.lineItems.map(defaultInvoiceLine) : [defaultInvoiceLine({ description:invoice.description || job.detail || "", quantity:invoice.quantity || 1, unitPrice:Number.isFinite(Number(invoice.unitPrice)) ? invoice.unitPrice : (Number(job.quote || 0) / 1.1) })];
     clientOptions.innerHTML = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
     renderInvoiceLineEditor();
-    $("#invoice-note").value = invoice.note || "Price including labour and materials cost. Not including rubbish disposal unless mentioned.";
+    const legacyDefaultNote = "Price including labour and materials cost. Not including rubbish disposal unless mentioned.";
+    const standardInvoiceNote = "Price includes labour and material costs. Not including rubbish disposal unless mentioned.";
+    $("#invoice-note").value = invoice.note === legacyDefaultNote ? standardInvoiceNote : (invoice.note || standardInvoiceNote);
     $("#invoice-builder-title").textContent = isExistingInvoice ? "View / edit tax invoice" : "Create tax invoice";
     $("#invoice-builder-title").nextElementSibling.textContent = isExistingInvoice ? "Update the invoice details, then save your changes to the shared tracker." : "Review the details, then save the invoice to the shared tracker.";
     $("#invoice-save").textContent = isExistingInvoice ? "Save changes" : "Save invoice";
