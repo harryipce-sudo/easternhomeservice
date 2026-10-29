@@ -1274,6 +1274,14 @@ document.addEventListener("DOMContentLoaded", () => {
     event.stopPropagation();
     open(state.records.find((record) => record.id === id), reminder ? "reminder" : "invoice");
   });
+  $("#job-send-invoice-email").addEventListener("click", () => {
+    const record = state.selected;
+    if (!record?.job?.invoiceNumber || invoiceTotal(record) <= 0) {
+      window.alert("Save the job with its invoice number and amount first, then you can send the invoice email.");
+      return;
+    }
+    open(record, "invoice");
+  });
   $("#invoice-email-close").addEventListener("click", close);
   $("#invoice-email-cancel").addEventListener("click", close);
   ["invoice-email-to", "invoice-email-cc", "invoice-email-bcc"].forEach((fieldId) => {
