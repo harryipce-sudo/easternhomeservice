@@ -1519,10 +1519,19 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-terms").addEventListener("change", refreshDueDate);
   $("#invoice-builder-close").addEventListener("click", closeInvoiceBuilder);
   $("#invoice-builder-cancel").addEventListener("click", closeInvoiceBuilder);
+  const printInvoicePdf = () => {
+    const rawNumber = $("#invoice-number").value.trim() || state.selected?.job?.invoiceNumber || "invoice";
+    const filename = rawNumber.replace(/[^a-z0-9._-]+/gi, "-") || "invoice";
+    const originalTitle = document.title;
+    const restoreTitle = () => { document.title = originalTitle; };
+    document.title = filename;
+    window.addEventListener("afterprint", restoreTitle, { once:true });
+    window.print();
+  };
   $("#invoice-preview-open").addEventListener("click", () => { renderInvoicePreview(); previewModal.classList.add("open"); });
   $("#invoice-preview-close").addEventListener("click", closeInvoicePreview);
   $("#invoice-preview-done").addEventListener("click", closeInvoicePreview);
-  $("#invoice-preview-print").addEventListener("click", () => window.print());
+  $("#invoice-preview-print").addEventListener("click", printInvoicePdf);
   $("#job-create-invoice").addEventListener("click", openInvoiceBuilder);
   $("#invoices-body").addEventListener("click", (event) => {
     const button = event.target.closest("[data-view-invoice]");
@@ -1532,7 +1541,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.selected = record;
     openInvoiceBuilder();
   });
-  $("#invoice-print").addEventListener("click", () => window.print());
+  $("#invoice-print").addEventListener("click", printInvoicePdf);
   $("#invoice-save").addEventListener("click", async () => {
     if (!state.selected || !$("#invoice-builder-form").reportValidity()) return;
     const invoiceNumber = $("#invoice-number").value.trim();
