@@ -1598,7 +1598,10 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#invoice-date").value = date;
     $("#invoice-terms").value = terms;
     $("#invoice-due-date").value = isExistingInvoice && invoice.dueDate ? invoice.dueDate : dueDateFor(date, terms);
-    $("#invoice-deposit").value = Math.max(0, Number(invoice.depositAmount) || 0).toFixed(2);
+    // Carry the deposit already entered in Job details into a new invoice.
+    // Once an invoice has its own saved value, keep using that value on edits.
+    const savedDeposit = Math.max(0, Number(invoice.depositAmount) || Number(job.paymentAmount) || 0);
+    $("#invoice-deposit").value = savedDeposit.toFixed(2);
     draftInvoiceLines = Array.isArray(invoice.lineItems) && invoice.lineItems.length ? invoice.lineItems.map(defaultInvoiceLine) : [defaultInvoiceLine({ description:invoice.description || job.detail || "", quantity:invoice.quantity || 1, unitPrice:Number.isFinite(Number(invoice.unitPrice)) ? invoice.unitPrice : (Number(job.quote || 0) / 1.1) })];
     clientOptions.innerHTML = [...new Set(state.records.map((record) => savedClientName(record.customerName)).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
     renderInvoiceLineEditor();
