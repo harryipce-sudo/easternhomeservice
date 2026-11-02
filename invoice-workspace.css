@@ -126,4 +126,16 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell .invoice-save-row { border-top:1px solid #e1e9f0; padding-top:18px; }
 .invoice-odoo-shell .invoice-save-row button { border-color:#c5d4e1; background:#fff; color:#29465f; }
 .invoice-odoo-shell .invoice-save-row .save { border-color:#0c7a57; background:#0d815c; color:#fff; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form input,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form textarea,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form select { pointer-events:none; appearance:none; -webkit-appearance:none; margin-top:0; min-height:0; height:auto; border-color:transparent !important; background:transparent !important; box-shadow:none; color:#18324c; font-weight:600; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form textarea { overflow:hidden; resize:none; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form input[type="date"]::-webkit-calendar-picker-indicator { display:none; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) .invoice-line-tools,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) .invoice-save-row,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) .line-menu { display:none; }
+.invoice-odoo-shell .invoice-workspace-main.is-editing .invoice-tabs,
+.invoice-odoo-shell .invoice-workspace-main.is-editing .invoice-line-tools,
+.invoice-odoo-shell .invoice-workspace-main.is-editing .invoice-save-row { display:flex; }
+.invoice-odoo-shell .invoice-workspace-main.is-editing .invoice-tabs { display:flex; }
 @media (max-width:980px) { .invoice-odoo-shell .invoice-workspace-layout { grid-template-columns:1fr; } }
