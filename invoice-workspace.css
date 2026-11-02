@@ -62,7 +62,8 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell [data-invoice-reset],
 .invoice-odoo-shell .invoice-tabs span:not(.active),
 .invoice-odoo-shell .invoice-activity-head span,
-.invoice-odoo-shell .activity-composer { display:none; }
+.invoice-odoo-shell .activity-composer,
+.invoice-odoo-shell .invoice-line-tools button:not([data-add-workspace-line]) { display:none; }
 .invoice-odoo-shell .invoice-app-layout { display:block; min-height:100vh; }
 .invoice-odoo-shell .invoice-workspace-top { min-height:66px; padding:14px clamp(20px,4vw,56px); border-bottom:1px solid #dbe4ed; background:#fff; }
 .invoice-odoo-shell .invoice-workspace-crumb { display:flex; align-items:center; gap:10px; }
