@@ -46,3 +46,83 @@ body.invoice-detail-mode { background:#101a27; } body.invoice-detail-mode .sideb
 /* Keep the header fields stacked cleanly in the accounting layout. */
 .invoice-odoo-shell .invoice-detail-grid .detail-meta { grid-template-columns:1fr !important; }
 .invoice-odoo-shell .invoice-detail-grid .detail-meta label:last-child { grid-column:auto !important; }
+
+/* Clean invoice workspace: only the working invoice controls remain visible. */
+body.invoice-detail-mode,
+body.invoice-detail-mode .workspace,
+.invoice-odoo-shell,
+.invoice-odoo-shell .invoice-canvas { background:#fff; color:#18324c; }
+.invoice-odoo-shell .invoice-global-nav,
+.invoice-odoo-shell .invoice-module-nav,
+.invoice-odoo-shell .invoice-workspace-new,
+.invoice-odoo-shell .invoice-workspace-pager,
+.invoice-odoo-shell .invoice-pager-buttons,
+.invoice-odoo-shell .invoice-workspace-action.more,
+.invoice-odoo-shell [data-invoice-preview],
+.invoice-odoo-shell [data-invoice-reset],
+.invoice-odoo-shell .invoice-tabs span:not(.active),
+.invoice-odoo-shell .invoice-activity-head span,
+.invoice-odoo-shell .activity-composer { display:none; }
+.invoice-odoo-shell .invoice-app-layout { display:block; min-height:100vh; }
+.invoice-odoo-shell .invoice-workspace-top { min-height:66px; padding:14px clamp(20px,4vw,56px); border-bottom:1px solid #dbe4ed; background:#fff; }
+.invoice-odoo-shell .invoice-workspace-crumb { display:flex; align-items:center; gap:10px; }
+.invoice-odoo-shell .invoice-workspace-crumb span,
+.invoice-odoo-shell .invoice-workspace-crumb i { color:#5d7288; }
+.invoice-odoo-shell .invoice-workspace-crumb strong { color:#153d63; }
+.invoice-odoo-shell .invoice-workspace-back { color:#0b6faf; font-weight:700; }
+.invoice-odoo-shell .invoice-actionbar { gap:9px; padding:12px clamp(20px,4vw,56px); border-bottom:1px solid #dbe4ed; background:#fff; }
+.invoice-odoo-shell .invoice-workspace-action { border-color:#b9c9d8; border-radius:5px; background:#fff; color:#18324c; }
+.invoice-odoo-shell .invoice-workspace-action.primary { border-color:#116eb1; background:#126fb2; color:#fff; }
+.invoice-odoo-shell .invoice-workspace-action.print { border-color:#8da5bc; background:#fff; color:#174d7a; }
+.invoice-odoo-shell .invoice-workspace-action.pay { border-color:#0a958d; background:#0b9b95; color:#fff; }
+.invoice-odoo-shell .invoice-workspace-layout { grid-template-columns:minmax(0,1fr) minmax(300px,360px); max-width:1440px; margin:0 auto; gap:24px; padding:30px clamp(20px,4vw,56px) 48px; }
+.invoice-odoo-shell .invoice-workspace-main,
+.invoice-odoo-shell .invoice-activity-rail { border-color:#dbe4ed; border-radius:8px; background:#fff; box-shadow:0 2px 10px rgba(25,55,85,.06); }
+.invoice-odoo-shell .invoice-workspace-main { padding:24px; }
+.invoice-odoo-shell .invoice-detail-heading p { color:#5c7287; }
+.invoice-odoo-shell .invoice-detail-heading h2 { color:#153d63; }
+.invoice-odoo-shell .invoice-status { border-color:#c8d6e3; }
+.invoice-odoo-shell .invoice-status span { color:#5b7085; }
+.invoice-odoo-shell .invoice-status span.active { background:#e8f2fb; color:#135b93; }
+.invoice-odoo-shell .invoice-detail-grid label,
+.invoice-odoo-shell .invoice-inline-lines input,
+.invoice-odoo-shell .invoice-inline-lines textarea { color:#29465f; }
+.invoice-odoo-shell .invoice-detail-grid input,
+.invoice-odoo-shell .invoice-detail-grid textarea,
+.invoice-odoo-shell .invoice-detail-grid select,
+.invoice-odoo-shell .invoice-inline-lines input,
+.invoice-odoo-shell .invoice-inline-lines textarea,
+.invoice-odoo-shell .invoice-inline-lines select,
+.invoice-odoo-shell .invoice-note-block textarea { border-color:#c9d7e4; background:#fff; color:#18324c; }
+.invoice-odoo-shell .invoice-tabs { border-bottom-color:#d9e3ec; }
+.invoice-odoo-shell .invoice-tabs span.active { border-color:#d4e0ea; border-top-color:#176ca8; background:#fff; color:#174d7a; }
+.invoice-odoo-shell .invoice-inline-lines,
+.invoice-odoo-shell .invoice-inline-lines th,
+.invoice-odoo-shell .invoice-inline-lines td { background:#fff; color:#18324c; border-color:#dbe4ed; }
+.invoice-odoo-shell .invoice-inline-lines thead,
+.invoice-odoo-shell .invoice-inline-lines thead tr,
+.invoice-odoo-shell .invoice-inline-lines thead th { background:#f3f7fa !important; color:#38536c !important; }
+.invoice-odoo-shell .invoice-inline-lines .amount { color:#153d63; }
+.invoice-odoo-shell .invoice-line-tools { padding-left:0; }
+.invoice-odoo-shell .invoice-line-tools button { color:#0872b8; }
+.invoice-odoo-shell .invoice-note-block .bank-label,
+.invoice-odoo-shell .invoice-total-row { color:#496278; }
+.invoice-odoo-shell .invoice-bank-copy { border-color:#d0dce7; background:#f8fbfd; color:#304b63; }
+.invoice-odoo-shell .invoice-total-row strong,
+.invoice-odoo-shell .invoice-total-row.grand { color:#153d63; }
+.invoice-odoo-shell .invoice-total-row.deposit { border-color:#b9e3d7; background:#f2fcf8; color:#087b71; }
+.invoice-odoo-shell .invoice-total-row.deposit strong { color:#087b71; }
+.invoice-odoo-shell .invoice-activity-rail { min-height:0; }
+.invoice-odoo-shell .invoice-activity-head { padding:16px 18px; border-bottom-color:#dbe4ed; }
+.invoice-odoo-shell .invoice-activity-head strong { border-bottom-color:#176ca8; color:#153d63; }
+.invoice-odoo-shell .invoice-activity-list li { color:#29465f; }
+.invoice-odoo-shell .invoice-activity-list li:not(:last-child)::after { background:#d4e0ea; }
+.invoice-odoo-shell .invoice-activity-list b { color:#18324c; }
+.invoice-odoo-shell .invoice-activity-list time,
+.invoice-odoo-shell .invoice-activity-list small { color:#6a8195; }
+.invoice-odoo-shell .activity-avatar { background:#176ca8; }
+.invoice-odoo-shell .invoice-activity-list li:nth-child(even) .activity-avatar { background:#0c998f; }
+.invoice-odoo-shell .invoice-save-row { border-top:1px solid #e1e9f0; padding-top:18px; }
+.invoice-odoo-shell .invoice-save-row button { border-color:#c5d4e1; background:#fff; color:#29465f; }
+.invoice-odoo-shell .invoice-save-row .save { border-color:#0c7a57; background:#0d815c; color:#fff; }
+@media (max-width:980px) { .invoice-odoo-shell .invoice-workspace-layout { grid-template-columns:1fr; } }
