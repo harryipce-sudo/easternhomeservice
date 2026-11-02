@@ -42,3 +42,7 @@ body.invoice-detail-mode { background:#101a27; } body.invoice-detail-mode .sideb
 /* The normal tracker view uses a negative workspace margin. Remove it while
    the accounting shell is open so it remains exactly within the viewport. */
 .invoice-odoo-shell { width:100%; max-width:100%; margin:0; overflow-x:clip; }
+
+/* Keep the header fields stacked cleanly in the accounting layout. */
+.invoice-odoo-shell .invoice-detail-grid .detail-meta { grid-template-columns:1fr !important; }
+.invoice-odoo-shell .invoice-detail-grid .detail-meta label:last-child { grid-column:auto !important; }
