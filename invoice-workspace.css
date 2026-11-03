@@ -234,3 +234,71 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell .invoice-activity-list small { display:block; margin-top:4px; color:#c1d1df; font-size:13px; }
 .invoice-odoo-shell .invoice-activity-empty { padding:24px; color:#afc4d8; }
 @media (max-width:1100px) { .invoice-odoo-shell .invoice-workspace-layout { grid-template-columns:1fr; } .invoice-odoo-shell .invoice-activity-rail { min-height:0; } }
+
+/* Light invoice workspace. */
+body.invoice-detail-mode,
+body.invoice-detail-mode .workspace,
+.invoice-odoo-shell,
+.invoice-odoo-shell .invoice-canvas { background:#fff; color:#19324b; }
+.invoice-odoo-shell .invoice-workspace-top { border-bottom-color:#d9e4ed; background:#fff; }
+.invoice-odoo-shell .invoice-workspace-crumb span,
+.invoice-odoo-shell .invoice-workspace-crumb i { color:#6b8195; }
+.invoice-odoo-shell .invoice-workspace-crumb strong { color:#153d63; }
+.invoice-odoo-shell .invoice-workspace-back { color:#0d6fad; }
+.invoice-odoo-shell .invoice-actionbar { border-bottom-color:#d9e4ed; background:#fff; }
+.invoice-odoo-shell .invoice-workspace-action { border-color:#b8c9d8; background:#fff; color:#173956; }
+.invoice-odoo-shell .invoice-workspace-action.primary { border-color:#7559ed; background:linear-gradient(135deg,#744cf2,#4970f4); color:#fff; }
+.invoice-odoo-shell .invoice-workspace-action.print { border-color:#3273bc !important; background:linear-gradient(135deg,#2c63aa,#214b83) !important; color:#fff !important; }
+.invoice-odoo-shell .invoice-workspace-action.pay { border-color:#0ca3a3 !important; background:linear-gradient(135deg,#13beba,#0e8eac) !important; color:#fff !important; }
+.invoice-odoo-shell .invoice-workspace-action.danger { border-color:#aab9c8; background:#f5f8fb; color:#24425e; }
+.invoice-odoo-shell .invoice-workspace-main,
+.invoice-odoo-shell .invoice-activity-rail { border-color:#d7e3ed; background:#fff; }
+.invoice-odoo-shell .invoice-detail-heading { border-bottom-color:#d7e3ed; }
+.invoice-odoo-shell .invoice-detail-heading p { color:#153d63; }
+.invoice-odoo-shell .invoice-status { border-color:#16886d; background:#f1fbf7; }
+.invoice-odoo-shell .invoice-status span.active { background:#e5f8ef; color:#087456; }
+.invoice-odoo-shell .invoice-detail-grid label,
+.invoice-odoo-shell .invoice-detail-grid .detail-meta label,
+.invoice-odoo-shell .invoice-note-block label { color:#405d76; }
+.invoice-odoo-shell .invoice-detail-grid input,
+.invoice-odoo-shell .invoice-detail-grid textarea,
+.invoice-odoo-shell .invoice-detail-grid select,
+.invoice-odoo-shell .invoice-inline-lines input,
+.invoice-odoo-shell .invoice-inline-lines textarea,
+.invoice-odoo-shell .invoice-inline-lines select,
+.invoice-odoo-shell .invoice-note-block textarea { border-color:#c8d7e4; background:#fff; color:#19324b; }
+.invoice-odoo-shell .invoice-tabs { border-bottom-color:#d9e4ed; }
+.invoice-odoo-shell .invoice-tabs span,
+.invoice-odoo-shell .invoice-tabs span.active { background:#fff; color:#23526f; border-color:#d9e4ed; }
+.invoice-odoo-shell .invoice-tabs span.active { border-bottom:2px solid #0e8ca5; }
+.invoice-odoo-shell .invoice-inline-lines { border-color:#d7e3ed; }
+.invoice-odoo-shell .invoice-inline-lines th,
+.invoice-odoo-shell .invoice-inline-lines td { border-color:#dce6ee; background:#fff; color:#19324b; }
+.invoice-odoo-shell .invoice-inline-lines thead,
+.invoice-odoo-shell .invoice-inline-lines thead tr,
+.invoice-odoo-shell .invoice-inline-lines thead th { background:#f1f6fa !important; color:#38556d !important; }
+.invoice-odoo-shell .invoice-inline-lines .amount { color:#173d5e; }
+.invoice-odoo-shell .invoice-line-tools button { color:#0877b6; }
+.invoice-odoo-shell .invoice-bank-copy { border-color:#d5e1ea; background:#f7fbfd; color:#405d76; }
+.invoice-odoo-shell .invoice-total-row { color:#405d76; }
+.invoice-odoo-shell .invoice-total-row strong,
+.invoice-odoo-shell .invoice-total-row.grand { color:#153d63; }
+.invoice-odoo-shell .invoice-total-row.deposit { border-color:#b6e3d9; background:#f0fbf7; color:#087b71; }
+.invoice-odoo-shell .invoice-total-row.deposit strong { color:#087b71; }
+.invoice-odoo-shell .invoice-total-row.balance { border-color:#c5d7e5; background:#f7fbfd; }
+.invoice-odoo-shell .invoice-activity-rail { background:#fff; }
+.invoice-odoo-shell .invoice-activity-head { border-bottom-color:#d9e4ed; }
+.invoice-odoo-shell .invoice-activity-head strong,
+.invoice-odoo-shell .invoice-activity-head span { color:#607b91; }
+.invoice-odoo-shell .invoice-activity-head strong { border-bottom-color:#0d98aa; color:#0b7891; }
+.invoice-odoo-shell .invoice-activity-list li { color:#29475f; }
+.invoice-odoo-shell .invoice-activity-list li::before { background:#2877ba; box-shadow:0 0 0 5px #eef5fa; }
+.invoice-odoo-shell .invoice-activity-list li:nth-child(even)::before { background:#10958b; }
+.invoice-odoo-shell .invoice-activity-list li:not(:last-child)::after { background:#d2e0ea; }
+.invoice-odoo-shell .invoice-activity-list time { color:#6d879c; }
+.invoice-odoo-shell .invoice-activity-list b { color:#173d5e; }
+.invoice-odoo-shell .invoice-activity-list small { color:#587188; }
+.invoice-odoo-shell .invoice-activity-empty { color:#6e879c; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form input,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form textarea,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form select { color:#19324b !important; }
