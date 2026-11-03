@@ -139,3 +139,71 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell .invoice-workspace-main.is-editing .invoice-save-row { display:flex; }
 .invoice-odoo-shell .invoice-workspace-main.is-editing .invoice-tabs { display:flex; }
 @media (max-width:980px) { .invoice-odoo-shell .invoice-workspace-layout { grid-template-columns:1fr; } }
+
+/* Focused invoice form, based on the supplied Odoo invoice layout. */
+body.invoice-detail-mode,
+body.invoice-detail-mode .workspace,
+.invoice-odoo-shell,
+.invoice-odoo-shell .invoice-canvas { background:#071726; color:#e9f2fb; }
+.invoice-odoo-shell .invoice-global-nav,
+.invoice-odoo-shell .invoice-module-nav { display:none; }
+.invoice-odoo-shell .invoice-app-layout { display:block; }
+.invoice-odoo-shell .invoice-workspace-top { min-height:58px; padding:12px clamp(18px,3vw,38px); border-bottom-color:#27435b; background:linear-gradient(100deg,#071725,#0a2033); }
+.invoice-odoo-shell .invoice-workspace-crumb { flex-direction:row; flex-wrap:wrap; gap:8px; }
+.invoice-odoo-shell .invoice-workspace-crumb span::before { content:"Accounting  ›  "; color:#8cafd0; }
+.invoice-odoo-shell .invoice-workspace-crumb span { color:#9cc2e6; font-size:13px; }
+.invoice-odoo-shell .invoice-workspace-crumb strong { color:#edf5fd; }
+.invoice-odoo-shell .invoice-workspace-back { order:-1; color:#9fc1df; }
+.invoice-odoo-shell .invoice-workspace-new { display:none; }
+.invoice-odoo-shell .invoice-actionbar { gap:9px; padding:11px clamp(18px,3vw,38px) 16px; border-bottom-color:#27435b; background:#091b2b; }
+.invoice-odoo-shell .invoice-workspace-action { min-height:42px; padding:9px 22px; border-color:#3d5872; background:linear-gradient(180deg,#27425e,#1c3048); color:#f6fbff; font-size:14px; }
+.invoice-odoo-shell .invoice-workspace-action.primary { border-color:#7559ed; background:linear-gradient(135deg,#774cff,#426efa); }
+.invoice-odoo-shell .invoice-workspace-action.print { border-color:#3d85d4; background:linear-gradient(135deg,#2759a1,#1c3e70); }
+.invoice-odoo-shell .invoice-workspace-action.pay { border-color:#29d9ea; background:linear-gradient(135deg,#19d7e8,#1582c8); color:#041827; }
+.invoice-odoo-shell .invoice-workspace-action.danger { background:linear-gradient(180deg,#415873,#2d4059); }
+.invoice-odoo-shell .invoice-workspace-layout { display:block; max-width:1480px; padding:16px clamp(18px,3vw,38px) 42px; }
+.invoice-odoo-shell .invoice-workspace-main { padding:0; overflow:visible; border:1px solid #2a4a64; border-radius:5px; background:linear-gradient(135deg,#0b2235,#081827); box-shadow:none; }
+.invoice-odoo-shell .invoice-detail-heading { align-items:center; padding:14px 20px; border-bottom:1px solid #28455f; }
+.invoice-odoo-shell .invoice-detail-heading p { margin:0; color:#f2f6fb; font-size:20px; font-weight:700; }
+.invoice-odoo-shell .invoice-detail-heading h2 { display:none; }
+.invoice-odoo-shell .invoice-status { min-width:auto; border-color:#278b7e; background:#106957; }
+.invoice-odoo-shell .invoice-status span { display:none; }
+.invoice-odoo-shell .invoice-status span.active { display:block; padding:6px 11px; background:#147d68; color:#ddfff5; font-size:13px; }
+.invoice-odoo-shell #invoice-workspace-form { padding:0 20px 20px; }
+.invoice-odoo-shell .invoice-detail-grid { grid-template-columns:1.14fr .92fr; gap:20px 44px; margin:0; padding:14px 0 20px; }
+.invoice-odoo-shell .invoice-detail-grid label,
+.invoice-odoo-shell .invoice-detail-grid .detail-meta label { grid-template-columns:124px minmax(0,1fr); align-items:center; gap:12px; margin:8px 0; color:#dae8f6; font-size:13px; }
+.invoice-odoo-shell .invoice-detail-grid textarea { min-height:84px; }
+.invoice-odoo-shell .invoice-detail-grid input,
+.invoice-odoo-shell .invoice-detail-grid textarea,
+.invoice-odoo-shell .invoice-detail-grid select,
+.invoice-odoo-shell .invoice-inline-lines input,
+.invoice-odoo-shell .invoice-inline-lines textarea,
+.invoice-odoo-shell .invoice-inline-lines select,
+.invoice-odoo-shell .invoice-note-block textarea { border-color:#365774; background:#0c2032; color:#eef7ff; }
+.invoice-odoo-shell .invoice-tabs { margin:0 -20px; padding-left:20px; border-bottom-color:#2a4a64; }
+.invoice-odoo-shell .invoice-tabs span { padding:11px 18px; border-color:#294c69; background:#0b2032; }
+.invoice-odoo-shell .invoice-tabs span.active { border-top:0; border-bottom:2px solid #27d9e4; background:#0b2032; color:#55edf3; }
+.invoice-odoo-shell .invoice-inline-lines { border:1px solid #294d6a; }
+.invoice-odoo-shell .invoice-inline-lines th,
+.invoice-odoo-shell .invoice-inline-lines td { border-color:#294a65; background:#0a1d2f; }
+.invoice-odoo-shell .invoice-inline-lines thead,
+.invoice-odoo-shell .invoice-inline-lines thead tr,
+.invoice-odoo-shell .invoice-inline-lines thead th { background:#102b43 !important; color:#dbeafd !important; }
+.invoice-odoo-shell .invoice-inline-lines th { padding:10px 12px; }
+.invoice-odoo-shell .invoice-inline-lines td { padding:10px 12px; }
+.invoice-odoo-shell .invoice-inline-lines .amount { color:#f4f9fe; }
+.invoice-odoo-shell .invoice-line-tools { padding:11px 14px 0; }
+.invoice-odoo-shell .invoice-line-tools button { color:#24dbe7; }
+.invoice-odoo-shell .invoice-bottom { grid-template-columns:minmax(0,1fr) 330px; gap:40px; margin-top:18px; }
+.invoice-odoo-shell .invoice-note-block label { color:#d8e7f7; }
+.invoice-odoo-shell .invoice-note-block textarea { min-height:144px; }
+.invoice-odoo-shell .invoice-bank-copy { border-color:#2d516e; background:#0b1d2e; color:#d8e8f6; }
+.invoice-odoo-shell .invoice-total-row { padding:7px 10px; color:#d8e8f7; }
+.invoice-odoo-shell .invoice-total-row.grand { border-top-color:#365b7a; color:#fff; font-size:18px; }
+.invoice-odoo-shell .invoice-total-row.deposit { margin-top:9px; border-color:#1cc9e0; background:#0c3247; color:#3eeaf0; }
+.invoice-odoo-shell .invoice-total-row.deposit strong { color:#3eeaf0; }
+.invoice-odoo-shell .invoice-total-row.balance { border:1px solid #3f6684; border-top:0; background:#102941; }
+.invoice-odoo-shell .invoice-activity-rail { display:none; }
+.invoice-odoo-shell .invoice-save-row { border-top-color:#294a65; }
+@media (max-width:780px) { .invoice-odoo-shell .invoice-actionbar { flex-wrap:wrap; } .invoice-odoo-shell .invoice-workspace-action { padding:8px 13px; } .invoice-odoo-shell .invoice-detail-grid,.invoice-odoo-shell .invoice-bottom { grid-template-columns:1fr; gap:12px; } .invoice-odoo-shell .invoice-detail-grid label,.invoice-odoo-shell .invoice-detail-grid .detail-meta label { grid-template-columns:1fr; gap:5px; } .invoice-odoo-shell .invoice-tabs { margin-left:-20px; margin-right:-20px; } }
