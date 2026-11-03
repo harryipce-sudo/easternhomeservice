@@ -206,4 +206,10 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell .invoice-total-row.balance { border:1px solid #3f6684; border-top:0; background:#102941; }
 .invoice-odoo-shell .invoice-activity-rail { display:none; }
 .invoice-odoo-shell .invoice-save-row { border-top-color:#294a65; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form input,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form textarea,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form select { color:#edf6ff !important; font-weight:500; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form label { color:#dceafa; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) .invoice-inline-lines .amount,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) .invoice-total-row strong { color:#fff; }
 @media (max-width:780px) { .invoice-odoo-shell .invoice-actionbar { flex-wrap:wrap; } .invoice-odoo-shell .invoice-workspace-action { padding:8px 13px; } .invoice-odoo-shell .invoice-detail-grid,.invoice-odoo-shell .invoice-bottom { grid-template-columns:1fr; gap:12px; } .invoice-odoo-shell .invoice-detail-grid label,.invoice-odoo-shell .invoice-detail-grid .detail-meta label { grid-template-columns:1fr; gap:5px; } .invoice-odoo-shell .invoice-tabs { margin-left:-20px; margin-right:-20px; } }
