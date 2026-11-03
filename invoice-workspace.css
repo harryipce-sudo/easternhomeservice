@@ -158,8 +158,8 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell .invoice-actionbar { gap:9px; padding:11px clamp(18px,3vw,38px) 16px; border-bottom-color:#27435b; background:#091b2b; }
 .invoice-odoo-shell .invoice-workspace-action { min-height:42px; padding:9px 22px; border-color:#3d5872; background:linear-gradient(180deg,#27425e,#1c3048); color:#f6fbff; font-size:14px; }
 .invoice-odoo-shell .invoice-workspace-action.primary { border-color:#7559ed; background:linear-gradient(135deg,#774cff,#426efa); }
-.invoice-odoo-shell .invoice-workspace-action.print { border-color:#3d85d4; background:linear-gradient(135deg,#2759a1,#1c3e70); color:#fff; }
-.invoice-odoo-shell .invoice-workspace-action.pay { border-color:#29d9ea; background:linear-gradient(135deg,#19d7e8,#1582c8); color:#fff; }
+.invoice-odoo-shell .invoice-workspace-action.print { border-color:#3d85d4 !important; background:linear-gradient(135deg,#2759a1,#1c3e70) !important; color:#fff !important; text-shadow:none; }
+.invoice-odoo-shell .invoice-workspace-action.pay { border-color:#29d9ea !important; background:linear-gradient(135deg,#19d7e8,#1582c8) !important; color:#fff !important; text-shadow:none; }
 .invoice-odoo-shell .invoice-workspace-action.danger { background:linear-gradient(180deg,#415873,#2d4059); }
 .invoice-odoo-shell .invoice-workspace-layout { display:block; max-width:1480px; padding:16px clamp(18px,3vw,38px) 42px; }
 .invoice-odoo-shell .invoice-workspace-main { padding:0; overflow:visible; border:1px solid #2a4a64; border-radius:5px; background:linear-gradient(135deg,#0b2235,#081827); box-shadow:none; }
