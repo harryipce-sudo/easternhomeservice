@@ -302,3 +302,9 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form input,
 .invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form textarea,
 .invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form select { color:#19324b !important; }
+.invoice-odoo-shell .invoice-detail-grid label,
+.invoice-odoo-shell .invoice-detail-grid .detail-meta label,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form label { color:#172b42 !important; }
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form input,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form textarea,
+.invoice-odoo-shell .invoice-workspace-main:not(.is-editing) #invoice-workspace-form select { color:#102f4c !important; }
