@@ -213,3 +213,24 @@ body.invoice-detail-mode .workspace,
 .invoice-odoo-shell .invoice-workspace-main:not(.is-editing) .invoice-inline-lines .amount,
 .invoice-odoo-shell .invoice-workspace-main:not(.is-editing) .invoice-total-row strong { color:#fff; }
 @media (max-width:780px) { .invoice-odoo-shell .invoice-actionbar { flex-wrap:wrap; } .invoice-odoo-shell .invoice-workspace-action { padding:8px 13px; } .invoice-odoo-shell .invoice-detail-grid,.invoice-odoo-shell .invoice-bottom { grid-template-columns:1fr; gap:12px; } .invoice-odoo-shell .invoice-detail-grid label,.invoice-odoo-shell .invoice-detail-grid .detail-meta label { grid-template-columns:1fr; gap:5px; } .invoice-odoo-shell .invoice-tabs { margin-left:-20px; margin-right:-20px; } }
+
+/* Restored invoice workflow controls and record of activity. */
+.invoice-odoo-shell [data-invoice-preview],
+.invoice-odoo-shell [data-invoice-reset] { display:inline-flex; align-items:center; justify-content:center; }
+.invoice-odoo-shell .invoice-workspace-layout { display:grid; grid-template-columns:minmax(0,1.72fr) minmax(300px,.78fr); max-width:1560px; gap:18px; align-items:start; }
+.invoice-odoo-shell .invoice-workspace-main { min-width:0; }
+.invoice-odoo-shell .invoice-activity-rail { display:block; min-width:0; min-height:680px; overflow:hidden; border:1px solid #2a4a64; border-radius:5px; background:linear-gradient(135deg,#0b2235,#081827); box-shadow:none; }
+.invoice-odoo-shell .invoice-activity-head { display:flex; gap:26px; padding:0 18px; border-bottom:1px solid #28455f; }
+.invoice-odoo-shell .invoice-activity-head strong,
+.invoice-odoo-shell .invoice-activity-head span { display:block; padding:15px 0 11px; color:#bdd3e8; font-size:14px; font-weight:600; }
+.invoice-odoo-shell .invoice-activity-head strong { border-bottom:2px solid #2ad7e4; color:#55edf3; }
+.invoice-odoo-shell .invoice-activity-list { margin:0; padding:12px 18px 22px 54px; list-style:none; }
+.invoice-odoo-shell .invoice-activity-list li { position:relative; display:block; padding:0 0 25px 14px; color:#e7f2fc; font-size:13px; line-height:1.45; }
+.invoice-odoo-shell .invoice-activity-list li::before { display:block; content:""; position:absolute; top:3px; left:-28px; width:17px; height:17px; border-radius:50%; background:#3d77cf; box-shadow:0 0 0 5px #102941; }
+.invoice-odoo-shell .invoice-activity-list li:nth-child(even)::before { background:#19a9ad; }
+.invoice-odoo-shell .invoice-activity-list li:not(:last-child)::after { content:""; position:absolute; top:22px; bottom:0; left:-20px; width:1px; background:#456078; }
+.invoice-odoo-shell .invoice-activity-list time { display:block; margin-bottom:4px; color:#9db7cf; font-size:12px; }
+.invoice-odoo-shell .invoice-activity-list b { display:block; color:#f4f9ff; font-size:14px; }
+.invoice-odoo-shell .invoice-activity-list small { display:block; margin-top:4px; color:#c1d1df; font-size:13px; }
+.invoice-odoo-shell .invoice-activity-empty { padding:24px; color:#afc4d8; }
+@media (max-width:1100px) { .invoice-odoo-shell .invoice-workspace-layout { grid-template-columns:1fr; } .invoice-odoo-shell .invoice-activity-rail { min-height:0; } }
