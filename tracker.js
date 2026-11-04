@@ -283,11 +283,70 @@ async function deleteClientEmail(name, email) {
     return true;
   } catch (error) { window.alert("The client email could not be deleted. Please try again."); console.warn(error); return false; }
 }
+async function updateClientEmail(name, previousEmail, nextEmail) {
+  const client = savedClientName(name);
+  const previous = String(previousEmail || "").trim().toLowerCase();
+  const next = String(nextEmail || "").trim().toLowerCase();
+  if (!next || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { window.alert("Enter a valid client email address."); return false; }
+  if (previous === next) return true;
+  const contacts = { ...clientContacts() };
+  const emails = clientEmails(client).map((email) => email.toLowerCase() === previous ? next : email);
+  contacts[client] = [...new Set(emails)];
+  try {
+    await persistClientContacts(contacts);
+    return true;
+  } catch (error) { window.alert("The client email could not be updated. Please try again."); console.warn(error); return false; }
+}
+async function renameClient(oldName, newName) {
+  const oldClient = savedClientName(oldName);
+  const client = savedClientName(newName);
+  if (!client) { window.alert("Enter a client name."); return false; }
+  if (oldClient === client) return true;
+  const contacts = { ...clientContacts() };
+  const mergedEmails = [...new Set([...clientEmails(oldClient), ...clientEmails(client)])];
+  delete contacts[oldClient];
+  if (mergedEmails.length) contacts[client] = mergedEmails;
+  const related = state.records.filter((record) => savedClientName(record.customerName) === oldClient);
+  try {
+    await persistClientContacts(contacts);
+    const savedRecords = await Promise.all(related.map(async (record) => {
+      const invoice = record.job?.invoice || {};
+      const updated = normalise({ ...record, customerName:client, job:{ ...record.job, invoice:{ ...invoice, client: savedClientName(invoice.client) === oldClient ? client : invoice.client } } });
+      return normalise(await request("?id=" + encodeURIComponent(updated.id), { method:"PATCH", body:JSON.stringify(updated) }));
+    }));
+    const byId = new Map(savedRecords.map((record) => [record.id, record]));
+    state.records = state.records.map((record) => byId.get(record.id) || record);
+    render();
+    return true;
+  } catch (error) { window.alert("The client name could not be updated. Please try again."); console.warn(error); return false; }
+}
 async function saveClientEmails(name, emails) {
   const uniqueEmails = [...new Set((emails || []).map((email) => String(email || "").trim().toLowerCase()).filter(Boolean))];
   for (const email of uniqueEmails) await saveClientEmail(name, email, true);
 }
-function renderClients() { const clients = [...new Map(activeRecords().filter((r) => r.customerName && r.customerName !== "-").map((r) => [savedClientName(r.customerName), r])).entries()]; $("#client-list").innerHTML = clients.map(([name, record]) => `<article class="client-item"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(record.phone || "No phone")} · ${escapeHtml(record.address || "No address")}</span><label style="display:grid;gap:5px;margin-top:10px;font-size:12px;font-weight:700;color:#425267">Invoice email<input type="email" data-client-email="${escapeHtml(name)}" value="${escapeHtml(clientEmail(name))}" placeholder="accounts@client.com" autocomplete="email"></label>${clientEmails(name).length > 1 ? `<small style="margin-top:6px;color:#637083">Also saved: ${escapeHtml(clientEmails(name).slice(1).join(", "))}</small>` : ""}<button class="quiet-button" type="button" data-save-client-email="${escapeHtml(name)}" style="margin-top:8px">Save email</button></article>`).join("") || `<div class="empty" style="display:block">Clients will appear when quotes are saved.</div>`; }
+function renderClients() {
+  const clients = [...new Map(activeRecords().filter((record) => record.customerName && record.customerName !== "-").map((record) => [savedClientName(record.customerName), record])).entries()];
+  $("#client-list").innerHTML = clients.map(([name, record]) => {
+    const emails = clientEmails(name);
+    const emailRows = emails.map((email) => [
+      '<div class="client-email-row">',
+      '<input type="email" data-saved-client-email data-email-original="', escapeHtml(email), '" value="', escapeHtml(email), '" autocomplete="email">',
+      '<button class="quiet-button" type="button" data-update-client-email="', escapeHtml(name), '">Save</button>',
+      '<button class="quiet-button danger" type="button" data-remove-client-email="', escapeHtml(name), '" data-email-original="', escapeHtml(email), '">Remove</button>',
+      '</div>'
+    ].join("")).join("") || '<p class="client-email-empty">No saved email addresses.</p>';
+    return [
+      '<article class="client-item" data-client-card="', escapeHtml(name), '">',
+      '<label class="client-name-label">Client name<input type="text" data-client-name value="', escapeHtml(name), '" autocomplete="organization"></label>',
+      '<span>', escapeHtml(record.phone || "No phone"), ' · ', escapeHtml(record.address || "No address"), '</span>',
+      '<div class="client-email-label">Saved email addresses</div>',
+      emailRows,
+      '<div class="client-email-row client-email-add"><input type="email" data-new-client-email placeholder="Add a new email address" autocomplete="email"><button class="quiet-button" type="button" data-add-client-email="', escapeHtml(name), '">Add email</button></div>',
+      '<button class="quiet-button" type="button" data-rename-client="', escapeHtml(name), '">Save client name</button>',
+      '</article>'
+    ].join("");
+  }).join("") || '<div class="empty" style="display:block">Clients will appear when quotes are saved.</div>';
+}
 function renderEmailSettings() {
   const list = $("#saved-email-list");
   if (!list) return;
@@ -1478,12 +1537,21 @@ document.addEventListener("DOMContentLoaded", () => {
     savedEmailStatus.textContent = deleted ? "Deleted email contact." : "Email could not be deleted. Please try again.";
     savedEmailStatus.className = `saved-email-status ${deleted ? "success" : "error"}`;
   });
-  $("#client-list").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-save-client-email]");
-    if (!button) return;
-    const name = button.dataset.saveClientEmail;
-    const input = document.querySelector(`[data-client-email="${CSS.escape(name)}"]`);
-    if (input) saveClientEmail(name, input.value);
+  $("#client-list").addEventListener("click", async (event) => {
+    const card = event.target.closest("[data-client-card]");
+    if (!card) return;
+    const rename = event.target.closest("[data-rename-client]");
+    if (rename) { await renameClient(rename.dataset.renameClient, card.querySelector("[data-client-name]")?.value); return; }
+    const update = event.target.closest("[data-update-client-email]");
+    if (update) {
+      const row = update.closest(".client-email-row");
+      await updateClientEmail(update.dataset.updateClientEmail, row?.querySelector("[data-email-original]")?.dataset.emailOriginal, row?.querySelector("[data-saved-client-email]")?.value);
+      return;
+    }
+    const remove = event.target.closest("[data-remove-client-email]");
+    if (remove) { await deleteClientEmail(remove.dataset.removeClientEmail, remove.dataset.emailOriginal); return; }
+    const add = event.target.closest("[data-add-client-email]");
+    if (add) { await saveClientEmail(add.dataset.addClientEmail, card.querySelector("[data-new-client-email]")?.value); }
   });
   const invoiceModal = $("#invoice-builder-modal");
   const previewModal = document.createElement("div");
