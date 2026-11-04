@@ -1719,10 +1719,19 @@ document.addEventListener("DOMContentLoaded", () => {
     invoiceModal.classList.add("open");
   }
   window.trackerOpenInvoiceBuilder = (record) => { if (!record) return; state.selected = record; openInvoiceBuilder(); };
+  window.trackerOpenInvoicePreview = (record) => {
+    if (!record) return;
+    state.selected = record;
+    openInvoiceBuilder();
+    invoiceModal.classList.remove("open");
+    renderInvoicePreview();
+    previewModal.classList.add("open");
+  };
   window.trackerPrintInvoiceDirect = (record) => {
     if (!record) return;
     state.selected = record;
     openInvoiceBuilder();
+    invoiceModal.classList.remove("open");
     renderInvoicePreview();
     window.addEventListener("afterprint", closeInvoiceBuilder, { once:true });
     printInvoicePdf();
@@ -1803,7 +1812,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.target.closest("[data-invoice-send]")) { window.trackerOpenInvoiceEmail?.(record, "invoice"); return; }
     if (event.target.closest("[data-invoice-pay]")) { window.trackerOpenPayment?.(record.id); return; }
     if (event.target.closest("[data-invoice-print]")) { window.trackerPrintInvoiceDirect?.(record); return; }
-    if (event.target.closest("[data-invoice-preview]")) { window.trackerOpenInvoiceBuilder?.(record); return; }
+    if (event.target.closest("[data-invoice-preview]")) { window.trackerOpenInvoicePreview?.(record); return; }
     if (event.target.closest("[data-add-workspace-line]")) {
       const body = $("#invoice-workspace-lines");
       const index = body.children.length;
