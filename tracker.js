@@ -1825,7 +1825,42 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-preview-close").addEventListener("click", closeInvoicePreview);
   $("#invoice-preview-done").addEventListener("click", closeInvoicePreview);
   $("#invoice-preview-print").addEventListener("click", printInvoicePdf);
-  $("#job-create-invoice").addEventListener("click", openInvoiceBuilder);
+  $("#job-create-invoice").addEventListener("click", async () => {
+    const record = state.selected;
+    if (!record) { window.alert("Save the job first, then create its invoice."); return; }
+    if (record.job.invoice?.status === "draft" || record.job.invoiceNumber) {
+      closeDrawer();
+      openInvoiceWorkspace(record.id);
+      return;
+    }
+    const today = new Date().toISOString().slice(0,10);
+    const termsDays = 30;
+    const subtotal = Math.max(0, Number(record.job.quote || 0) / 1.1);
+    const number = nextInvoiceNumber();
+    const invoice = {
+      number,
+      date:today,
+      dueDate:dueDateFor(today, termsDays),
+      termsDays,
+      client:record.customerName || "",
+      address:record.address || "",
+      description:record.job.detail || "",
+      lineItems:[defaultInvoiceLine({ description:record.job.detail || "", quantity:1, unitPrice:subtotal })],
+      quantity:1,
+      unitPrice:subtotal,
+      total:Number(record.job.quote || 0),
+      note:"Price includes labour and material costs. Not including rubbish disposal unless mentioned.",
+      status:"draft"
+    };
+    const updated = normalise({ ...record, job:{ ...record.job, invoiceNumber:number, invoiceDate:today, invoice, activity:[...(record.job.activity || []), { at:new Date().toISOString(), type:"invoice", message:"Draft invoice created." }] } });
+    try {
+      const saved = normalise(await request("?id=" + encodeURIComponent(updated.id), { method:"PATCH", body:JSON.stringify(updated) }));
+      state.records = state.records.map((item) => item.id === saved.id ? saved : item);
+      state.selected = saved;
+      closeDrawer();
+      openInvoiceWorkspace(saved.id);
+    } catch (error) { window.alert("Unable to create the invoice draft. Please try again."); console.warn(error); }
+  });
   $("#invoices-body").addEventListener("click", (event) => {
     const button = event.target.closest("[data-view-invoice]");
     if (!button) return;
