@@ -414,7 +414,7 @@ function renderInvoiceWorkspace() {
   const root = $("#invoice-workspace"); if (!root) return;
   const record = state.records.find((item) => item.id === state.invoiceRecordId);
   if (!record) { root.innerHTML = `<div class="invoice-workspace"><section class="invoice-workspace-main"><h2>Invoice not found</h2><p>The invoice may have been removed. Return to the invoice register and choose another one.</p><button class="invoice-workspace-back" type="button" data-invoice-back>← Invoices</button></section></div>`; return; }
-  const invoice = record.job.invoice || {}; const lines = workspaceLines(record); const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0); const gst = subtotal * .1; const total = subtotal + gst; const payments = paymentTotals(record); const status = invoice.status === "draft" ? "Draft" : payments.balance <= .01 && total > 0 ? "Paid" : "Posted";
+  const invoice = record.job.invoice || {}; const lines = workspaceLines(record); const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0); const gst = subtotal * .1; const total = subtotal + gst; const payments = paymentTotals(record); const status = invoice.status === "draft" ? "Draft" : payments.balance <= .01 && total > 0 ? "Paid" : payments.paid > .01 ? "Partially paid" : "Posted";
   const activity = workspaceActivity(record);
   const number = record.job.invoiceNumber || "Draft";
   const lineRows = lines.map((line, index) => `<tr data-workspace-line="${index}"><td class="drag-handle" aria-hidden="true">⠿</td><td class="line-number">${index + 1}</td><td><textarea data-line-description>${escapeHtml(line.description)}</textarea></td><td><input data-line-quantity type="number" min="0" step="0.01" value="${escapeHtml(line.quantity)}"></td><td><input data-line-price type="number" min="0" step="0.01" value="${escapeHtml(line.unitPrice.toFixed(2))}"></td><td><select aria-label="GST rate"><option>10% GST</option></select></td><td class="amount" data-line-amount>${currency(line.quantity * line.unitPrice)}</td><td><button class="invoice-workspace-action line-menu" type="button" data-remove-workspace-line="${index}" aria-label="Remove line">⋮</button></td></tr>`).join("");
@@ -431,8 +431,27 @@ function renderInvoiceWorkspace() {
         <div class="invoice-workspace-layout"><main class="invoice-workspace-main${status === "Draft" ? " is-editing" : ""}"><div class="invoice-detail-heading"><div><p>Customer Invoice</p><h2>INV/${escapeHtml(number)}</h2></div><div class="invoice-status"><span class="${status === "Draft" ? "active" : ""}">Draft</span><span class="${status !== "Draft" ? "active" : ""}">${escapeHtml(status)}</span></div></div><form id="invoice-workspace-form"><div class="invoice-detail-grid"><div><label>Customer<input name="client" value="${escapeHtml(invoice.client || record.customerName || "")}"></label><label>Invoice address<textarea name="address">${escapeHtml(invoice.address || record.address || "")}</textarea></label><label>Invoice date<input name="date" type="date" value="${escapeHtml(invoice.date || record.job.invoiceDate || "")}"></label><label>Payment terms (days)<input name="termsDays" type="number" min="0" max="365" value="${escapeHtml(String(Number(invoice.termsDays) || 30))}"></label></div><div class="detail-meta"><label>Invoice Number<input value="INV/${escapeHtml(number)}" readonly></label><label>Currency<select><option>AUD · Australian Dollar</option></select></label><label>Due date<input name="dueDate" type="date" value="${escapeHtml(invoice.dueDate || invoiceDueDate(record) || "")}"></label></div></div><div class="invoice-tabs"><span class="active">Invoice Lines</span><span>Other Info</span></div><div class="invoice-line-scroll"><table class="invoice-inline-lines"><thead><tr><th></th><th>#</th><th>Product / Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th><th></th></tr></thead><tbody id="invoice-workspace-lines">${lineRows}</tbody></table></div><div class="invoice-line-tools"><button type="button" data-add-workspace-line>Add a line</button><button type="button">Add a section</button><button type="button">Add a note</button></div><div class="invoice-bottom"><div class="invoice-note-block"><label>Terms and Conditions<textarea name="note">${escapeHtml(invoice.note || "Price includes labour and material costs. Not including rubbish disposal unless mentioned.")}</textarea></label><label class="bank-label">Bank Details<p class="invoice-bank-copy">Eastern Group VIC\nSWIFT: CTBAAU2S\nBank Name: Commonwealth Bank\nBSB: 063 109\nAccount Number: 13349243 (AUD ONLY)\nPlease include the invoice number in your transfer reference.</p></label></div><div class="invoice-totals"><div class="invoice-total-row"><span>Untaxed Amount</span><strong id="workspace-subtotal">${currency(subtotal)}</strong></div><div class="invoice-total-row"><span>GST 10%</span><strong id="workspace-gst">${currency(gst)}</strong></div><div class="invoice-total-row grand"><span>Total</span><strong id="workspace-total">${currency(total)}</strong></div><div class="invoice-total-row deposit"><span>Deposit Received</span><strong>${currency(payments.paid)}</strong></div><div class="invoice-total-row grand balance"><span>Balance Due</span><strong>${currency(Math.max(0, total - payments.paid))}</strong></div></div></div><div class="invoice-save-row"><span class="invoice-save-message" id="workspace-save-message"></span><button type="button" data-invoice-back>Cancel</button><button class="save" type="submit">Save draft</button></div></form></main><aside class="invoice-activity-rail"><div class="invoice-activity-head"><strong>Activity</strong><span>Logbook</span><span>Documents</span></div><div class="activity-composer"><input placeholder="Log a note..."><button type="button">Post</button></div><ol class="invoice-activity-list">${activityRows}</ol></aside></div></section></div></div>`;
   requestAnimationFrame(() => root.querySelectorAll("textarea").forEach((field) => {
     field.style.height = "auto";
-    field.style.height = `${field.scrollHeight}px`;
+    field.style.height = field.scrollHeight + "px";
   }));
+  const receivedRow = root.querySelector(".invoice-total-row.deposit");
+  if (receivedRow) {
+    if (payments.paid <= .01) receivedRow.remove();
+    else receivedRow.querySelector("span").textContent = "Payment received";
+  }
+  if (payments.paid > .01) {
+    const latestPaymentDate = paymentsForRecord(record).map((payment) => payment.date).filter(validIsoDate).sort().at(-1) || record.job.paymentDate || "";
+    const dueDate = root.querySelector('input[name="dueDate"]');
+    if (dueDate && latestPaymentDate) {
+      const paymentDateLabel = document.createElement("label");
+      paymentDateLabel.textContent = "Payment date";
+      const paymentDate = document.createElement("input");
+      paymentDate.type = "date";
+      paymentDate.value = latestPaymentDate;
+      paymentDate.readOnly = true;
+      paymentDateLabel.append(paymentDate);
+      dueDate.closest("label").after(paymentDateLabel);
+    }
+  }
 }
 function openInvoiceWorkspace(id) { state.invoiceRecordId = id; setView("invoice-detail"); renderInvoiceWorkspace(); }
 function workspaceLinesFromDom() { return [...document.querySelectorAll("#invoice-workspace-lines tr")].map((row) => ({ description:row.querySelector("[data-line-description]")?.value.trim() || "", quantity:Math.max(0, Number(row.querySelector("[data-line-quantity]")?.value) || 0), unitPrice:Math.max(0, Number(row.querySelector("[data-line-price]")?.value) || 0) })).filter((line) => line.description || line.unitPrice); }
@@ -950,6 +969,23 @@ ensureFinancialWorkspace();
 document.addEventListener("DOMContentLoaded", () => {
   let paymentRecordId = null;
   const modal = $("#payment-entry-modal");
+  const paymentForm = $("#payment-entry-form");
+  const firstPaymentField = paymentForm?.querySelector("label");
+  if (paymentForm && firstPaymentField && !$("#payment-entry-journal")) {
+    const journalLabel = document.createElement("label");
+    journalLabel.textContent = "Journal";
+    const journal = document.createElement("select");
+    journal.id = "payment-entry-journal";
+    journal.innerHTML = "<option>Bank</option>";
+    journalLabel.append(journal);
+    paymentForm.insertBefore(journalLabel, firstPaymentField);
+  }
+  const referenceLabel = $("#payment-entry-reference")?.closest("label");
+  if (referenceLabel?.firstChild) referenceLabel.firstChild.textContent = "Memo";
+  const cancelPayment = $("#payment-entry-cancel");
+  const createPayment = $("#payment-entry-form button[type='submit']");
+  if (cancelPayment) cancelPayment.textContent = "Discard";
+  if (createPayment) createPayment.textContent = "Create payment";
   const close = () => { modal.classList.remove("open"); paymentRecordId = null; };
   const open = (id) => { const record = state.records.find((item) => item.id === id); if (!record) return; const totals = paymentTotals(record); paymentRecordId = id; $("#payment-entry-title").textContent = `Record payment · ${record.job.invoiceNumber || record.job.number}`; $("#payment-entry-copy").textContent = `${record.customerName || "Client"} · ${currency(totals.balance)} remaining.`; $("#payment-entry-date").value = new Date().toISOString().slice(0,10); $("#payment-entry-amount").value = totals.balance.toFixed(2); $("#payment-entry-method").value = "Bank transfer"; $("#payment-entry-reference").value = ""; $("#payment-entry-note").value = ""; modal.classList.add("open"); $("#payment-entry-amount").focus(); };
   window.trackerOpenPayment = open;
