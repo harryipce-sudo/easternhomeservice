@@ -52,6 +52,8 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 details { border-top:1px solid var(--line); padding-top:12px; }
 summary { cursor:pointer; color:var(--navy); font-size:13px; font-weight:750; }
 .invoice-detail { margin:10px 0 0; max-width:760px; color:var(--ink); font-size:14px; line-height:1.55; white-space:pre-line; }
+.invoice-download { display:inline-flex; margin-top:12px; border:1px solid var(--navy); background:var(--navy); color:#fff; font-size:13px; font-weight:750; line-height:1; padding:9px 12px; text-decoration:none; }
+.invoice-download:hover { background:#062f59; }
 .empty,.error { margin:0; padding:28px; color:var(--muted); text-align:center; }
 .invoice-section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin:0 0 12px; }
 .invoice-section-heading h2 { margin:0 0 4px; color:var(--navy); font-size:20px; letter-spacing:-.015em; }
