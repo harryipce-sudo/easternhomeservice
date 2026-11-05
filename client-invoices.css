@@ -19,6 +19,10 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .invoice-table-frame { overflow-x:auto; border:1px solid var(--line); background:#fff; }
 .invoice-table { width:100%; min-width:0; border-collapse:collapse; table-layout:fixed; font-size:14px; }
 .invoice-table th { padding:13px 10px; background:var(--header); color:#172338; font-size:13px; font-weight:750; text-align:left; white-space:nowrap; }
+.table-sort-button { align-items:center; background:transparent; border:0; color:inherit; cursor:pointer; display:inline-flex; font:inherit; font-weight:inherit; gap:6px; justify-content:space-between; margin:0; padding:0; text-align:left; width:100%; }
+.table-sort-button span { color:#315478; font-size:11px; line-height:1; }
+.table-sort-button:hover { color:var(--navy); }
+.table-sort-button:focus-visible { outline:2px solid var(--navy); outline-offset:3px; }
 .invoice-table td { padding:15px 10px; border-top:1px solid var(--line); vertical-align:top; overflow-wrap:anywhere; }
 .invoice-table th:nth-child(1),.invoice-table td:nth-child(1) { width:9%; }
 .invoice-table th:nth-child(2),.invoice-table td:nth-child(2) { width:9%; }

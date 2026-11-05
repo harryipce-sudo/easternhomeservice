@@ -4,6 +4,10 @@ const paidInvoiceSection = document.querySelector("#paid-invoice-section");
 const paidInvoiceCopy = document.querySelector("#paid-invoice-copy");
 const paidInvoiceList = document.querySelector("#paid-invoice-list");
 const money = new Intl.NumberFormat("en-AU", { style:"currency", currency:"AUD" });
+const tableSort = {
+  unpaid:{ key:"invoiceDate", direction:"desc" },
+  paid:{ key:"paymentDate", direction:"desc" }
+};
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
 // A compact dash keeps empty invoice and due-date cells clear on smaller screens.
 const dateLabel = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }) : "—";
@@ -24,6 +28,33 @@ const invoiceLinks = (invoiceNumber, access) => {
 const clientPaymentControl = (invoice, access) => invoice.clientReportedPaidDate
   ? reportedPayment(invoice.clientReportedPaidDate, invoice.clientReportedPaymentNote, invoice.invoiceNumber)
   : `<label class="client-payment-control"><span>Paid date <b aria-hidden="true">*</b></span><input type="date" data-client-paid-date required><textarea data-client-payment-note maxlength="1000" placeholder="Optional payment or invoice note"></textarea><button type="button" data-client-paid="${escapeHtml(invoice.invoiceNumber)}">Mark paid</button>${invoiceLinks(invoice.invoiceNumber, access)}</label>`;
+const sortValue = (invoice, key, clientName = "") => {
+  if (key === "clientName") return clientName;
+  if (key === "status") return overdueInfo(invoice).late ? 1 : 0;
+  if (key === "clientPayment") return invoice.clientReportedPaidDate || "";
+  if (key === "paymentDate") return invoice.paymentDate || "";
+  if (["amount", "referralPercentage", "referralFee"].includes(key)) return Number(invoice[key]) || 0;
+  return String(invoice[key] || "").trim().toLowerCase();
+};
+const sortedInvoices = (invoices, table, clientName = "") => {
+  const { key, direction } = tableSort[table];
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...invoices].sort((left, right) => {
+    const a = sortValue(left, key, clientName);
+    const b = sortValue(right, key, clientName);
+    if (a === "" && b !== "") return 1;
+    if (b === "" && a !== "") return -1;
+    if (typeof a === "number" && typeof b === "number") return (a - b) * multiplier;
+    return String(a).localeCompare(String(b), "en-AU", { numeric:true, sensitivity:"base" }) * multiplier;
+  });
+};
+const sortableHeader = (table, key, label) => {
+  const active = tableSort[table].key === key;
+  const direction = active ? tableSort[table].direction : "none";
+  const indicator = active ? (direction === "asc" ? "▲" : "▼") : "↕";
+  const ariaSort = active ? (direction === "asc" ? "ascending" : "descending") : "none";
+  return `<th aria-sort="${ariaSort}"><button class="table-sort-button" type="button" data-table-sort="${table}" data-sort-key="${key}">${label}<span aria-hidden="true">${indicator}</span></button></th>`;
+};
 
 async function loadInvoices() {
   const access = new URLSearchParams(location.search).get("access") || "";
@@ -34,16 +65,18 @@ async function loadInvoices() {
   const invoiceTotal = Number(data.totalAmount) || 0;
   const referralTotal = Number(data.totalReferralFee) || 0;
   const paidInvoices = Array.isArray(data.paidInvoices) ? data.paidInvoices : [];
-  const unpaidInvoices = [...data.invoices].sort((left, right) => Number(Boolean(left.clientReportedPaidDate)) - Number(Boolean(right.clientReportedPaidDate)));
+  const unpaidInvoices = Array.isArray(data.invoices) ? data.invoices : [];
   const overdueInvoices = unpaidInvoices.filter((invoice) => overdueInfo(invoice).late);
   const overdueTotal = overdueInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+  const sortedUnpaidInvoices = sortedInvoices(unpaidInvoices, "unpaid", data.clientName);
+  const sortedPaidInvoices = sortedInvoices(paidInvoices, "paid", data.clientName);
   copy.textContent = `${data.clientName} · ${unpaidInvoices.length} unpaid invoice${unpaidInvoices.length === 1 ? "" : "s"} · ${overdueInvoices.length} late`;
   document.querySelector("#invoice-totals").innerHTML = `<article><span>Total invoice payment due</span><strong>${money.format(invoiceTotal)}</strong><small>Including GST</small></article><article class="late-total"><span>Late unpaid invoices</span><strong>${overdueInvoices.length}</strong><small>${money.format(overdueTotal)} including GST</small></article><article class="referral-total"><span>Total referral payable</span><strong>${money.format(referralTotal)}</strong><small>Paid invoices only · Including GST</small></article>`;
-  list.innerHTML = unpaidInvoices.length ? `<table class="invoice-table"><thead><tr><th>Invoice no.</th><th>Client name</th><th>Address</th><th>Invoice date</th><th>Due date</th><th>Status</th><th>Invoice amount</th><th>Referral %</th><th>Referral payable</th><th>Client payment</th></tr></thead><tbody>${unpaidInvoices.map((invoice) => `<tr class="${overdueInfo(invoice).late ? "late-row" : ""}"><td class="invoice-number">${escapeHtml(invoice.invoiceNumber || "Invoice")}</td><td>${escapeHtml(data.clientName)}</td><td class="invoice-address">${escapeHtml(invoice.address)}</td><td class="invoice-date">${escapeHtml(dateLabel(invoice.invoiceDate))}</td><td class="invoice-date">${escapeHtml(dateLabel(invoice.dueDate))}</td><td>${invoiceStatus(invoice)}</td><td class="invoice-amount">${money.format(invoice.amount)}</td><td class="referral-percentage">${Number(invoice.referralPercentage) > 0 ? `${Number(invoice.referralPercentage).toFixed(1)}%` : "—"}</td><td class="invoice-amount">${money.format(invoice.referralFee)}</td><td>${clientPaymentControl(invoice, access)}</td></tr><tr class="detail-row ${overdueInfo(invoice).late ? "late-row" : ""}"><td colspan="10"><details><summary>View invoice details</summary><p class="invoice-detail">${escapeHtml(invoice.detail || "No additional invoice details.")}</p></details></td></tr>`).join("")}</tbody></table>` : '<p class="empty">There are no unpaid invoices at this time.</p>';
+  list.innerHTML = unpaidInvoices.length ? `<table class="invoice-table"><thead><tr>${sortableHeader("unpaid", "invoiceNumber", "Invoice no.")}${sortableHeader("unpaid", "clientName", "Client name")}${sortableHeader("unpaid", "address", "Address")}${sortableHeader("unpaid", "invoiceDate", "Invoice date")}${sortableHeader("unpaid", "dueDate", "Due date")}${sortableHeader("unpaid", "status", "Status")}${sortableHeader("unpaid", "amount", "Invoice amount")}${sortableHeader("unpaid", "referralPercentage", "Referral %")}${sortableHeader("unpaid", "referralFee", "Referral payable")}${sortableHeader("unpaid", "clientPayment", "Client payment")}</tr></thead><tbody>${sortedUnpaidInvoices.map((invoice) => `<tr class="${overdueInfo(invoice).late ? "late-row" : ""}"><td class="invoice-number">${escapeHtml(invoice.invoiceNumber || "Invoice")}</td><td>${escapeHtml(data.clientName)}</td><td class="invoice-address">${escapeHtml(invoice.address)}</td><td class="invoice-date">${escapeHtml(dateLabel(invoice.invoiceDate))}</td><td class="invoice-date">${escapeHtml(dateLabel(invoice.dueDate))}</td><td>${invoiceStatus(invoice)}</td><td class="invoice-amount">${money.format(invoice.amount)}</td><td class="referral-percentage">${Number(invoice.referralPercentage) > 0 ? `${Number(invoice.referralPercentage).toFixed(1)}%` : "—"}</td><td class="invoice-amount">${money.format(invoice.referralFee)}</td><td>${clientPaymentControl(invoice, access)}</td></tr><tr class="detail-row ${overdueInfo(invoice).late ? "late-row" : ""}"><td colspan="10"><details><summary>View invoice details</summary><p class="invoice-detail">${escapeHtml(invoice.detail || "No additional invoice details.")}</p></details></td></tr>`).join("")}</tbody></table>` : '<p class="empty">There are no unpaid invoices at this time.</p>';
   paidInvoiceSection.hidden = !paidInvoices.length;
   if (paidInvoices.length) {
     paidInvoiceCopy.textContent = `${paidInvoices.length} paid invoice${paidInvoices.length === 1 ? "" : "s"} · Total referral payable ${money.format(referralTotal)} including GST`;
-    paidInvoiceList.innerHTML = `<table class="invoice-table paid-invoice-table"><thead><tr><th>Invoice no.</th><th>Address</th><th>Payment status</th><th>Paid date</th><th>Invoice amount</th><th>Referral %</th><th>Referral payable</th></tr></thead><tbody>${paidInvoices.map((invoice) => `<tr><td class="invoice-number">${escapeHtml(invoice.invoiceNumber || "Invoice")}</td><td class="invoice-address">${escapeHtml(invoice.address)}</td><td class="paid-status">Paid</td><td class="invoice-date">${invoice.paymentDate ? escapeHtml(dateLabel(invoice.paymentDate)) : "—"}</td><td class="invoice-amount">${money.format(invoice.amount)}</td><td class="referral-percentage">${Number(invoice.referralPercentage) > 0 ? `${Number(invoice.referralPercentage).toFixed(1)}%` : "—"}</td><td class="invoice-amount">${money.format(invoice.referralFee)}</td></tr><tr class="detail-row"><td colspan="7"><details><summary>View invoice details</summary><p class="invoice-detail">${escapeHtml(invoice.detail || "No additional invoice details.")}</p>${invoiceLinks(invoice.invoiceNumber, access)}</details></td></tr>`).join("")}</tbody></table>`;
+    paidInvoiceList.innerHTML = `<table class="invoice-table paid-invoice-table"><thead><tr>${sortableHeader("paid", "invoiceNumber", "Invoice no.")}${sortableHeader("paid", "address", "Address")}${sortableHeader("paid", "status", "Payment status")}${sortableHeader("paid", "paymentDate", "Paid date")}${sortableHeader("paid", "amount", "Invoice amount")}${sortableHeader("paid", "referralPercentage", "Referral %")}${sortableHeader("paid", "referralFee", "Referral payable")}</tr></thead><tbody>${sortedPaidInvoices.map((invoice) => `<tr><td class="invoice-number">${escapeHtml(invoice.invoiceNumber || "Invoice")}</td><td class="invoice-address">${escapeHtml(invoice.address)}</td><td class="paid-status">Paid</td><td class="invoice-date">${invoice.paymentDate ? escapeHtml(dateLabel(invoice.paymentDate)) : "—"}</td><td class="invoice-amount">${money.format(invoice.amount)}</td><td class="referral-percentage">${Number(invoice.referralPercentage) > 0 ? `${Number(invoice.referralPercentage).toFixed(1)}%` : "—"}</td><td class="invoice-amount">${money.format(invoice.referralFee)}</td></tr><tr class="detail-row"><td colspan="7"><details><summary>View invoice details</summary><p class="invoice-detail">${escapeHtml(invoice.detail || "No additional invoice details.")}</p>${invoiceLinks(invoice.invoiceNumber, access)}</details></td></tr>`).join("")}</tbody></table>`;
   }
 }
 
@@ -58,6 +91,21 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) sync
 window.setInterval(syncClientPortal, 30000);
 
 document.addEventListener("click", (event) => {
+  const sortButton = event.target.closest("[data-table-sort]");
+  if (sortButton) {
+    if (hasClientPaymentDraft()) {
+      window.alert("Finish or clear the payment entry before sorting, so no typed payment details are lost.");
+      return;
+    }
+    const table = sortButton.dataset.tableSort;
+    const key = sortButton.dataset.sortKey;
+    if (!tableSort[table] || !key) return;
+    tableSort[table] = tableSort[table].key === key
+      ? { key, direction:tableSort[table].direction === "asc" ? "desc" : "asc" }
+      : { key, direction:"asc" };
+    loadInvoices().catch(() => {});
+    return;
+  }
   const unpaidButton = event.target.closest("[data-client-unpaid]");
   if (unpaidButton) {
     clearClientPayment(unpaidButton);
