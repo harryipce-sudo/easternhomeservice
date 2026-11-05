@@ -44,6 +44,8 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .client-payment-control textarea { min-height:54px; resize:vertical; width:100%; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; line-height:1.35; padding:7px; }
 .client-payment-control button { border:1px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer; font:inherit; font-size:12px; font-weight:750; padding:8px; }
 .client-payment-control button:disabled { cursor:wait; opacity:.65; }
+.client-payment-control .invoice-document-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:0; }
+.client-payment-control .invoice-document-actions a { align-items:center; justify-content:center; font-size:11px; padding:8px 4px; text-align:center; }
 .client-payment-reported { color:#247043; display:grid; font-size:12px; font-weight:800; gap:5px; line-height:1.4; min-width:0; }
 .client-payment-reported small { color:var(--muted); font-size:12px; font-weight:650; }
 .client-payment-reported button { border:1px solid #247043; background:#fff; color:#247043; cursor:pointer; font:inherit; font-size:12px; font-weight:750; padding:7px; }
