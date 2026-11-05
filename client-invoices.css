@@ -17,10 +17,18 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .invoice-totals .late-total strong { color:#9b1c1c; }
 .referral-note { margin:0 0 18px; color:var(--muted); font-size:13px; line-height:1.5; }
 .invoice-table-frame { overflow-x:auto; border:1px solid var(--line); background:#fff; }
-.invoice-table { width:100%; min-width:1320px; border-collapse:collapse; font-size:14px; }
-.invoice-table th { padding:13px 15px; background:var(--header); color:#172338; font-size:13px; font-weight:750; text-align:left; white-space:nowrap; }
-.invoice-table td { padding:15px; border-top:1px solid var(--line); vertical-align:top; }
-.invoice-table td:last-child,.invoice-table th:last-child { text-align:right; }
+.invoice-table { width:100%; min-width:0; border-collapse:collapse; table-layout:fixed; font-size:14px; }
+.invoice-table th { padding:13px 10px; background:var(--header); color:#172338; font-size:13px; font-weight:750; text-align:left; white-space:nowrap; }
+.invoice-table td { padding:15px 10px; border-top:1px solid var(--line); vertical-align:top; overflow-wrap:anywhere; }
+.invoice-table th:nth-child(1),.invoice-table td:nth-child(1) { width:9%; }
+.invoice-table th:nth-child(2),.invoice-table td:nth-child(2) { width:9%; }
+.invoice-table th:nth-child(3),.invoice-table td:nth-child(3) { width:14%; }
+.invoice-table th:nth-child(4),.invoice-table td:nth-child(4),.invoice-table th:nth-child(5),.invoice-table td:nth-child(5) { width:9%; }
+.invoice-table th:nth-child(6),.invoice-table td:nth-child(6) { width:9%; }
+.invoice-table th:nth-child(7),.invoice-table td:nth-child(7) { width:9%; }
+.invoice-table th:nth-child(8),.invoice-table td:nth-child(8) { width:8%; }
+.invoice-table th:nth-child(9),.invoice-table td:nth-child(9) { width:9%; }
+.invoice-table th:nth-child(10),.invoice-table td:nth-child(10) { width:15%; text-align:left; }
 .invoice-number { color:var(--navy); font-weight:800; white-space:nowrap; }
 .invoice-address { max-width:400px; font-weight:650; line-height:1.4; }
 .invoice-date { color:var(--muted); white-space:nowrap; }
@@ -30,13 +38,13 @@ h1 { margin:0 0 7px; color:var(--navy); font-size:30px; letter-spacing:-.025em; 
 .invoice-status.late { background:#fde8e7; color:#9b1c1c; }
 .late-row td { background:#fff9f8; }
 .referral-percentage { font-weight:700; text-align:right; white-space:nowrap; }
-.client-payment-control { display:grid; gap:6px; min-width:142px; }
+.client-payment-control { display:grid; gap:6px; min-width:0; }
 .client-payment-control span { color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; }
 .client-payment-control input { width:100%; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; padding:7px; }
 .client-payment-control textarea { min-height:54px; resize:vertical; width:100%; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; line-height:1.35; padding:7px; }
 .client-payment-control button { border:1px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer; font:inherit; font-size:12px; font-weight:750; padding:8px; }
 .client-payment-control button:disabled { cursor:wait; opacity:.65; }
-.client-payment-reported { color:#247043; display:grid; font-size:12px; font-weight:800; gap:5px; line-height:1.4; min-width:142px; }
+.client-payment-reported { color:#247043; display:grid; font-size:12px; font-weight:800; gap:5px; line-height:1.4; min-width:0; }
 .client-payment-reported small { color:var(--muted); font-size:12px; font-weight:650; }
 .client-payment-reported button { border:1px solid #247043; background:#fff; color:#247043; cursor:pointer; font:inherit; font-size:12px; font-weight:750; padding:7px; }
 .client-payment-reported button:disabled { cursor:wait; opacity:.65; }
@@ -52,5 +60,6 @@ summary { cursor:pointer; color:var(--navy); font-size:13px; font-weight:750; }
 .invoice-section-toggle:hover { background:var(--navy); color:#fff; }
 .paid-invoice-section { margin-top:30px; }
 .portal-help { margin-top:20px; }
+@media (max-width:900px) { .invoice-table { min-width:980px; table-layout:auto; } }
 @media (max-width:700px) { .invoice-totals { grid-template-columns:1fr; } }
 @media (max-width:600px) { .portal-shell { width:min(100% - 24px,1200px); padding-top:18px; } .portal-header { align-items:flex-start; flex-direction:column; gap:9px; } .invoice-section-heading { align-items:stretch; flex-direction:column; } .invoice-section-toggle { align-self:flex-start; } h1 { font-size:27px; } }
