@@ -5,7 +5,8 @@ const paidInvoiceCopy = document.querySelector("#paid-invoice-copy");
 const paidInvoiceList = document.querySelector("#paid-invoice-list");
 const money = new Intl.NumberFormat("en-AU", { style:"currency", currency:"AUD" });
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
-const dateLabel = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }) : "Date not available";
+// A compact dash keeps empty invoice and due-date cells clear on smaller screens.
+const dateLabel = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", { day:"numeric", month:"short", year:"numeric" }) : "—";
 const overdueInfo = (invoice) => {
   if (invoice.payment === "paid" || !/^\d{4}-\d{2}-\d{2}$/.test(String(invoice.dueDate || ""))) return { late:false, days:0 };
   const dueDate = new Date(`${invoice.dueDate}T00:00:00`);
