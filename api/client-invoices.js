@@ -84,9 +84,12 @@ module.exports = async (req, res) => {
     const invoices = clientInvoices.filter((invoice) => invoice.payment !== "paid");
     const paidInvoices = clientInvoices.filter((invoice) => invoice.payment === "paid");
 
+    // Keep the client portal aligned with the Tracker's "Unpaid referral payable"
+    // total. Referral becomes payable only while its related invoice remains unpaid.
     const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-    const totalReferralFee = paidInvoices.reduce((sum, invoice) => sum + invoice.referralFee, 0);
-    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, paidInvoices, totalReferralFee });
+    const totalReferralFee = invoices.reduce((sum, invoice) => sum + invoice.referralFee, 0);
+    const unpaidReferralInvoiceCount = invoices.filter((invoice) => invoice.referralFee > 0).length;
+    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, paidInvoices, totalReferralFee, unpaidReferralInvoiceCount });
   } catch {
     return res.status(500).json({ error: "Unable to load invoices." });
   }
