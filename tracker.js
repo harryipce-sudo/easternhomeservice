@@ -258,9 +258,12 @@ function renderCalendar() { const scheduled = activeRecords().filter((record) =>
 function clientContacts() { return state.boardSettings?.job?.clientContacts && typeof state.boardSettings.job.clientContacts === "object" ? state.boardSettings.job.clientContacts : {}; }
 function clientEmails(name) { const value = clientContacts()[savedClientName(name)]; return [...new Set((Array.isArray(value) ? value : [value]).map((email) => String(email || "").trim().toLowerCase()).filter(Boolean))]; }
 function clientEmail(name) { return clientEmails(name)[0] || ""; }
-async function persistClientContacts(contacts) {
+function clientEmailRoles() { return state.boardSettings?.job?.clientEmailRoles && typeof state.boardSettings.job.clientEmailRoles === "object" ? state.boardSettings.job.clientEmailRoles : {}; }
+function clientEmailRole(name, email) { const role = clientEmailRoles()?.[savedClientName(name)]?.[String(email || "").trim().toLowerCase()]; return ["to", "cc", "bcc"].includes(role) ? role : "to"; }
+function clientEmailRecipients(name) { const recipients = { to:[], cc:[], bcc:[] }; clientEmails(name).forEach((email) => recipients[clientEmailRole(name, email)].push(email)); if (!recipients.to.length && clientEmails(name)[0]) recipients.to.push(clientEmails(name)[0]); return recipients; }
+async function persistClientContacts(contacts, roles = clientEmailRoles()) {
   const isNew = !state.boardSettings;
-  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, clientContacts:contacts } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards:[], boardOrder:[], hiddenBoards:[], clientContacts:contacts } };
+  const settings = state.boardSettings ? { ...state.boardSettings, job:{ ...state.boardSettings.job, clientContacts:contacts, clientEmailRoles:roles } } : { id:crypto.randomUUID(), recordType:"tracker-board-settings", sector:"Tracker settings", submittedAt:new Date().toISOString(), customerName:"-", phone:"", address:"-", quoteNumber:"-", totalQuote:"$0.00", subtotalExGst:"$0.00", gstTotal:"$0.00", blindItems:[], curtainItems:[], job:{ boards:[], boardOrder:[], hiddenBoards:[], clientContacts:contacts, clientEmailRoles:roles } };
   state.boardSettings = await request(isNew ? "" : `?id=${encodeURIComponent(settings.id)}`, { method:isNew ? "POST" : "PATCH", body:JSON.stringify(settings) });
   renderClients();
   renderEmailSettings();
@@ -281,10 +284,12 @@ async function saveClientEmail(name, email, append = false) {
 async function deleteClientEmail(name, email) {
   const client = savedClientName(name);
   const contacts = { ...clientContacts() };
+  const roles = { ...clientEmailRoles(), [client]:{ ...(clientEmailRoles()[client] || {}) } };
   const remaining = clientEmails(client).filter((item) => item.toLowerCase() !== String(email || "").trim().toLowerCase());
   if (remaining.length) contacts[client] = remaining; else delete contacts[client];
+  delete roles[client][String(email || "").trim().toLowerCase()]; if (!remaining.length) delete roles[client];
   try {
-    await persistClientContacts(contacts);
+    await persistClientContacts(contacts, roles);
     return true;
   } catch (error) { window.alert("The client email could not be deleted. Please try again."); console.warn(error); return false; }
 }
@@ -295,10 +300,12 @@ async function updateClientEmail(name, previousEmail, nextEmail) {
   if (!next || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { window.alert("Enter a valid client email address."); return false; }
   if (previous === next) return true;
   const contacts = { ...clientContacts() };
+  const roles = { ...clientEmailRoles(), [client]:{ ...(clientEmailRoles()[client] || {}) } };
   const emails = clientEmails(client).map((email) => email.toLowerCase() === previous ? next : email);
   contacts[client] = [...new Set(emails)];
+  if (previous && previous !== next) { roles[client][next] = roles[client][previous] || "to"; delete roles[client][previous]; }
   try {
-    await persistClientContacts(contacts);
+    await persistClientContacts(contacts, roles);
     return true;
   } catch (error) { window.alert("The client email could not be updated. Please try again."); console.warn(error); return false; }
 }
@@ -308,12 +315,14 @@ async function renameClient(oldName, newName) {
   if (!client) { window.alert("Enter a client name."); return false; }
   if (oldClient === client) return true;
   const contacts = { ...clientContacts() };
+  const roles = { ...clientEmailRoles(), [client]:{ ...(clientEmailRoles()[client] || {}), ...(clientEmailRoles()[oldClient] || {}) } };
   const mergedEmails = [...new Set([...clientEmails(oldClient), ...clientEmails(client)])];
   delete contacts[oldClient];
+  delete roles[oldClient];
   if (mergedEmails.length) contacts[client] = mergedEmails;
   const related = state.records.filter((record) => savedClientName(record.customerName) === oldClient);
   try {
-    await persistClientContacts(contacts);
+    await persistClientContacts(contacts, roles);
     const savedRecords = await Promise.all(related.map(async (record) => {
       const invoice = record.job?.invoice || {};
       const updated = normalise({ ...record, customerName:client, job:{ ...record.job, invoice:{ ...invoice, client: savedClientName(invoice.client) === oldClient ? client : invoice.client } } });
@@ -329,6 +338,12 @@ async function saveClientEmails(name, emails) {
   const uniqueEmails = [...new Set((emails || []).map((email) => String(email || "").trim().toLowerCase()).filter(Boolean))];
   for (const email of uniqueEmails) await saveClientEmail(name, email, true);
 }
+async function saveClientEmailRole(name, email, role) {
+  const client = savedClientName(name); const address = String(email || "").trim().toLowerCase();
+  if (!client || !address) return false;
+  const roles = { ...clientEmailRoles(), [client]:{ ...(clientEmailRoles()[client] || {}), [address]:["to", "cc", "bcc"].includes(role) ? role : "to" } };
+  try { await persistClientContacts({ ...clientContacts() }, roles); return true; } catch (error) { window.alert("The email role could not be saved. Please try again."); console.warn(error); return false; }
+}
 function renderClients() {
   const clients = [...new Map(activeRecords().filter((record) => record.customerName && record.customerName !== "-").map((record) => [savedClientName(record.customerName), record])).entries()];
   $("#client-list").innerHTML = clients.map(([name, record]) => {
@@ -336,6 +351,7 @@ function renderClients() {
     const emailRows = emails.map((email) => [
       '<div class="client-email-row">',
       '<input type="email" data-saved-client-email data-email-original="', escapeHtml(email), '" value="', escapeHtml(email), '" autocomplete="email">',
+      '<select data-client-email-role aria-label="Email role"><option value="to"', clientEmailRole(name, email) === "to" ? " selected" : "", '>To</option><option value="cc"', clientEmailRole(name, email) === "cc" ? " selected" : "", '>CC</option><option value="bcc"', clientEmailRole(name, email) === "bcc" ? " selected" : "", '>BCC</option></select>',
       '<button class="quiet-button" type="button" data-update-client-email="', escapeHtml(name), '">Save</button>',
       '<button class="quiet-button danger" type="button" data-remove-client-email="', escapeHtml(name), '" data-email-original="', escapeHtml(email), '">Remove</button>',
       '</div>'
@@ -346,7 +362,7 @@ function renderClients() {
       '<span>', escapeHtml(record.phone || "No phone"), ' · ', escapeHtml(record.address || "No address"), '</span>',
       '<div class="client-email-label">Saved email addresses</div>',
       emailRows,
-      '<div class="client-email-row client-email-add"><input type="email" data-new-client-email placeholder="Add a new email address" autocomplete="email"><button class="quiet-button" type="button" data-add-client-email="', escapeHtml(name), '">Add email</button></div>',
+      '<div class="client-email-row client-email-add"><input type="email" data-new-client-email placeholder="Add a new email address" autocomplete="email"><select data-new-client-email-role aria-label="New email role"><option value="to">To</option><option value="cc">CC</option><option value="bcc">BCC</option></select><button class="quiet-button" type="button" data-add-client-email="', escapeHtml(name), '">Add email</button></div>',
       '<button class="quiet-button" type="button" data-rename-client="', escapeHtml(name), '">Save client name</button>',
       '</article>'
     ].join("");
@@ -804,7 +820,10 @@ function selectSavedClient() {
   const client = $("#job-client").value.trim();
   if (!client) return;
   populateJobEmailOptions(client);
-  if (!$("#job-email").value.trim()) $("#job-email").value = clientEmail(client);
+  const recipients = clientEmailRecipients(client);
+  $("#job-email").value = recipients.to[0] || "";
+  $("#job-email-cc").value = recipients.cc.join(", ");
+  $("#job-email-bcc").value = recipients.bcc.join(", ");
 }
 function jobSuggestionEntries(kind) {
   if (kind === "client") return savedJobValues((record) => savedClientName(record.customerName)).map((value) => ({ value, label:value, detail:clientEmails(value).join(", ") || "Saved client" }));
@@ -1567,7 +1586,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!savedEmailForm.reportValidity()) return;
     savedEmailStatus.textContent = "Saving email…";
     savedEmailStatus.className = "saved-email-status";
-    const saved = await saveClientEmail($("#saved-email-client").value, $("#saved-email-address").value);
+    const client = $("#saved-email-client").value; const email = $("#saved-email-address").value;
+    const saved = await saveClientEmail(client, email);
+    if (saved) await saveClientEmailRole(client, email, $("#saved-email-role")?.value);
     if (!saved) { savedEmailStatus.textContent = "Email was not saved. Please check the details and try again."; savedEmailStatus.className = "saved-email-status error"; return; }
     savedEmailForm.reset();
     savedEmailStatus.textContent = "Saved email contact.";
@@ -1593,13 +1614,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const update = event.target.closest("[data-update-client-email]");
     if (update) {
       const row = update.closest(".client-email-row");
-      await updateClientEmail(update.dataset.updateClientEmail, row?.querySelector("[data-email-original]")?.dataset.emailOriginal, row?.querySelector("[data-saved-client-email]")?.value);
+      const original = row?.querySelector("[data-email-original]")?.dataset.emailOriginal;
+      const email = row?.querySelector("[data-saved-client-email]")?.value;
+      const saved = await updateClientEmail(update.dataset.updateClientEmail, original, email);
+      if (saved) await saveClientEmailRole(update.dataset.updateClientEmail, email, row?.querySelector("[data-client-email-role]")?.value);
       return;
     }
     const remove = event.target.closest("[data-remove-client-email]");
     if (remove) { await deleteClientEmail(remove.dataset.removeClientEmail, remove.dataset.emailOriginal); return; }
     const add = event.target.closest("[data-add-client-email]");
-    if (add) { await saveClientEmail(add.dataset.addClientEmail, card.querySelector("[data-new-client-email]")?.value); }
+    if (add) { const email = card.querySelector("[data-new-client-email]")?.value; const saved = await saveClientEmail(add.dataset.addClientEmail, email); if (saved) await saveClientEmailRole(add.dataset.addClientEmail, email, card.querySelector("[data-new-client-email-role]")?.value); }
   });
   const invoiceModal = $("#invoice-builder-modal");
   const previewModal = document.createElement("div");
