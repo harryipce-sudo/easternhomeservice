@@ -37,6 +37,45 @@ No actionable P0, P1 or P2 visual issues found in the tested desktop state. Exis
 
 final result: passed
 
+## Trello board refresh QA — 21 November 2026
+
+- Source visual truth: selected board concept shown in the user's image attachment (`codex-clipboard-33afb23c-cffc-4108-9f2a-e67289be9d9f.png`), corresponding to the second displayed Trello-inspired board concept.
+- Implementation source: `tracker.html`, `tracker.css`, and `tracker.js` in this project.
+- Intended desktop viewport: 1440 × 1024 CSS pixels.
+- Required state: Jobs / Board view with draggable cards, then a card move between lanes.
+
+### Implementation checks completed
+
+- `node --check tracker.js` passed after the board-card and activity updates.
+- Existing drag-and-drop, lane reordering, custom boards, saved positions, and card menus were preserved in the implementation.
+- A moved job now records an activity entry naming its source and destination workflow stage.
+
+### Visual comparison status
+
+Browser-rendered capture is blocked: the desktop browser's managed policy denied access to the local preview origin `http://127.0.0.1:4173`. This prevents the required same-viewport visual comparison and interaction test. No alternate browser or indirect browser method was used.
+
+### Required fidelity surfaces
+
+- Fonts and typography: blocked from visual verification.
+- Spacing and layout rhythm: blocked from visual verification.
+- Colours and visual tokens: blocked from visual verification.
+- Image quality and asset fidelity: no new image asset was added; blocked from visual verification.
+- Copy and content: implemented board labels, client initials, amount, due date, payment state, markup and action controls; visual verification blocked.
+
+### Findings
+
+- [P1] Local visual verification unavailable.
+  Location: local preview.
+  Evidence: browser policy rejected the local origin before capture.
+  Impact: the refreshed board cannot be certified against the selected design until a permitted preview origin is available.
+  Fix: open the preview in an approved browser/origin, capture the same Jobs / Board state, and run the drag/drop interaction test.
+
+### Comparison history
+
+1. Initial QA attempt: blocked before local page capture by managed browser-origin policy.
+
+final result: blocked
+
 ## Separate editor and preview QA — 19 October 2026
 
 - Source intent: the user requested direct invoice-line entry, with the editable invoice and the A4 preview in separate windows.

@@ -110,7 +110,12 @@ function addressGroupKey(address) {
 }
 const groupScope = (stage, key) => `${stage}::${key}`;
 function renderCard(record, { hideDate = false } = {}) {
-  return `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-top"><span>⠿ &nbsp;${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</span><span>✎</span></div><div class="board-card-content">${record.job.scheduledDate && !hideDate ? `<span class="board-card-date">◷ ${escapeHtml(cardDate(record.job.scheduledDate))}</span>` : ""}<div class="board-card-bottom"><span>Quote</span><strong>${currency(record.job.quote)}</strong></div>${markupTag(record.job)}</div></article>`;
+  const job = record.job || {};
+  const client = savedClientName(record.customerName || "");
+  const initials = client.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "EH";
+  const date = job.scheduledDate && !hideDate ? `<span class="board-card-date">Due ${escapeHtml(cardDate(job.scheduledDate))}</span>` : "";
+  const payment = job.payment === "paid" ? `<span class="board-card-payment paid">Paid</span>` : job.payment === "partially-paid" ? `<span class="board-card-payment partial">Part paid</span>` : "";
+  return `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-content"><div class="board-card-title"><span class="board-drag-grip" aria-hidden="true">⠿</span><strong>${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</strong><button class="board-card-edit" type="button" aria-label="Open job">•••</button></div><div class="board-card-meta"><span class="board-card-avatar">${escapeHtml(initials)}</span><span>${escapeHtml(client || "Client not added")}</span></div><div class="board-card-footer">${date || `<span class="board-card-date muted">No date</span>`}<strong>${currency(job.quote)}</strong></div><div class="board-card-labels">${payment}${markupTag(job)}</div></div></article>`;
 }
 function renderGroupedCards(jobs, stage) {
   const groups = new Map();
@@ -549,7 +554,9 @@ async function placeJob(id, status, index) {
   const groupKey = shouldGroup ? addressGroupKey(record.address) : (status === record.job.status ? record.job.groupKey || "" : "");
   const relatedUpdates = shouldGroup ? matchingAddressCards.filter((item) => item.job.groupKey !== groupKey).map((item) => normalise({ ...item, job:{ ...item.job, groupKey } })) : [];
   const previous = state.records.filter((item) => item.id === id || relatedUpdates.some((updatedItem) => updatedItem.id === item.id));
-  const updated = normalise({ ...record, jobStage: status, job: { ...record.job, status, groupKey, boardOrder: order } });
+  const moved = record.job.status !== status;
+  const activity = moved ? [...(record.job.activity || []), { at:new Date().toISOString(), type:"board", message:`Moved from ${boardLabels[record.job.status] || record.job.status} to ${boardLabels[status] || status}.` }] : (record.job.activity || []);
+  const updated = normalise({ ...record, jobStage: status, job: { ...record.job, status, groupKey, boardOrder: order, activity } });
   state.records = state.records.map((item) => item.id === id ? updated : relatedUpdates.find((related) => related.id === item.id) || item);
   render();
   try {
