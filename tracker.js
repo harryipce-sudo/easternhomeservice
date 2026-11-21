@@ -1214,7 +1214,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("pointerdown", (event) => { if (!event.target.closest("#card-menu")) closeCardMenu(); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeCardMenu(); });
-  $("#job-board").addEventListener("click", (event) => { const add = event.target.closest("[data-new-job-stage]"); if (add) { openDrawer(null, add.dataset.newJobStage); return; } const card = event.target.closest(".board-card[data-job-id]"); if (card) renderQuickPanel(state.records.find((record) => record.id === card.dataset.jobId)); });
+  $("#job-board").addEventListener("click", (event) => { const add = event.target.closest("[data-new-job-stage]"); if (add) { openDrawer(null, add.dataset.newJobStage); return; } const card = event.target.closest(".board-card[data-job-id]"); if (card) openDrawer(state.records.find((record) => record.id === card.dataset.jobId)); });
 });
 
 document.addEventListener("click", (event) => {
