@@ -229,6 +229,7 @@
     <aside class="sidebar" id="sidebar" aria-label="Tracker navigation">
       <a class="brand" href="./index.html"><span class="brand-mark">EH</span><span>Eastern Home<br>Service</span></a>
       <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-link" data-view="today">Today</button>
         <button class="nav-link active" data-view="jobs">Jobs</button>
         <button class="nav-link" data-view="invoices">Invoices</button>
         <button class="nav-link secondary-nav" data-view="drafts">Draft invoices</button>
@@ -248,10 +249,18 @@
         <div class="top-actions"><div class="sync-state top-sync" id="sync-state"><span></span> Syncing shared data</div><button class="quiet-button" id="refresh-button">Refresh</button><button class="primary-button" id="add-job">Add job</button></div>
       </header>
 
+      <section class="view" id="view-today">
+        <div class="today-heading"><div><h2>Today</h2><p>Your schedule, cash activity and work that needs attention.</p></div><button class="primary-button" type="button" data-today-action="new-job">＋ Add job</button></div>
+        <div class="today-layout"><section class="today-schedule"><header><h3>Upcoming schedule</h3><span id="today-schedule-count">0 jobs</span></header><div id="today-schedule-list"></div></section><aside class="today-attention"><header><h3>Attention needed</h3><span id="today-attention-count">0</span></header><div id="today-attention-list"></div></aside></div>
+        <section class="today-snapshot"><header><h3>Business snapshot</h3><span>Live from your shared tracker</span></header><div class="today-metrics" id="today-metrics"></div></section>
+      </section>
+
       <section class="view active" id="view-jobs">
         <div class="toolbar">
           <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search job no., client, address or detail"></label>
           <select id="sort" aria-label="Sort jobs"><option value="newest">Sort: Newest</option><option value="address">Sort: Address</option><option value="quote-high">Sort: Quote high to low</option><option value="status">Sort: Status</option></select>
+          <select id="job-status-filter" aria-label="Filter jobs by workflow"><option value="">All workflow stages</option><option value="quoted">Quotes</option><option value="confirmed">Confirmed</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="invoiced">Invoiced</option><option value="follow_up">Follow up</option></select>
+          <select id="job-payment-filter" aria-label="Filter jobs by payment"><option value="">All payment states</option><option value="unpaid">Unpaid</option><option value="deposit-paid">Deposit paid</option><option value="partially-paid">Partially paid</option><option value="paid">Paid in full</option></select>
           <div class="view-switch" aria-label="Jobs layout"><button class="switch-button" data-layout="table" type="button">Register</button><button class="switch-button active" data-layout="board" type="button">Board</button></div>
         </div>
         <div class="summary-line"><span id="result-count">0 jobs</span><span>Total quotation <strong id="quote-total">$0.00</strong></span><span hidden id="markup-total">$0.00</span><span>Total invoiced <strong id="invoice-total">$0.00</strong></span><button class="quiet-button" type="button" id="add-board">＋ Add board</button></div>
@@ -272,7 +281,7 @@
     </main>
 
     <nav class="mobile-nav" aria-label="Mobile navigation">
-      <button class="nav-link" data-view="calendar"><span aria-hidden="true">▣</span>Today</button>
+      <button class="nav-link" data-view="today"><span aria-hidden="true">▣</span>Today</button>
       <button class="nav-link active" data-view="jobs"><span aria-hidden="true">▤</span>Jobs</button>
       <button class="nav-link" data-view="invoices"><span aria-hidden="true">▤</span>Invoices</button>
       <button class="nav-link" data-view="clients"><span aria-hidden="true">♧</span>Clients</button>
@@ -298,6 +307,8 @@
         <label>Payment received date<input id="job-payment-date" type="date"></label>
         <label>Referral payment status<select id="job-referral"><option value="pending">Pending</option><option value="paid">Paid</option><option value="not-applicable">Not applicable</option></select></label>
         <label>Invoice no.<input id="job-invoice"></label><label>Scheduled date<input id="job-scheduled-date" type="date"></label><label>Invoice date<input id="job-invoice-date" type="date"></label>
+        <section class="job-work-panel"><header><div><h3>Work checklist</h3><p id="job-checklist-progress">0 of 0 completed</p></div></header><div class="job-checklist-editor" id="job-checklist-editor"></div><div class="job-checklist-add"><input id="job-checklist-new" maxlength="120" placeholder="Add a work step"><button class="quiet-button" id="job-checklist-add" type="button">Add step</button></div></section>
+        <section class="job-record-panel"><header><h3>Job record</h3><span>Saved changes and notes</span></header><div class="job-record-activity" id="job-record-activity"></div><label class="job-note-entry">Add a note<input id="job-note" maxlength="500" placeholder="Leave a useful update for the next person"></label></section>
         <div class="drawer-actions"><button class="quiet-button" type="button" id="cancel-edit">Cancel</button><button class="quiet-button" type="button" id="job-create-invoice">Create A4 invoice</button><button class="quiet-button" type="button" id="job-send-invoice-email">Send invoice email</button><button class="primary-button" type="submit">Save changes</button></div>
       </form>
     </aside>
