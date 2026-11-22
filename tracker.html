@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./tracker.css?v=20261104-client-edit-2">
   <link rel="stylesheet" href="./invoice-workspace.css?v=20261104-invoice-layout-9">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="./client-portal-tracker.css?v=20261107-referral-cards">
   <style>
     .board-invoiced { background:#f4faf6; border-color:#b9dcc4; }
@@ -225,6 +226,18 @@
   </style>
 </head>
 <body>
+  <header class="app-topnav" aria-label="Main navigation">
+    <a class="app-brand" href="./index.html" aria-label="Eastern Home Service home"><i class="fa-solid fa-house"></i><strong>Eastern Home Service</strong></a>
+    <nav class="app-primary-nav" aria-label="Workspace navigation">
+      <button class="nav-link" data-view="today"><i class="fa-regular fa-calendar"></i>Today</button>
+      <button class="nav-link active" data-view="jobs"><i class="fa-solid fa-briefcase"></i>Jobs</button>
+      <button class="nav-link" data-view="invoices"><i class="fa-regular fa-file-lines"></i>Invoices</button>
+      <button class="nav-link" data-view="clients"><i class="fa-regular fa-user"></i>Clients</button>
+      <button class="nav-link" data-view="payments"><i class="fa-regular fa-credit-card"></i>Payments</button>
+      <button class="nav-link" data-view="reports"><i class="fa-solid fa-chart-line"></i>Reports</button>
+    </nav>
+    <div class="app-top-actions"><button class="nav-link icon-nav" data-view="settings" aria-label="Settings"><i class="fa-solid fa-gear"></i></button><button class="nav-link profile-nav" data-view="settings" aria-label="Open settings">EH</button></div>
+  </header>
   <div class="tracker-shell">
     <aside class="sidebar" id="sidebar" aria-label="Tracker navigation">
       <a class="brand" href="./index.html"><span class="brand-mark">EH</span><span>Eastern Home<br>Service</span></a>
@@ -281,11 +294,11 @@
     </main>
 
     <nav class="mobile-nav" aria-label="Mobile navigation">
-      <button class="nav-link" data-view="today"><span aria-hidden="true">▣</span>Today</button>
-      <button class="nav-link active" data-view="jobs"><span aria-hidden="true">▤</span>Jobs</button>
-      <button class="nav-link" data-view="invoices"><span aria-hidden="true">▤</span>Invoices</button>
-      <button class="nav-link" data-view="clients"><span aria-hidden="true">♧</span>Clients</button>
-      <button class="nav-link" data-view="payments"><span aria-hidden="true">▣</span>Payments</button>
+      <button class="nav-link" data-view="today"><i class="fa-regular fa-calendar"></i>Today</button>
+      <button class="nav-link active" data-view="jobs"><i class="fa-solid fa-briefcase"></i>Jobs</button>
+      <button class="nav-link" data-view="invoices"><i class="fa-regular fa-file-lines"></i>Invoices</button>
+      <button class="nav-link" data-view="clients"><i class="fa-regular fa-user"></i>Clients</button>
+      <button class="nav-link" data-view="payments"><i class="fa-regular fa-credit-card"></i>Payments</button>
     </nav>
 
     <aside class="detail-drawer" id="drawer" aria-hidden="true">
