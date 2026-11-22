@@ -271,6 +271,14 @@
       <section class="view" id="view-settings"><div class="section-head"><h2>Settings</h2><p>Shared tracker settings.</p></div><div class="report-grid"><article class="report-card"><span>Data source</span><strong>Shared cloud</strong><p>Every device using this link reads the same job register.</p></article><article class="report-card"><span>Automatic refresh</span><strong>30 sec</strong><p>Use Refresh now after a colleague makes an urgent update.</p></article><article class="report-card"><span>Workflow</span><strong>4 stages</strong><p>Quotes, Confirmed, Scheduled and Completed.</p></article></div><section class="email-settings-panel"><div><h3>Saved email contacts</h3><p>Add addresses you use often. They will appear in the client, invoice, CC and BCC search suggestions.</p></div><form id="saved-email-form" class="saved-email-form"><label>Client name<input id="saved-email-client" required placeholder="e.g. BRW Group" autocomplete="organization"></label><label>Email address<input id="saved-email-address" type="email" required placeholder="accounts@example.com" autocomplete="email"></label><button class="primary-button" type="submit">Add email</button></form><p id="saved-email-status" class="saved-email-status" aria-live="polite"></p><div id="saved-email-list" class="saved-email-list"></div></section></section>
     </main>
 
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <button class="nav-link" data-view="calendar"><span aria-hidden="true">▣</span>Today</button>
+      <button class="nav-link active" data-view="jobs"><span aria-hidden="true">▤</span>Jobs</button>
+      <button class="nav-link" data-view="invoices"><span aria-hidden="true">▤</span>Invoices</button>
+      <button class="nav-link" data-view="clients"><span aria-hidden="true">♧</span>Clients</button>
+      <button class="nav-link" data-view="payments"><span aria-hidden="true">▣</span>Payments</button>
+    </nav>
+
     <aside class="detail-drawer" id="drawer" aria-hidden="true">
       <div class="drawer-head"><div><p>JOB DETAILS</p><h2 id="drawer-title">New job</h2></div><button class="icon-button" id="close-drawer" aria-label="Close">×</button></div>
       <form id="job-form">
