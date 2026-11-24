@@ -257,7 +257,9 @@ async function deleteBoard(id) {
 function renderCalendar() { const scheduled = activeRecords().filter((record) => record.job.scheduledDate).sort((a,b) => String(a.job.scheduledDate).localeCompare(String(b.job.scheduledDate))); $("#calendar-grid").innerHTML = scheduled.length ? scheduled.map((record) => `<article class="calendar-item"><strong>${escapeHtml(record.job.number)} · ${escapeHtml(record.address)}</strong><span>${escapeHtml(record.job.scheduledDate)} · ${escapeHtml(record.job.detail || "Job scheduled")}</span></article>`).join("") : `<div class="empty" style="display:block">Add a scheduled date to a job to see it here.</div>`; }
 function renderToday() {
   const records = activeRecords(); const today = dateToIso(new Date());
-  const scheduled = records.filter((record) => record.job.scheduledDate).sort((a,b) => String(a.job.scheduledDate).localeCompare(String(b.job.scheduledDate)));
+  // The Today schedule is operational work only. Once a job is invoiced it
+  // belongs in Invoices/Payments, even if it still retains its historic date.
+  const scheduled = records.filter((record) => record.job.scheduledDate && ["confirmed", "scheduled"].includes(record.job.status)).sort((a,b) => String(a.job.scheduledDate).localeCompare(String(b.job.scheduledDate)));
   const upcoming = (scheduled.filter((record) => record.job.scheduledDate >= today).length ? scheduled.filter((record) => record.job.scheduledDate >= today) : scheduled).slice(0, 6);
   const overdue = invoicedRecords(records).filter((record) => invoiceOverdue(record).late && paymentTotals(record).balance > 0).sort((a,b) => invoiceOverdue(b).days - invoiceOverdue(a).days);
   const unscheduled = records.filter((record) => ["confirmed","scheduled"].includes(record.job.status) && !record.job.scheduledDate).slice(0, 4);
