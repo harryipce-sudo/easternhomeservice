@@ -1521,6 +1521,8 @@ document.addEventListener("DOMContentLoaded", () => {
     activeKind = kind === "reminder" ? "reminder" : "invoice";
     const number = invoiceNumber(record);
     const dueDate = invoiceDueDate(record);
+    const address = String(record.job.invoice?.address || record.address || "").replace(/\s+/g, " ").trim();
+    const addressSuffix = address ? ` — ${address}` : "";
     const payment = paymentSummary(record);
     const amount = currency(payment.balance);
     const prior = record.job.invoice?.email || {};
@@ -1531,7 +1533,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const priorCc = Array.isArray(prior.cc) ? prior.cc : emailsFromValue(record.job.emailCc);
     $("#invoice-email-cc").value = [...new Set([...priorCc, INTERNAL_EMAIL_COPY])].join(", ");
     $("#invoice-email-bcc").value = Array.isArray(prior.bcc) ? prior.bcc.join(", ") : (record.job.emailBcc || "");
-    $("#invoice-email-subject").value = activeKind === "reminder" ? `Reminder: invoice ${number} payment due` : `Invoice ${number} from Eastern Home Service`;
+    $("#invoice-email-subject").value = activeKind === "reminder" ? `Reminder: invoice ${number}${addressSuffix} payment due` : `Invoice ${number}${addressSuffix} from Eastern Home Service`;
     $("#invoice-email-message").value = activeKind === "reminder"
       ? payment.isPartPaid
         ? `Hello,\n\nThank you for the ${currency(payment.paid)} payment received for invoice ${number}. The remaining balance is ${amount}${dueDate ? `, due ${displayDate(dueDate)}` : ""}. Please arrange payment of the remaining balance at your earliest convenience.\n\nThe invoice PDF is attached. If the balance has already been paid, please reply with the payment date or reference.\n\nKind regards,\nEastern Home Service`
