@@ -1,0 +1,147 @@
+/* Board preview — option 3. This file is deliberately isolated so no workflow,
+   invoice, persistence or financial rule is changed while the visual refresh is reviewed. */
+:root {
+  --refresh-canvas: #fcfbf8;
+  --refresh-surface: #ffffff;
+  --refresh-ink: #102745;
+  --refresh-muted: #62758a;
+  --refresh-line: #dce5ec;
+  --refresh-blue: #087bd6;
+  --refresh-teal: #087b83;
+  --refresh-lane: #f8fafb;
+  --refresh-shadow: 0 3px 12px rgba(22, 53, 78, .07);
+  --refresh-radius: 12px;
+}
+
+body { background: var(--refresh-canvas); color: var(--refresh-ink); }
+.workspace, .tracker-shell { background: var(--refresh-canvas); }
+.topbar, .view { max-width: none; }
+.topbar { padding: 26px 32px 14px; background: var(--refresh-canvas); }
+.topbar h1 { color: var(--refresh-ink); letter-spacing: -.75px; }
+.topbar p { color: var(--refresh-muted); }
+.view { padding: 12px 32px 34px; }
+.primary-button { background: var(--refresh-teal); border-color: var(--refresh-teal); box-shadow: 0 2px 5px rgba(8, 123, 131, .18); }
+.quiet-button { background: #fff; border-color: #cbd9e4; color: #234667; }
+
+#view-jobs .toolbar {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.3fr) 220px 220px 220px auto;
+  gap: 12px;
+  align-items: center;
+}
+#view-jobs .toolbar .search { min-width: 0; height: 46px; border-radius: 10px; box-shadow: 0 1px 2px rgba(18, 52, 78, .03); }
+#view-jobs .toolbar select, .view-switch { height: 46px; border-radius: 10px; }
+.summary-line {
+  min-height: 58px;
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-color: var(--refresh-line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.76);
+  box-shadow: 0 1px 2px rgba(18, 52, 78, .02);
+}
+
+.job-board {
+  grid-template-columns: repeat(var(--board-count, 6), 312px) !important;
+  grid-auto-flow: column;
+  gap: 16px !important;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 16px 2px 18px;
+  scroll-snap-type: x proximity;
+  scrollbar-color: #b9c7d1 transparent;
+  scrollbar-width: thin;
+}
+.job-board::-webkit-scrollbar { height: 10px; }
+.job-board::-webkit-scrollbar-thumb { border: 3px solid var(--refresh-canvas); border-radius: 999px; background: #b9c7d1; }
+.board-column, .board-confirmed, .board-scheduled, .board-completed, .board-invoiced, .board-follow_up {
+  display: flex;
+  min-width: 312px !important;
+  min-height: 590px;
+  height: auto !important;
+  overflow: hidden;
+  border: 1px solid var(--refresh-line) !important;
+  border-radius: var(--refresh-radius);
+  background: var(--refresh-lane) !important;
+  box-shadow: none;
+  scroll-snap-align: start;
+}
+.board-confirmed { background: #fffcf6 !important; }
+.board-scheduled { background: #f7fbff !important; }
+.board-completed, .board-invoiced { background: #f7fcf9 !important; }
+.board-follow_up { background: #fffbf5 !important; }
+.board-head { padding: 16px 16px 9px; background: transparent !important; }
+.board-title-row { gap: 8px; }
+.board-head strong { color: var(--refresh-ink) !important; font-size: 16px; letter-spacing: -.2px; }
+.board-head strong span { min-width: 26px; height: 26px; background: #edf1f4; color: #506479; font-size: 12px; }
+.board-confirmed .board-head strong { color: #a36012 !important; }
+.board-scheduled .board-head strong { color: #0d6faa !important; }
+.board-completed .board-head strong, .board-invoiced .board-head strong { color: #167448 !important; }
+.board-follow_up .board-head strong { color: #9d5b15 !important; }
+.lane-add { min-height: 37px; padding: 8px 0 3px; color: var(--refresh-blue) !important; font-weight: 700; }
+.board-actions button { color: #71869a; }
+.board-dropzone, .board-invoiced .board-dropzone { display: grid; flex: 1; min-height: 0; max-height: none; gap: 12px; align-content: start; overflow: visible; padding: 12px; }
+.board-dropzone.drag-over { outline: 2px dashed var(--refresh-blue); outline-offset: -6px; background: #eaf6ff; }
+.board-empty { display: grid; place-items: center; min-height: 250px; padding: 32px 16px; color: #8493a0; font-weight: 600; }
+
+.board-card {
+  overflow: hidden;
+  border: 1px solid #dce5ec;
+  border-radius: 11px;
+  background: var(--refresh-surface);
+  box-shadow: var(--refresh-shadow);
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.board-card:hover { border-color: #9cc9e7; box-shadow: 0 7px 18px rgba(22, 53, 78, .12); transform: translateY(-1px); }
+.board-card-content { padding: 14px; }
+.board-card-title { grid-template-columns: 15px minmax(0, 1fr) auto !important; gap: 8px; align-items: start; background: transparent !important; color: var(--refresh-ink); }
+.board-card-title strong { color: var(--refresh-ink) !important; font-size: 14px; line-height: 1.32; letter-spacing: -.1px; }
+.board-drag-grip { color: #91a2b0; font-size: 16px; padding-top: 1px; }
+.board-card-edit { min-width: 26px; min-height: 26px; border-radius: 7px; color: #5c7184; font-size: 16px; }
+.board-card-edit:hover, .board-card-edit:focus-visible { background: #eef5f9; color: #1467a3; outline: none; }
+.board-card-meta { margin-top: 12px; color: #576d82; }
+.board-card-avatar { width: 26px; height: 26px; background: #e2f3fb; color: #0d6fa9; }
+.board-card-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #e8eef2; }
+.board-card-footer strong { font-variant-numeric: tabular-nums; color: var(--refresh-ink); font-size: 15px; }
+.board-card-date { margin: 0; border-radius: 6px; background: #fff2f0; color: #b83225; }
+.board-card-date.muted { background: #f2f5f7; color: #708195; }
+.board-card-labels { min-height: 22px; margin-top: 10px; }
+.board-card .markup-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 6px; }
+.board-card-actions { display: flex; margin: 12px -14px -14px; padding: 9px 12px; border-top: 1px solid #e8eef2; background: #fbfcfd; }
+.address-actions.labelled { width: 100%; gap: 8px; }
+.address-actions.labelled .address-action { display: inline-flex; flex: 1; justify-content: center; gap: 6px; min-width: 0; height: 32px; padding: 0 8px; border-radius: 7px; font-size: 12px; font-weight: 700; color: #315a79; }
+.address-actions.labelled .address-action:hover, .address-actions.labelled .address-action:focus-visible { color: #075f9f; }
+.address-action-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-card-payment { border-radius: 6px; }
+
+.board-group-card { border-color: #a9d8bb; border-width: 1px; border-radius: 11px; box-shadow: var(--refresh-shadow); }
+.board-group-card .board-card-top { min-height: 44px; padding: 10px 12px; background: #167448; }
+.board-group-card .address-actions { margin-left: auto; }
+.board-group-card .board-card-content { padding: 12px; }
+
+@media (max-width: 1240px) {
+  #view-jobs .toolbar { grid-template-columns: minmax(260px, 1fr) 210px 210px; }
+  #view-jobs .toolbar #job-payment-filter { grid-column: 2; }
+  #view-jobs .toolbar .view-switch { grid-column: 3; }
+}
+@media (max-width: 700px) {
+  body, .workspace, .tracker-shell { background: var(--refresh-canvas); }
+  .topbar { padding: 17px 16px 8px; }
+  .view { padding: 10px 14px 92px; }
+  #view-jobs .toolbar { grid-template-columns: 1fr 1fr; gap: 8px; }
+  #view-jobs .toolbar .search { grid-column: 1 / -1; }
+  #view-jobs .toolbar #job-payment-filter { grid-column: auto; }
+  #view-jobs .toolbar .view-switch { grid-column: auto; justify-self: stretch; }
+  #view-jobs .toolbar .switch-button { flex: 1; }
+  .summary-line { display: flex; min-height: 54px; margin-top: 14px; padding: 12px 14px; overflow-x: auto; }
+  .summary-line > *:not(:first-child) { display: none; }
+  .job-board { grid-template-columns: repeat(var(--board-count, 6), minmax(86vw, 86vw)) !important; gap: 12px !important; padding-top: 12px; }
+  .board-column, .board-confirmed, .board-scheduled, .board-completed, .board-invoiced, .board-follow_up { min-width: 86vw !important; min-height: 0; height: auto !important; }
+  .board-head { padding: 14px 14px 8px; }
+  .board-dropzone, .board-invoiced .board-dropzone { padding: 10px; }
+  .board-card-content { padding: 13px; }
+  .board-card-title strong { font-size: 14px; }
+  .board-card-actions { margin: 11px -13px -13px; padding: 9px 10px; }
+  .address-actions.labelled .address-action { height: 40px; font-size: 12px; }
+}
