@@ -4,6 +4,9 @@ const savedView = (() => {
 })();
 const state = { records: [], search: "", sort: "newest", jobStatusFilter:"", jobPaymentFilter:"", view: savedView, layout: "board", selected: null, invoiceRecordId:"", drawerStage: "quoted", drawerImportedInvoice:null, drawerChecklist:[], invoiceFilter: "all", invoiceSearch:"", invoiceFY: "", invoiceQuarter: "", profitFY: "", accountingFY: "", paymentsFY: "", reportsFY: "", gstBasis: "cash", expandedGroups: new Set(), customBoards: [], boardOrder: [], hiddenBoards: [], boardSettings: null };
 let syncRequest = null;
+// Contact updates happen in the background after a job or email is saved.
+// Keep them in order so quick edits cannot overwrite each other.
+let clientContactSync = Promise.resolve();
 const $ = (selector) => document.querySelector(selector);
 const INTERNAL_EMAIL_COPY = "easternhomeservice@gmail.com";
 const currency = (value) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value) || 0);
@@ -50,7 +53,7 @@ const normalise = (record) => {
   return { ...record, job: { number: job.number || record.quoteNumber || "", detail: job.detail || job.description || "", quote: Number(job.quote ?? String(record.totalQuote || "").replace(/[^0-9.-]/g, "")) || 0, markup: Number(job.markup) || 0, markupStatus: job.markupStatus || (Number(job.markup) > 0 ? "included" : "not-recorded"), status: job.status || record.jobStage || "quoted", payment: job.payment === "pending" ? "unpaid" : (job.payment || "unpaid"), paymentDate: job.paymentDate || "", paymentAmount:Math.max(0, Number(job.paymentAmount) || 0), payments, referral: job.referral || "pending", invoiceNumber: job.invoiceNumber || "", invoiceDate: job.invoiceDate || "", scheduledDate: job.scheduledDate || "", email: job.email || "", emailCc: job.emailCc || "", emailBcc: job.emailBcc || "", invoice: job.invoice && typeof job.invoice === "object" ? job.invoice : {}, activity: Array.isArray(job.activity) ? job.activity : [], checklist: Array.isArray(job.checklist) ? job.checklist : [], comments: Array.isArray(job.comments) ? job.comments : [], archived: job.archived === true, groupKey: job.groupKey || "", boardOrder: Number.isFinite(Number(job.boardOrder)) ? Number(job.boardOrder) : null } };
 };
 async function request(path = "", options = {}) { const response = await fetch(`${API}${path}`, { headers: { "Content-Type":"application/json", ...(options.headers || {}) }, ...options }); if (!response.ok) throw new Error(await response.text()); return response.status === 204 ? null : response.json(); }
-async function loadRecords() { if (syncRequest) return syncRequest; $("#sync-state").innerHTML = "<span></span> Syncing shared data"; syncRequest = (async () => { try { const raw = await request(); state.boardSettings = raw.find((record) => record.recordType === "tracker-board-settings") || null; await importApprovedAccountingEntries(); state.customBoards = Array.isArray(state.boardSettings?.job?.boards) ? state.boardSettings.job.boards.filter((board) => board?.id && board?.label) : []; state.boardOrder = Array.isArray(state.boardSettings?.job?.boardOrder) ? state.boardSettings.job.boardOrder : []; state.hiddenBoards = Array.isArray(state.boardSettings?.job?.hiddenBoards) ? state.boardSettings.job.hiddenBoards : []; state.customBoards.forEach((board) => { boardLabels[board.id] = board.label; }); state.records = raw.filter((record) => record.recordType !== "tracker-board-settings").map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; render(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; render(); console.warn(error); } finally { syncRequest = null; } })(); return syncRequest; }
+async function loadRecords() { if (syncRequest) return syncRequest; $("#sync-state").innerHTML = "<span></span> Syncing shared data"; syncRequest = (async () => { try { const raw = await request(); state.boardSettings = raw.find((record) => record.recordType === "tracker-board-settings") || null; await importApprovedAccountingEntries(); state.customBoards = Array.isArray(state.boardSettings?.job?.boards) ? state.boardSettings.job.boards.filter((board) => board?.id && board?.label) : []; state.boardOrder = Array.isArray(state.boardSettings?.job?.boardOrder) ? state.boardSettings.job.boardOrder : []; state.hiddenBoards = Array.isArray(state.boardSettings?.job?.hiddenBoards) ? state.boardSettings.job.hiddenBoards : []; state.customBoards.forEach((board) => { boardLabels[board.id] = board.label; }); state.records = raw.filter((record) => record.recordType !== "tracker-board-settings").map(normalise); $("#sync-state").innerHTML = "<span></span> Shared data is up to date"; renderActiveView(); } catch (error) { $("#sync-state").innerHTML = "<span></span> Offline — unable to sync"; renderActiveView(); console.warn(error); } finally { syncRequest = null; } })(); return syncRequest; }
 function activeRecords() { return state.records.filter((record) => !record.job.archived); }
 // A saved invoice number can be prepared before a job is finished. Only jobs
 // moved to the Invoiced lane belong in the invoice and accounting registers.
@@ -366,9 +369,17 @@ async function renameClient(oldName, newName) {
     return true;
   } catch (error) { window.alert("The client name could not be updated. Please try again."); console.warn(error); return false; }
 }
-async function saveClientEmails(name, emails) {
+function saveClientEmails(name, emails) {
+  const client = savedClientName(name);
   const uniqueEmails = [...new Set((emails || []).map((email) => String(email || "").trim().toLowerCase()).filter(Boolean))];
-  for (const email of uniqueEmails) await saveClientEmail(name, email, true);
+  if (!client || !uniqueEmails.length) return Promise.resolve(false);
+  clientContactSync = clientContactSync.catch(() => {}).then(async () => {
+    const contacts = { ...clientContacts() };
+    contacts[client] = [...new Set([...uniqueEmails, ...clientEmails(client)])];
+    await persistClientContacts(contacts);
+    return true;
+  });
+  return clientContactSync;
 }
 async function saveClientEmailRole(name, email, role) {
   const client = savedClientName(name); const address = String(email || "").trim().toLowerCase();
@@ -517,6 +528,25 @@ async function saveBankImport() {
 }
 function renderArchive() { const records = state.records.filter((record) => record.job.archived); $("#archive-body").innerHTML = records.map((record) => `<tr><td>${escapeHtml(record.job.number || "—")}</td><td class="address">${escapeHtml(record.address || "—")}</td><td class="detail">${escapeHtml(record.job.detail || "—")}</td><td>${tag(record.job.status)}</td><td class="money">${currency(record.job.quote)}</td><td><div class="archive-actions"><button class="quiet-button archive-restore" type="button" data-restore-card="${escapeHtml(record.id)}">Restore</button><button class="danger-button" type="button" data-delete-card="${escapeHtml(record.id)}">Permanently delete</button></div></td></tr>`).join("") || `<tr><td colspan="6" class="archive-empty">No archived cards.</td></tr>`; }
 function render() { renderJobs(); renderBoard(); renderBoardTargets(); renderToday(); renderCalendar(); renderClients(); renderQuotes(); renderInvoiceWorkspace(); renderClientPortal(); renderPayments(); renderReportsWorkspace(); renderArchive(); renderProfit(); renderAccounting(); renderEmailSettings(); }
+// Cloud refreshes occur regularly. Only rebuild the visible workspace instead
+// of regenerating every board, report and invoice table in the background.
+function renderActiveView() {
+  if (state.view === "jobs") { renderJobs(); renderBoard(); renderBoardTargets(); return; }
+  if (state.view === "today") return renderToday();
+  if (state.view === "calendar") return renderCalendar();
+  if (state.view === "clients") return renderClients();
+  if (state.view === "invoices") return renderQuotes();
+  if (state.view === "drafts") return renderDraftInvoices();
+  if (state.view === "invoice-detail") return renderInvoiceWorkspace();
+  if (state.view === "client-portal") return renderClientPortal();
+  if (state.view === "payments") return renderPayments();
+  if (state.view === "reports") return renderReportsWorkspace();
+  if (state.view === "archive") return renderArchive();
+  if (state.view === "profit") return renderProfit();
+  if (state.view === "accounting") return renderAccounting();
+  if (state.view === "settings") return renderEmailSettings();
+  renderJobs(); renderBoard(); renderBoardTargets();
+}
 
 function workspaceLines(record) {
   const invoice = record?.job?.invoice || {};
@@ -1027,7 +1057,7 @@ function formRecord() {
   if (note) { comments.push({ at:new Date().toISOString(), author:"Eastern Home Service", text:note }); activity.push({ at:new Date().toISOString(), type:"note", message:`Note added: ${note}` }); }
   return { ...base, customerName:client, phone, address, quoteNumber:$("#job-number").value.trim(), totalQuote:currency(quote), subtotalExGst:currency(subtotal), gstTotal:currency(gst), jobStage:status, job:{ number:$("#job-number").value.trim(), detail, quote, markup, markupStatus:markup > 0 ? "included" : "not-recorded", status, payment:$("#job-payment").value, paymentAmount, paymentDate:$("#job-payment-date").value, payments:state.selected?.job?.payments || [], referral:$("#job-referral").value, invoiceNumber, invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, email, emailCc, emailBcc, invoice, checklist, comments, activity, archived:state.selected?.job?.archived === true, groupKey:state.selected?.job?.groupKey || "", boardOrder:status === "invoiced" && imported ? -Date.now() : state.selected?.job?.boardOrder ?? undefined } };
 }
-async function saveJob(event) { event.preventDefault(); const record = formRecord(); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; const recipients = [record.job.email, ...String(record.job.emailCc || "").split(/[;,\n]+/), ...String(record.job.emailBcc || "").split(/[;,\n]+/)].filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()) && String(email).trim().toLowerCase() !== INTERNAL_EMAIL_COPY); if (record.customerName !== "-" && recipients.length) await saveClientEmails(record.customerName, recipients); closeDrawer(); render(); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
+async function saveJob(event) { event.preventDefault(); const record = formRecord(); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; const recipients = [record.job.email, ...String(record.job.emailCc || "").split(/[;,\n]+/), ...String(record.job.emailBcc || "").split(/[;,\n]+/)].filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()) && String(email).trim().toLowerCase() !== INTERNAL_EMAIL_COPY); closeDrawer(); renderActiveView(); if (record.customerName !== "-" && recipients.length) void saveClientEmails(record.customerName, recipients).catch((error) => console.warn("Job saved, but client contacts could not be updated.", error)); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
 function renderQuotes() {
   const records = activeRecords();
   const quotesBody = $("#quotes-body");
@@ -1609,10 +1639,7 @@ document.addEventListener("DOMContentLoaded", () => {
       activeRecord = state.records.find((record) => record.id === activeRecord.id) || activeRecord;
       renderQuotes();
       const sentRecipients = ["#invoice-email-to", "#invoice-email-cc", "#invoice-email-bcc"].flatMap((selector) => emailsFromValue($(selector).value)).filter((email) => email.toLowerCase() !== INTERNAL_EMAIL_COPY);
-      if (sentRecipients.length) {
-        try { await saveClientEmails(activeRecord.customerName, sentRecipients); }
-        catch (saveError) { console.warn("Invoice email was sent but the saved client email could not be updated.", saveError); }
-      }
+      if (sentRecipients.length) void saveClientEmails(activeRecord.customerName, sentRecipients).catch((saveError) => console.warn("Invoice email was sent but the saved client email could not be updated.", saveError));
       setStatus("Email sent, recorded in the tracker, and saved for this client.", "success");
       window.setTimeout(close, 900);
     } catch (error) {

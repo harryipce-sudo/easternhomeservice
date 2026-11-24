@@ -174,6 +174,13 @@ async function allInvoiceRows(config) {
   return response.json();
 }
 
+async function invoiceRowById(config, id) {
+  const response = await supabaseFetch(config, `/rest/v1/quote_records?id=eq.${encodeURIComponent(id)}&select=id,payload,address,customer_name,quote_number,total_quote`);
+  if (!response.ok) throw new Error("Unable to load this invoice.");
+  const rows = await response.json();
+  return rows[0] || null;
+}
+
 async function extractPdfText(buffer) {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   // PDF.js runs a "fake" worker in Node. Giving it an explicit resolved path
@@ -190,4 +197,4 @@ async function extractPdfText(buffer) {
   return pages.join("\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-module.exports = { DOCUMENT_BUCKET, MAX_PDF_BYTES, getSupabaseConfig, supabaseFetch, money, isoDate, extractInvoice, invoiceKey, readRawBody, readJsonBody, uploadDocument, allInvoiceRows, extractPdfText, crypto };
+module.exports = { DOCUMENT_BUCKET, MAX_PDF_BYTES, getSupabaseConfig, supabaseFetch, money, isoDate, extractInvoice, invoiceKey, readRawBody, readJsonBody, uploadDocument, allInvoiceRows, invoiceRowById, extractPdfText, crypto };

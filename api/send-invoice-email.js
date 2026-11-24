@@ -1,4 +1,4 @@
-const { getSupabaseConfig, supabaseFetch, allInvoiceRows } = require("./_invoice-import-utils");
+const { getSupabaseConfig, supabaseFetch, invoiceRowById } = require("./_invoice-import-utils");
 const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
@@ -229,8 +229,7 @@ module.exports = async (req, res) => {
     recipients = parseAddresses(body.to);
     cc = [...new Set([...(String(body.cc || "").trim() ? parseAddresses(body.cc) : []), REQUIRED_INTERNAL_CC])].filter((address) => !recipients.includes(address));
     bcc = String(body.bcc || "").trim() ? parseAddresses(body.bcc) : [];
-    const rows = await allInvoiceRows(config);
-    record = rows.find((row) => String(row.id) === recordId);
+    record = await invoiceRowById(config, recordId);
     if (!record || record?.payload?.job?.status !== "invoiced") return res.status(404).json({ error:"Invoice not found." });
     if (kind === "reminder" && record.payload.job.payment === "paid") return res.status(400).json({ error:"Reminders can only be sent for unpaid invoices." });
 
