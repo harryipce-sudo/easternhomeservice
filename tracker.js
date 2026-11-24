@@ -33,6 +33,10 @@ const invoiceOverdue = (record) => {
   return { late:days > 0, dueDate, days:Math.max(0, days) };
 };
 const savedClientName = (value) => /^brw$/i.test(String(value || "").trim()) ? "BRW Group" : String(value || "").trim();
+// Historic imports used "-" as a placeholder. It must never replace a real
+// client name when an invoice is opened, printed or saved.
+const meaningfulClientName = (value) => { const name = savedClientName(value); return name === "-" ? "" : name; };
+const invoiceClientName = (record) => meaningfulClientName(record?.job?.invoice?.client) || meaningfulClientName(record?.customerName) || "";
 const invoiceActivityEntries = (record) => {
   const entries = [...(record?.job?.activity || []), ...(record?.job?.invoice?.activity || [])].filter((entry) => entry && entry.message);
   // Older invoices were created before the timeline existed. Their saved
@@ -542,6 +546,8 @@ function renderInvoiceWorkspace() {
       <section class="invoice-canvas"><header class="invoice-workspace-top"><button class="invoice-workspace-new" type="button" data-invoice-create>New</button><div class="invoice-workspace-crumb"><span>Invoices</span><i>/</i><strong>${escapeHtml(number)}</strong><button class="invoice-workspace-back" type="button" data-invoice-back>← Invoices</button></div><div class="invoice-workspace-spacer"></div><span class="invoice-workspace-pager">1 / 1</span><span class="invoice-pager-buttons">‹　›</span></header>
         <div class="invoice-actionbar">${status === "Draft" ? `<button class="invoice-workspace-action primary" type="button" data-invoice-confirm>Confirm</button>` : ""}<button class="invoice-workspace-action primary" type="button" data-invoice-send>Send</button><button class="invoice-workspace-action print" type="button" data-invoice-print>Print / Save PDF</button><button class="invoice-workspace-action pay" type="button" data-invoice-pay>Pay</button><button class="invoice-workspace-action" type="button" data-invoice-preview>Preview</button>${status !== "Draft" ? `<button class="invoice-workspace-action danger" type="button" data-invoice-reset>Reset to Draft</button>` : ""}<button class="invoice-workspace-action more" type="button">More⌄</button></div>
         <div class="invoice-workspace-layout"><main class="invoice-workspace-main${status === "Draft" ? " is-editing" : ""}"><div class="invoice-detail-heading"><div><p>Customer Invoice</p><h2>INV/${escapeHtml(number)}</h2></div><div class="invoice-status"><span class="${status === "Draft" ? "active" : ""}">Draft</span><span class="${status !== "Draft" ? "active" : ""}">${escapeHtml(status)}</span></div></div><form id="invoice-workspace-form"><div class="invoice-detail-grid"><div><label>Customer<input name="client" value="${escapeHtml(invoice.client || record.customerName || "")}"></label><label>Invoice address<textarea name="address">${escapeHtml(invoice.address || record.address || "")}</textarea></label><label>Invoice date<input name="date" type="date" value="${escapeHtml(invoice.date || record.job.invoiceDate || "")}"></label><label>Payment terms (days)<input name="termsDays" type="number" min="0" max="365" value="${escapeHtml(String(Number(invoice.termsDays) || 30))}"></label></div><div class="detail-meta"><label>Invoice Number<input value="INV/${escapeHtml(number)}" readonly></label><label>Currency<select><option>AUD · Australian Dollar</option></select></label><label>Due date<input name="dueDate" type="date" value="${escapeHtml(invoice.dueDate || invoiceDueDate(record) || "")}"></label></div></div><div class="invoice-tabs"><span class="active">Invoice Lines</span><span>Other Info</span></div><div class="invoice-line-scroll"><table class="invoice-inline-lines"><thead><tr><th></th><th>#</th><th>Product / Description</th><th>Quantity</th><th>Unit Price</th><th>Taxes</th><th>Amount</th><th></th></tr></thead><tbody id="invoice-workspace-lines">${lineRows}</tbody></table></div><div class="invoice-line-tools"><button type="button" data-add-workspace-line>Add a line</button><button type="button">Add a section</button><button type="button">Add a note</button></div><div class="invoice-bottom"><div class="invoice-note-block"><label>Terms and Conditions<textarea name="note">${escapeHtml(invoice.note || "Price includes labour and material costs. Not including rubbish disposal unless mentioned.")}</textarea></label><label class="bank-label">Bank Details<p class="invoice-bank-copy">Eastern Group VIC\nSWIFT: CTBAAU2S\nBank Name: Commonwealth Bank\nBSB: 063 109\nAccount Number: 13349243 (AUD ONLY)\nPlease include the invoice number in your transfer reference.</p></label></div><div class="invoice-totals"><div class="invoice-total-row"><span>Untaxed Amount</span><strong id="workspace-subtotal">${currency(subtotal)}</strong></div><div class="invoice-total-row"><span>GST 10%</span><strong id="workspace-gst">${currency(gst)}</strong></div><div class="invoice-total-row grand"><span>Total</span><strong id="workspace-total">${currency(total)}</strong></div><div class="invoice-total-row deposit"><span>Deposit Received</span><strong>${currency(payments.paid)}</strong></div><div class="invoice-total-row grand balance"><span>Balance Due</span><strong>${currency(Math.max(0, total - payments.paid))}</strong></div></div></div><div class="invoice-save-row"><span class="invoice-save-message" id="workspace-save-message"></span><button type="button" data-invoice-back>Cancel</button><button class="save" type="submit">Save draft</button></div></form></main><aside class="invoice-activity-rail"><div class="invoice-activity-head"><strong>Activity</strong><span>Logbook</span><span>Documents</span></div><div class="activity-composer"><input placeholder="Log a note..."><button type="button">Post</button></div><ol class="invoice-activity-list">${activityRows}</ol></aside></div></section></div></div>`;
+  const workspaceClient = root.querySelector('input[name="client"]');
+  if (workspaceClient && !meaningfulClientName(workspaceClient.value)) workspaceClient.value = invoiceClientName(record);
   requestAnimationFrame(() => root.querySelectorAll("textarea").forEach((field) => {
     field.style.height = "auto";
     field.style.height = field.scrollHeight + "px";
@@ -1885,7 +1891,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toISOString().slice(0,10);
     const date = isExistingInvoice ? (invoice.date || job.invoiceDate || today) : today;
     const terms = Number(invoice.termsDays) >= 0 ? invoice.termsDays : 30;
-    $("#invoice-client").value = invoice.client || state.selected.customerName || "";
+    $("#invoice-client").value = invoiceClientName(state.selected);
     $("#invoice-address").value = invoice.address || state.selected.address || "";
     $("#invoice-number").value = invoice.number || job.invoiceNumber || nextInvoiceNumber();
     $("#invoice-date").value = date;
@@ -1963,7 +1969,7 @@ document.addEventListener("DOMContentLoaded", () => {
       date:today,
       dueDate:dueDateFor(today, termsDays),
       termsDays,
-      client:record.customerName || "",
+      client:meaningfulClientName(record.customerName),
       address:record.address || "",
       description:record.job.detail || "",
       lineItems:[defaultInvoiceLine({ description:record.job.detail || "", quantity:1, unitPrice:subtotal })],
