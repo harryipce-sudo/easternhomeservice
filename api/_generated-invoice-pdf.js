@@ -135,7 +135,7 @@ function createInvoicePdf(job = {}) {
     };
     lines.forEach((item) => {
       const richBlocks = rich.clean(item.detailRich);
-      const useRich = richBlocks.length && rich.text(richBlocks) === item.description;
+      const useRich = richBlocks.length && rich.text(richBlocks).trim() === item.description;
       const wrapped = useRich ? wrapRich(richBlocks) : wrapDescription(item.description);
       const hasPrice = Number(item.quantity) > 0 && Number(item.unitPrice) > 0;
       if (y + 30 > 760) continuationPage();

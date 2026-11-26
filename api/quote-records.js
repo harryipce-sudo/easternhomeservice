@@ -1,3 +1,4 @@
+const { clean: cleanRichText } = require("../rich-format");
 const ALLOWED_ORIGINS = new Set([
   "https://easternhomeservice.vercel.app",
   "http://127.0.0.1:4173",
@@ -91,6 +92,9 @@ function activityForChange(previous, next) {
 function mapRecordToRow(record) {
   const blindItems = normalizeArray(record.blindItems);
   const curtainItems = normalizeArray(record.curtainItems);
+  const job = record.job && typeof record.job === "object" ? { ...record.job } : {};
+  if (Array.isArray(job.detailRich)) job.detailRich = cleanRichText(job.detailRich);
+  if (job.invoice && typeof job.invoice === "object" && Array.isArray(job.invoice.lineItems)) job.invoice = { ...job.invoice, lineItems:job.invoice.lineItems.map(line => line && typeof line === "object" && Array.isArray(line.detailRich) ? { ...line, detailRich:cleanRichText(line.detailRich) } : line) };
   const payload = {
     submittedAt: record.submittedAt,
     recordType: record.recordType || "blinds-curtains",
@@ -103,7 +107,7 @@ function mapRecordToRow(record) {
     // migration is needed. This also makes edits available to every device
     // through the same quote_records API.
     jobStage: record.jobStage || "quoted",
-    job: record.job && typeof record.job === "object" ? record.job : {},
+    job,
     blindItems,
     curtainItems,
     cleaningSummary: record.cleaningSummary && typeof record.cleaningSummary === "object" ? record.cleaningSummary : null

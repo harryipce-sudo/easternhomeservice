@@ -1,5 +1,6 @@
 {
   "functions": {
+    "api/quote-records.js": { "includeFiles": "rich-format.js" },
     "api/send-invoice-email.js": {
       "includeFiles": "{api/_generated-invoice-pdf.js,rich-format.js,assets/eastern-home-service-logo-clean.png,node_modules/pdfkit/js/standard-fonts/**}"
     },
