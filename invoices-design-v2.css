@@ -4,7 +4,7 @@
 #view-invoices .invoice-toolbar label.invoice-search { width: auto; flex: 1 1 240px; min-width: 180px; }
 #view-invoices .invoice-toolbar label:not(.invoice-search) { width: 170px; }
 #view-invoices .invoice-toolbar input, #view-invoices .invoice-toolbar select { border: 1px solid #d7e4ee; border-radius: 7px; background: white; color: #102d4c; }
-#view-invoices .invoice-summary { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+#view-invoices .invoice-summary { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 #view-invoices .invoice-metric { min-width: 0; border: 1px solid #d7e4ee; border-radius: 7px; background: #fff; box-shadow: 0 2px 6px #102d4c06; }
 #view-invoices .invoice-metric strong { font-variant-numeric: tabular-nums; }
 #view-invoices .table-frame { border: 1px solid #d7e4ee; border-radius: 9px; overflow: hidden; background: white; }
@@ -42,6 +42,7 @@ body:has(#view-invoices.active) .topbar p { color:#647b90; }
 #view-invoices .invoice-metric .metric-label { display:flex; justify-content:space-between; color:#526b83; font-size:12px; text-transform:none; }
 #view-invoices .invoice-metric strong { font-size:clamp(16px,1.5vw,24px); line-height:1.2; white-space:nowrap; }
 #view-invoices .invoice-metric small { color:#647b90; font-size:12px; }
+#view-invoices .invoice-metric .referral-paid-secondary { overflow-wrap:anywhere; border-top:1px solid #e4edf3; padding-top:6px; }
 #view-invoices .invoice-metric.unpaid strong, #view-invoices .invoice-metric.unpaid i { color:#b45309; }
 #view-invoices .invoice-metric.late strong, #view-invoices .invoice-metric.late i { color:#c13232; }
 #view-invoices .invoice-metric.paid strong, #view-invoices .invoice-metric.paid i { color:#19804b; }
