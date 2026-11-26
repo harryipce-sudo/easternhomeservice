@@ -1,0 +1,37 @@
+/* Shared responsive foundations adapted to the tracker’s existing components. */
+:root { --eh-border:#d7e4ee; --eh-scroll-track:#f1f5f9; --eh-scroll-thumb:#b6c8d8; --eh-gap:12px; }
+.eh-responsive-workspace { container: workspace / inline-size; min-width:0; max-width:100%; }
+.eh-responsive-workspace .view { min-width:0; max-width:100%; }
+.eh-responsive-workspace :is(.invoice-summary,.today-metrics,.profit-metrics,.client-portal-totals,.accounting-receivable-grid) { min-width:0; max-width:100%; }
+.eh-responsive-workspace :is(.invoice-metric,.today-metrics article,.profit-metric,.client-portal-totals article,.accounting-receivable-cell) { min-width:0; max-width:100%; height:auto; }
+/* Monetary values must remain complete, including cents, even for unusually large values. */
+.eh-responsive-workspace :is(.invoice-metric,.today-metrics article,.profit-metric,.client-portal-totals article,.accounting-receivable-cell) strong { max-width:100%; min-width:0; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+#view-invoices .invoice-metric strong { white-space:normal; overflow-wrap:anywhere; }
+#view-invoices.has-long-summary .invoice-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+#view-invoices.has-long-amounts table { table-layout:auto; width:max-content; min-width:100%; }
+.eh-responsive-workspace :is(.invoice-toolbar,.profit-toolbar,.top-actions) { min-width:0; max-width:100%; flex-wrap:wrap; }
+.eh-responsive-workspace :is(.invoice-toolbar,.profit-toolbar) :is(input,select) { min-width:0; max-width:100%; }
+.eh-responsive-workspace .table-scroll { min-width:0; max-width:100%; overflow:auto; }
+.eh-responsive-workspace .money { font-variant-numeric:tabular-nums; white-space:nowrap; }
+.detail-drawer { container:form / inline-size; min-width:0; max-width:100%; }
+.detail-drawer :is(input,select,textarea) { min-width:0; max-width:100%; }
+.detail-drawer .drawer-actions { flex-wrap:wrap; }
+@container workspace (max-width:1199px) {
+  #view-invoices .invoice-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .today-metrics,.profit-metrics,.client-portal-totals { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@container workspace (max-width:749px) {
+  #view-invoices .invoice-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #view-invoices.has-long-summary .invoice-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .accounting-overview,.profit-layout,.today-layout { grid-template-columns:minmax(0,1fr); }
+}
+@container workspace (max-width:399px) {
+  #view-invoices .invoice-summary,.today-metrics,.profit-metrics,.client-portal-totals,.accounting-receivable-grid { grid-template-columns:minmax(0,1fr); }
+  #view-invoices.has-long-summary .invoice-summary { grid-template-columns:minmax(0,1fr); }
+}
+@container form (max-width:420px) { .detail-drawer .two-col { grid-template-columns:minmax(0,1fr); } }
+:is(.table-scroll,.detail-drawer,#job-board,.board-dropzone,.invoice-workspace-activity) { scrollbar-width:thin; scrollbar-color:var(--eh-scroll-thumb) var(--eh-scroll-track); }
+:is(.table-scroll,.detail-drawer,#job-board,.board-dropzone,.invoice-workspace-activity)::-webkit-scrollbar { width:8px; height:8px; }
+:is(.table-scroll,.detail-drawer,#job-board,.board-dropzone,.invoice-workspace-activity)::-webkit-scrollbar-track { background:var(--eh-scroll-track); border-radius:8px; }
+:is(.table-scroll,.detail-drawer,#job-board,.board-dropzone,.invoice-workspace-activity)::-webkit-scrollbar-thumb { background:var(--eh-scroll-thumb); border:2px solid var(--eh-scroll-track); border-radius:8px; }
+@media (prefers-reduced-motion:reduce) { .eh-responsive-workspace *, .detail-drawer * { scroll-behavior:auto; } }
