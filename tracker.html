@@ -228,12 +228,13 @@
   <link rel="stylesheet" href="./board-layout-v2.css?v=20261126-viewport-1">
   <link rel="stylesheet" href="./invoices-design-v2.css?v=20261126-7">
   <link rel="stylesheet" href="./responsive-system.css?v=20261126-1">
+  <link rel="stylesheet" href="./overview.css?v=1">
 </head>
 <body>
   <header class="app-topnav" aria-label="Main navigation">
     <a class="app-brand" href="./index.html" aria-label="Eastern Home Service home"><i class="fa-solid fa-house"></i><strong>Eastern Home Service</strong></a>
     <nav class="app-primary-nav" aria-label="Workspace navigation">
-      <button class="nav-link" data-view="today"><i class="fa-regular fa-calendar"></i>Today</button>
+      <button class="nav-link" data-view="today"><i class="fa-regular fa-calendar"></i>Overview</button>
       <button class="nav-link active" data-view="jobs"><i class="fa-solid fa-briefcase"></i>Jobs</button>
       <button class="nav-link" data-view="invoices"><i class="fa-regular fa-file-lines"></i>Invoices</button>
       <button class="nav-link" data-view="clients"><i class="fa-regular fa-user"></i>Clients</button>
@@ -246,7 +247,7 @@
     <aside class="sidebar" id="sidebar" aria-label="Tracker navigation">
       <a class="brand" href="./index.html"><span class="brand-mark">EH</span><span>Eastern Home<br>Service</span></a>
       <nav class="side-nav" aria-label="Main navigation">
-        <button class="nav-link" data-view="today">Today</button>
+        <button class="nav-link" data-view="today">Overview</button>
         <button class="nav-link active" data-view="jobs">Jobs</button>
         <button class="nav-link" data-view="invoices">Invoices</button>
         <button class="nav-link secondary-nav" data-view="drafts">Draft invoices</button>
@@ -266,11 +267,10 @@
         <div class="top-actions"><div class="sync-state top-sync" id="sync-state"><span></span> Syncing shared data</div><button class="quiet-button" id="refresh-button">Refresh</button><button class="primary-button invoice-header-import" type="button" id="invoice-import-open">＋ Import invoice</button><button class="primary-button" id="add-job">Add job</button></div>
       </header>
 
-      <section class="view" id="view-today">
-        <div class="today-heading"><div><h2>Today</h2><p>Your schedule, cash activity and work that needs attention.</p></div><button class="primary-button" type="button" data-today-action="new-job">＋ Add job</button></div>
-        <div class="today-layout"><section class="today-schedule"><header><h3>Upcoming schedule</h3><span id="today-schedule-count">0 jobs</span></header><div id="today-schedule-list"></div></section><aside class="today-attention"><header><h3>Attention needed</h3><span id="today-attention-count">0</span></header><div id="today-attention-list"></div></aside></div>
-        <section class="today-work-queues"><header><div><h3>Workflow queue</h3><p>Confirmed and scheduled work ready for the team.</p></div></header><div class="today-queue-grid"><section><div class="today-queue-head confirmed"><span><i class="fa-regular fa-circle-check"></i> Confirmed</span><b id="today-confirmed-count">0</b></div><div id="today-confirmed-list"></div></section><section><div class="today-queue-head scheduled"><span><i class="fa-regular fa-calendar"></i> Scheduled</span><b id="today-scheduled-count">0</b></div><div id="today-scheduled-list"></div></section></div></section>
-        <section class="today-snapshot"><header><h3>Business snapshot</h3><span>Live from your shared tracker</span></header><div class="today-metrics" id="today-metrics"></div></section>
+      <section class="view overview" id="view-today">
+        <div class="overview-heading"><div><h2>Business Overview</h2><p id="overview-date"></p></div><button class="primary-button" type="button" data-overview-route="new-job"><i class="fa-regular fa-circle-plus"></i> New job</button></div>
+        <section class="overview-metrics" id="overview-metrics" aria-label="Financial overview"></section>
+        <div class="overview-grid"><section class="overview-panel"><header><div><h3>Action centre</h3><p>Tasks requiring your attention</p></div><small>Prioritised by urgency</small></header><div id="overview-tasks"></div></section><div class="overview-stack"><section class="overview-panel"><header><div><h3>Upcoming appointments</h3><p>Today and the next 7 days</p></div><button type="button" class="quiet-button" data-overview-route="calendar">View calendar</button></header><div id="overview-appointments"></div></section><section class="overview-panel"><header><h3>Quick actions</h3></header><div class="overview-quick" id="overview-quick"></div></section></div></div>
       </section>
 
       <section class="view active" id="view-jobs">
@@ -300,7 +300,7 @@
     </main>
 
     <nav class="mobile-nav" aria-label="Mobile navigation">
-      <button class="nav-link" data-view="today"><i class="fa-regular fa-calendar"></i>Today</button>
+      <button class="nav-link" data-view="today"><i class="fa-regular fa-calendar"></i>Overview</button>
       <button class="nav-link active" data-view="jobs"><i class="fa-solid fa-briefcase"></i>Jobs</button>
       <button class="nav-link" data-view="invoices"><i class="fa-regular fa-file-lines"></i>Invoices</button>
       <button class="nav-link" data-view="clients"><i class="fa-regular fa-user"></i>Clients</button>
@@ -355,7 +355,7 @@
     <div class="invoice-builder-modal" id="invoice-email-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-email-title"><div class="invoice-builder-dialog invoice-email-dialog"><div class="invoice-builder-head"><div><h2 id="invoice-email-title">Send invoice email</h2><p id="invoice-email-copy">The stored Odoo PDF will be attached.</p></div><button class="icon-button" type="button" id="invoice-email-close" aria-label="Close invoice email">×</button></div><div class="invoice-email-body"><form id="invoice-email-form"><label>To email<div class="invoice-email-recipient"><input id="invoice-email-to" type="email" required autocomplete="off" placeholder="Type a client name or email" aria-expanded="false" aria-controls="invoice-email-to-suggestions"><div class="invoice-email-suggestions" id="invoice-email-to-suggestions" role="listbox" hidden></div></div><span class="invoice-email-help">Start typing to search saved client emails, then choose a suggestion.</span></label><label>CC emails<div class="invoice-email-recipient"><input id="invoice-email-cc" type="text" autocomplete="off" placeholder="Type a client name or email" aria-expanded="false" aria-controls="invoice-email-cc-suggestions"><div class="invoice-email-suggestions" id="invoice-email-cc-suggestions" role="listbox" hidden></div></div><span class="invoice-email-help">Includes the required internal copy to easternhomeservice@gmail.com. Separate extra addresses with commas.</span></label><label>BCC emails<div class="invoice-email-recipient"><input id="invoice-email-bcc" type="text" autocomplete="off" placeholder="Type a client name or email" aria-expanded="false" aria-controls="invoice-email-bcc-suggestions"><div class="invoice-email-suggestions" id="invoice-email-bcc-suggestions" role="listbox" hidden></div></div><span class="invoice-email-help">BCC recipients are hidden from the client. Separate addresses with commas.</span></label><label>Subject<input id="invoice-email-subject" required maxlength="200"></label><label>Message<textarea id="invoice-email-message" rows="7" required maxlength="10000"></textarea></label><label>Evidence photos <input id="invoice-email-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><span class="invoice-email-help">Optional: up to 8 JPG, PNG or WebP photos, 3 MB total. They are attached only to this email and are not made public.</span></label><p class="invoice-email-help" id="invoice-email-photo-summary">The original Odoo invoice PDF is attached.</p><p class="invoice-email-status" id="invoice-email-status" aria-live="polite"></p></form></div><div class="invoice-builder-actions"><button class="quiet-button" type="button" id="invoice-email-cancel">Cancel</button><button class="primary-button" type="submit" form="invoice-email-form" id="invoice-email-send">Send email</button></div></div></div>
     <div class="invoice-builder-modal" id="invoice-activity-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-activity-title"><div class="invoice-builder-dialog invoice-activity-dialog"><div class="invoice-builder-head"><div><h2 id="invoice-activity-title">Invoice activity</h2><p id="invoice-activity-copy">A dated history of this job and invoice.</p></div><button class="icon-button" type="button" id="invoice-activity-close" aria-label="Close activity">×</button></div><div class="invoice-activity-body"><ol class="invoice-activity-list" id="invoice-activity-list"></ol><p class="invoice-activity-empty" id="invoice-activity-empty" hidden>No activity recorded yet.</p></div><div class="invoice-builder-actions"><button class="quiet-button" type="button" id="invoice-activity-done">Done</button></div></div></div>
   </div>
-  <script src="./tracker.js?v=20261126-referral-due-1"></script>
+  <script src="./tracker.js?v=20261126-overview-1"></script>
   <script>
     document.getElementById("add-board").addEventListener("click", addBoard);
     document.getElementById("job-board").addEventListener("click", (event) => {
