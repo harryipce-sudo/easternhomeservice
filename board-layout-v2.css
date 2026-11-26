@@ -1,0 +1,455 @@
+
+/* ==================================================
+   Eastern Home Service
+   Job Board Layout V2
+   Detailed / Compact / Mini
+   ================================================== */
+
+/* 1. Responsive board layout */
+
+#job-board {
+  --lane-width: 220px;
+  --card-padding: 10px;
+  --card-gap: 8px;
+  --board-gap: 12px;
+
+  display: grid;
+  grid-template-columns:
+    repeat(var(--board-count, 5),
+    minmax(var(--lane-width), 1fr));
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--board-gap);
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: stretch;
+  padding: 4px 0 12px;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+  overscroll-behavior-x: contain;
+}
+
+/* 2. Display modes */
+
+#job-board[data-density="detailed"] {
+  --lane-width: 280px;
+  --card-padding: 14px;
+  --card-gap: 12px;
+  --board-gap: 14px;
+}
+
+#job-board[data-density="compact"] {
+  --lane-width: 220px;
+  --card-padding: 10px;
+  --card-gap: 8px;
+  --board-gap: 10px;
+}
+
+#job-board[data-density="mini"] {
+  --lane-width: 170px;
+  --card-padding: 7px;
+  --card-gap: 6px;
+  --board-gap: 8px;
+}
+
+/* 3. Prevent parent container overflow */
+
+#view-jobs,
+#board-layout {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 4. Workflow columns */
+
+#job-board .board-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: auto;
+  max-width: none;
+  height: auto;
+  max-height: max(320px, calc(100dvh - 320px));
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+#job-board .board-head {
+  flex-shrink: 0;
+  padding: 10px 12px;
+}
+
+#job-board .board-head strong {
+  font-size: 13px;
+  font-weight: 650;
+  text-transform: none;
+}
+
+#job-board .lane-add {
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+/* 5. Independent vertical column scrolling */
+
+#job-board .board-dropzone {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: var(--card-gap);
+  padding: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+}
+
+/* 6. Automatic job card height */
+
+#job-board .board-card {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  border: 1px solid #d7e4ee;
+  border-radius: 9px;
+  box-shadow: 0 2px 5px rgba(16, 43, 80, 0.05);
+  box-sizing: border-box;
+}
+
+#job-board .board-card:hover {
+  border-color: #8ebde8;
+  box-shadow: 0 3px 8px rgba(16, 43, 80, 0.09);
+}
+
+#job-board .board-card-content {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  padding: var(--card-padding);
+  gap: 6px;
+}
+
+/* 7. Property address and card heading */
+
+#job-board .board-card-title {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 5px;
+  background: transparent;
+  color: #142e4e;
+}
+
+#job-board .board-card-title strong {
+  min-width: 0;
+  margin: 0;
+  color: #142e4e;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#job-board .board-card-address {
+  margin: 0;
+  padding: 0;
+  color: #142e4e;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+/* Maximum two address lines in Compact and Mini */
+
+#job-board[data-density="compact"] .board-card-title strong,
+#job-board[data-density="mini"] .board-card-title strong,
+#job-board[data-density="compact"] .board-card-address,
+#job-board[data-density="mini"] .board-card-address {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 8. Job descriptions */
+
+#job-board .board-card-detail {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  height: auto;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+#job-board[data-density="compact"] .board-card-detail {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}
+
+/* 9. Dates and quotation amounts */
+
+#job-board .board-card-footer,
+#job-board .board-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 5px 0 0;
+  min-height: 0;
+}
+
+#job-board .board-card-footer strong,
+#job-board .board-card-bottom strong {
+  color: #142e4e;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#job-board .board-card-date {
+  margin: 0;
+  padding: 3px 5px;
+  font-size: 11px;
+  line-height: 1.2;
+  border-radius: 4px;
+}
+
+/* 10. Compact and Mini information visibility */
+
+#job-board[data-density="compact"] .board-card-meta,
+#job-board[data-density="mini"] .board-card-meta,
+#job-board[data-density="mini"] .board-card-detail {
+  display: none;
+}
+
+#job-board[data-density="mini"] .board-card-title strong {
+  font-size: 12px;
+}
+
+#job-board[data-density="mini"] .board-card-content {
+  gap: 4px;
+}
+
+/* Hide "No date" in Mini mode.
+   Preserve actual due dates and warning indicators. */
+
+#job-board[data-density="mini"] .board-card-date.muted {
+  display: none;
+}
+
+/* 11. Compact address action icons */
+
+#job-board .address-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+#job-board .address-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid #d3e1ec;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #35658a;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* The existing address controls include labels; keep the compact controls
+   alongside the amount while preserving accessible names and full addresses. */
+#job-board .board-card-footer .address-actions { width: auto; margin-left: auto; }
+#job-board .board-card-footer .address-action-label { display: none; }
+#job-board .board-card-footer .address-actions.labelled .address-action { flex: 0 0 28px; }
+#job-board[data-density="mini"] .board-card-footer .address-actions.labelled .address-action { flex-basis: 26px; }
+#job-board .board-card-labels:empty { display: none; }
+#job-board[data-density="compact"] .markup-badge,
+#job-board[data-density="mini"] .markup-badge { display: none; }
+#job-board[data-density="compact"] .board-card-labels:has(.markup-badge:only-child),
+#job-board[data-density="mini"] .board-card-labels:has(.markup-badge:only-child) { display: none; }
+
+#job-board .address-action:hover {
+  background: #edf7ff;
+  border-color: #87b7e0;
+  color: #0878dc;
+}
+
+#job-board[data-density="mini"] .address-action {
+  width: 26px;
+  height: 26px;
+}
+
+/* 12. Display mode selector */
+
+.board-density-control {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #d7e4ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.board-density-control button {
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #64748b;
+  padding: 7px 11px;
+  font: 600 12px Inter, Arial, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.board-density-control button:hover {
+  background: #f1f6fa;
+}
+
+.board-density-control button.active,
+.board-density-control button[aria-pressed="true"] {
+  background: #e3f1ff;
+  color: #0878dc;
+}
+
+/* 13. Horizontal scrollbar */
+
+#job-board {
+  scrollbar-width: auto;
+  scrollbar-color: #a6b9cc #eaf0f5;
+}
+
+#job-board::-webkit-scrollbar {
+  height: 12px;
+}
+
+#job-board::-webkit-scrollbar-track {
+  background: #eaf0f5;
+  border-radius: 8px;
+}
+
+#job-board::-webkit-scrollbar-thumb {
+  background: #a6b9cc;
+  border-radius: 8px;
+  border: 2px solid #eaf0f5;
+}
+
+#job-board::-webkit-scrollbar-thumb:hover {
+  background: #809bb5;
+}
+
+/* 14. Column vertical scrollbar */
+
+#job-board .board-dropzone {
+  scrollbar-width: thin;
+  scrollbar-color: #b7c8d8 transparent;
+}
+
+#job-board .board-dropzone::-webkit-scrollbar {
+  width: 6px;
+}
+
+#job-board .board-dropzone::-webkit-scrollbar-thumb {
+  background: #b7c8d8;
+  border-radius: 5px;
+}
+
+/* 15. Reduce unnecessary toolbar spacing */
+
+#view-jobs .toolbar {
+  margin-bottom: 10px;
+  gap: 8px;
+  min-width: 0;
+}
+
+@media (min-width: 1101px) {
+  #view-jobs .toolbar { grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(120px, 170px)) auto auto; }
+}
+
+#view-jobs .summary-line {
+  margin-bottom: 10px;
+}
+
+#job-board .board-card-labels {
+  min-height: 0;
+  margin-top: 3px;
+  gap: 4px;
+}
+
+/* 16. Responsive layout */
+
+@media (max-width: 768px) {
+
+  #job-board {
+    scroll-snap-type: none;
+  }
+
+  #job-board[data-density="detailed"] {
+    --lane-width: 260px;
+  }
+
+  #job-board[data-density="compact"] {
+    --lane-width: 210px;
+  }
+
+  #job-board[data-density="mini"] {
+    --lane-width: 165px;
+  }
+
+  #view-jobs .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  #job-board .address-action {
+    width: 34px;
+    height: 34px;
+  }
+
+  #job-board[data-density="mini"] .address-action {
+    width: 30px;
+    height: 30px;
+  }
+  #job-board .board-card-footer .address-actions.labelled .address-action { flex-basis: 34px; }
+  #job-board[data-density="mini"] .board-card-footer .address-actions.labelled .address-action { flex-basis: 30px; }
+}
+
+/* 17. Reduced motion accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  #job-board {
+    scroll-behavior: auto;
+  }
+
+  #job-board .board-card {
+    transition: none;
+  }
+}
+
+/* End of Eastern Home Service Board Layout V2 */
