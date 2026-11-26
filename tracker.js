@@ -19,8 +19,24 @@ function addressControls(address, compact = false, labelled = false) {
   const directionLabel = labelled ? `<span class="address-action-label">Directions</span>` : "";
   return `<span class="address-actions${compact ? " compact" : ""}${labelled ? " labelled" : ""}" data-address-actions><button class="address-action" type="button" draggable="false" data-copy-address="${encoded}"${disabled} aria-label="Copy address" title="Copy address"><i class="fa-regular fa-copy" aria-hidden="true"></i>${labels}</button><button class="address-action" type="button" draggable="false" data-open-address-map="${encoded}"${disabled} aria-label="Get directions in Google Maps" title="Get directions"><i class="fa-solid fa-diamond-turn-right" aria-hidden="true"></i>${directionLabel}</button></span>`;
 }
-function showAddressCopied() { let toast = $("#address-copy-toast"); if (!toast) { toast = document.createElement("div"); toast.id = "address-copy-toast"; toast.className = "address-copy-toast"; toast.setAttribute("role", "status"); toast.setAttribute("aria-live", "polite"); document.body.append(toast); } toast.textContent = "Address copied"; toast.classList.add("show"); window.clearTimeout(showAddressCopied.timeout); showAddressCopied.timeout = window.setTimeout(() => toast.classList.remove("show"), 1800); }
-async function copyAddress(value) { const address = usableAddress(value); if (!address) return; try { await navigator.clipboard.writeText(address); } catch (_) { const input = document.createElement("textarea"); input.value = address; input.setAttribute("readonly", ""); input.style.cssText = "position:fixed;opacity:0"; document.body.append(input); input.select(); document.execCommand("copy"); input.remove(); } showAddressCopied(); }
+function showAddressCopyMessage(message, failed = false) { let toast = $("#address-copy-toast"); if (!toast) { toast = document.createElement("div"); toast.id = "address-copy-toast"; toast.className = "address-copy-toast"; toast.setAttribute("role", "status"); toast.setAttribute("aria-live", "polite"); document.body.append(toast); } toast.textContent = message; toast.classList.toggle("copy-error", failed); toast.classList.add("show"); window.clearTimeout(showAddressCopyMessage.timeout); showAddressCopyMessage.timeout = window.setTimeout(() => toast.classList.remove("show"), 2500); }
+async function copyAddress(value) {
+  const address = usableAddress(value);
+  if (!address) return;
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+    await navigator.clipboard.writeText(address);
+  } catch (_) {
+    const input = document.createElement("textarea");
+    input.value = address; input.setAttribute("readonly", ""); input.style.cssText = "position:fixed;opacity:0";
+    document.body.append(input); input.select();
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch (_) { /* Report failure below. */ }
+    input.remove();
+    if (!copied) { showAddressCopyMessage("Could not copy address. Please copy it manually.", true); return; }
+  }
+  showAddressCopyMessage("Address copied");
+}
 function openAddressMap(value) { const address = usableAddress(value); if (address) window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, "_blank", "noopener"); }
 function addressValueForControl(control) { const inputId = control.dataset.copyAddressInput || control.dataset.openAddressMapInput; return inputId ? $("#" + CSS.escape(inputId))?.value : (control.dataset.copyAddress || control.dataset.openAddressMap || ""); }
 document.addEventListener("click", (event) => {

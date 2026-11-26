@@ -113,6 +113,7 @@ body { background: var(--refresh-canvas); color: var(--refresh-ink); }
 .address-actions.labelled .address-action { display: inline-flex; flex: 1; justify-content: center; gap: 6px; min-width: 0; height: 32px; padding: 0 8px; border-radius: 7px; font-size: 12px; font-weight: 700; color: #315a79; }
 .address-actions.labelled .address-action:hover, .address-actions.labelled .address-action:focus-visible { color: #075f9f; }
 .address-action-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.address-copy-toast.copy-error { background: #9d2b25; color: #fff; }
 .board-card-payment { border-radius: 6px; }
 
 .board-group-card { border-color: #a9d8bb; border-width: 1px; border-radius: 11px; box-shadow: var(--refresh-shadow); }
