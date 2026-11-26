@@ -2249,9 +2249,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#job-checklist-add")?.addEventListener("click", () => { const input = $("#job-checklist-new"); const label = input.value.trim(); if (!label) return input.focus(); state.drawerChecklist.push({ id:crypto.randomUUID(), label, done:false }); input.value = ""; renderDrawerChecklist(); });
   $("#view-today")?.addEventListener("click", (event) => {
     const route = event.target.closest("[data-overview-route]")?.dataset.overviewRoute;
-    if (route?.startsWith("invoice:")) { state.invoiceFilter = route.slice(8); state.invoiceFY = ""; state.invoiceQuarter = ""; state.invoiceSearch = ""; return setView("invoices"); }
+    if (route?.startsWith("invoice:")) { state.invoiceFilter = route.slice(8); state.invoiceFY = ""; state.invoiceQuarter = ""; state.invoiceSearch = ""; $("#invoice-search").value = ""; $("#invoice-age").value = ""; return setView("invoices"); }
     if (route?.startsWith("job:")) return openDrawer(state.records.find(record => record.id === route.slice(4)));
-    if (route === "new-job" || route === "create-invoice") return openDrawer();
+    if (route === "create-invoice") { state.search = ""; $("#search").value = ""; state.jobStatusFilter = "completed"; $("#job-status-filter").value = "completed"; state.jobPaymentFilter = ""; $("#job-payment-filter").value = ""; setView("jobs"); return renderActiveView(); }
+    if (route === "new-job") return openDrawer();
     if (route === "expense") return openExpenseModal();
     if (route === "calendar" || route === "payments") return setView(route);
     const newJob = event.target.closest("[data-today-action='new-job']");
