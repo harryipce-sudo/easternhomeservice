@@ -163,7 +163,7 @@ function renderCard(record, { hideDate = false } = {}) {
   const initials = client.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "EH";
   const date = job.scheduledDate && !hideDate ? `<span class="board-card-date">Due ${escapeHtml(cardDate(job.scheduledDate))}</span>` : "";
   const payment = job.payment === "paid" ? `<span class="board-card-payment paid">Paid</span>` : job.payment === "partially-paid" ? `<span class="board-card-payment partial">Part paid</span>` : "";
-  return `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-content"><div class="board-card-title"><span class="board-drag-grip" aria-hidden="true">⠿</span><strong>${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</strong><button class="board-card-edit" type="button" aria-label="Open job">•••</button></div><div class="board-card-meta"><span class="board-card-avatar">${escapeHtml(initials)}</span><span>${escapeHtml(client || "Client not added")}</span></div><div class="board-card-footer">${date || `<span class="board-card-date muted">No date</span>`}<strong>${currency(job.quote)}</strong></div><div class="board-card-labels">${payment}${markupTag(job)}</div><div class="board-card-actions">${addressControls(record.address, false, true)}</div></div></article>`;
+  return `<article class="board-card" draggable="true" data-job-id="${escapeHtml(record.id)}"><div class="board-card-content"><div class="board-card-title"><span class="board-drag-grip" aria-hidden="true">⠿</span><strong title="${escapeHtml(record.address || "")}">${escapeHtml(record.address && record.address !== "-" ? record.address : "Address not added")}</strong><button class="board-card-edit" type="button" aria-label="Open job">•••</button></div><div class="board-card-meta"><span class="board-card-avatar">${escapeHtml(initials)}</span><span>${escapeHtml(client || "Client not added")}</span></div>${job.detail ? `<p class="board-card-description" title="${escapeHtml(job.detail)}">${escapeHtml(job.detail)}</p>` : ""}<div class="board-card-footer">${date || `<span class="board-card-date muted">No date</span>`}<strong>${currency(job.quote)}</strong></div><div class="board-card-labels">${payment}${markupTag(job)}</div><div class="board-card-actions">${addressControls(record.address, false, true)}</div></div></article>`;
 }
 function renderGroupedCards(jobs, stage) {
   const groups = new Map();
@@ -1021,7 +1021,50 @@ function ensureJobInvoiceDropzone() {
   zone.addEventListener("drop", (event) => importForJob(event.dataTransfer.files[0]));
 }
 function openDrawer(record = null, defaultStage = "quoted") { ensureJobInvoiceDropzone(); $("#job-invoice-dropzone").hidden = !record; state.selected = record; state.drawerImportedInvoice = null; const j = record?.job || {}; const selectedClient = record?.customerName && record.customerName !== "-" ? record.customerName : ""; const recipients = clientEmailRecipients(selectedClient); state.drawerStage = j.status || defaultStage; $("#drawer-title").textContent = record ? j.number || "Edit job" : "New job"; $("#record-id").value = record?.id || ""; $("#job-number").value = j.number || `J-${String(Date.now()).slice(-5)}`; populateJobClientOptions(selectedClient); populateJobEmailOptions(selectedClient); $("#job-address").value = record?.address && record.address !== "-" ? record.address : ""; document.querySelectorAll("[data-copy-address-input='job-address'], [data-open-address-map-input='job-address']").forEach((button) => { button.disabled = !usableAddress($("#job-address").value); }); $("#job-detail").value = j.detail || ""; $("#job-phone").value = record?.phone && record.phone !== "-" ? record.phone : ""; $("#job-email").value = j.email || recipients.to[0] || record?.email || ""; $("#job-email-cc").value = j.emailCc || recipients.cc.join(", "); $("#job-email-bcc").value = j.emailBcc || recipients.bcc.join(", "); $("#job-quote").value = j.quote ? (Number(j.quote) / 1.1).toFixed(2) : ""; $("#job-payment").value = ["unpaid", "deposit-paid", "partially-paid", "paid"].includes(j.payment) ? j.payment : "unpaid"; $("#job-payment-amount").value = Number(j.paymentAmount ?? (j.payment === "paid" ? j.quote : 0)).toFixed(2); $("#job-payment-date").value = j.paymentDate || ""; updateTaxAmounts(); $("#job-markup").value = j.markup ?? 50; updateMarkupAmount(); $("#job-referral").value = j.referral || "pending"; $("#job-invoice").value = j.invoiceNumber || ""; $("#job-invoice-date").value = j.invoiceDate || ""; $("#job-scheduled-date").value = j.scheduledDate || ""; renderDrawerWorkflow(record); const message = $("#job-invoice-dropzone p"); if (message) { message.textContent = ""; message.className = ""; } document.body.classList.add("drawer-open"); $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); }
-function closeDrawer() { state.drawerImportedInvoice = null; document.body.classList.remove("drawer-open"); $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
+function closeDrawer() { state.drawerImportedInvoice = null; document.body.classList.remove("drawer-open", "drawer-collapsed"); $("#drawer").classList.remove("open", "collapsed"); $("#drawer").setAttribute("aria-hidden", "true"); $("#drawer-collapse").setAttribute("aria-expanded", "true"); $("#drawer-collapse").setAttribute("aria-label", "Collapse job editor"); $("#drawer-collapse").textContent = "›"; }
+
+// Board layout preferences are local to this browser and never change job records.
+document.addEventListener("DOMContentLoaded", () => {
+  const board = $("#job-board"), drawer = $("#drawer"), handle = $("#drawer-resize"), collapse = $("#drawer-collapse");
+  const read = (key) => { try { return localStorage.getItem(key); } catch (_) { return null; } };
+  const save = (key, value) => { try { localStorage.setItem(key, String(value)); } catch (_) {} };
+  const setDensity = (value) => {
+    const mode = ["detailed", "compact", "mini"].includes(value) ? value : "compact";
+    board.dataset.density = mode;
+    document.querySelectorAll("[data-board-density]").forEach((button) => { const active = button.dataset.boardDensity === mode; button.classList.toggle("active", active); button.setAttribute("aria-pressed", String(active)); });
+    save("tracker-board-density", mode);
+  };
+  document.querySelectorAll("[data-board-density]").forEach((button) => button.addEventListener("click", () => setDensity(button.dataset.boardDensity)));
+  setDensity(read("tracker-board-density"));
+  const setWidth = (width, persist = false) => {
+    const max = Math.max(320, Math.min(900, window.innerWidth * .7));
+    const clamped = Math.min(max, Math.max(320, Number(width) || window.innerWidth * .35));
+    document.documentElement.style.setProperty("--job-drawer-width", `${clamped}px`);
+    handle.setAttribute("aria-valuenow", String(Math.round(clamped)));
+    if (persist) save("tracker-drawer-width", Math.round(clamped));
+  };
+  setWidth(read("tracker-drawer-width"));
+  window.addEventListener("resize", () => setWidth(read("tracker-drawer-width")));
+  handle.addEventListener("pointerdown", (event) => { if (window.innerWidth <= 700) return; event.preventDefault(); handle.setPointerCapture(event.pointerId); document.body.classList.add("drawer-resizing"); });
+  handle.addEventListener("pointermove", (event) => { if (handle.hasPointerCapture(event.pointerId)) setWidth(window.innerWidth - event.clientX); });
+  handle.addEventListener("pointerup", (event) => { if (!handle.hasPointerCapture(event.pointerId)) return; handle.releasePointerCapture(event.pointerId); document.body.classList.remove("drawer-resizing"); setWidth(window.innerWidth - event.clientX, true); });
+  handle.addEventListener("pointercancel", () => document.body.classList.remove("drawer-resizing"));
+  handle.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return; event.preventDefault(); setWidth(drawer.getBoundingClientRect().width + (event.key === "ArrowLeft" ? 24 : -24), true); });
+  collapse.addEventListener("click", () => { const collapsed = drawer.classList.toggle("collapsed"); document.body.classList.toggle("drawer-collapsed", collapsed); collapse.textContent = collapsed ? "‹" : "›"; collapse.setAttribute("aria-expanded", String(!collapsed)); collapse.setAttribute("aria-label", collapsed ? "Expand job editor" : "Collapse job editor"); });
+  const updateArrows = () => { $("#board-scroll-left").disabled = board.scrollLeft <= 1; $("#board-scroll-right").disabled = board.scrollLeft + board.clientWidth >= board.scrollWidth - 1; };
+  board.addEventListener("scroll", updateArrows, { passive:true });
+  new ResizeObserver(updateArrows).observe(board);
+  $("#board-scroll-left").addEventListener("click", () => board.scrollBy({ left:-board.clientWidth * .75, behavior:"smooth" }));
+  $("#board-scroll-right").addEventListener("click", () => board.scrollBy({ left:board.clientWidth * .75, behavior:"smooth" }));
+  board.addEventListener("wheel", (event) => { if (event.shiftKey && event.deltaY) { event.preventDefault(); board.scrollLeft += event.deltaY; } }, { passive:false });
+  let pan = null;
+  board.addEventListener("pointerdown", (event) => { if (event.pointerType !== "mouse" || event.button !== 0 || event.target.closest(".board-card,.board-group-card,button,.custom-board-title")) return; pan = { x:event.clientX, left:board.scrollLeft, id:event.pointerId }; board.setPointerCapture(event.pointerId); });
+  board.addEventListener("pointermove", (event) => { if (pan && event.pointerId === pan.id) board.scrollLeft = pan.left - (event.clientX - pan.x); });
+  board.addEventListener("pointerup", () => { pan = null; });
+  board.addEventListener("pointercancel", () => { pan = null; });
+  board.addEventListener("dragover", (event) => { if (!state.draggingId && !state.draggingGroupKey) return; const rect = board.getBoundingClientRect(); if (event.clientX < rect.left + 60) board.scrollLeft -= 16; else if (event.clientX > rect.right - 60) board.scrollLeft += 16; });
+  updateArrows();
+});
 function quickChecklist(record) { return record.job.checklist.length ? record.job.checklist : ["Attend site and assess", "Complete maintenance work", "Capture site photos", "Confirm work with client", "Prepare for invoicing"].map((label, index) => ({ id:`default-${index}`, label, done:false })); }
 function renderDrawerWorkflow(record) {
   state.drawerChecklist = record ? quickChecklist(record).map((item) => ({ ...item })) : [];
