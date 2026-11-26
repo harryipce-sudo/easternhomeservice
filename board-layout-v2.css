@@ -19,6 +19,7 @@
     minmax(var(--lane-width), 1fr));
 
   width: 100%;
+  height: var(--board-viewport-height, 55vh);
   min-width: 0;
   max-width: 100%;
   gap: var(--board-gap);
@@ -72,8 +73,8 @@
   min-height: 0;
   width: auto;
   max-width: none;
-  height: auto;
-  max-height: max(320px, calc(100dvh - 320px));
+  height: 100%;
+  max-height: none;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: none;

@@ -1052,6 +1052,24 @@ document.addEventListener("DOMContentLoaded", () => {
   handle.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return; event.preventDefault(); setWidth(drawer.getBoundingClientRect().width + (event.key === "ArrowLeft" ? 24 : -24), true); });
   collapse.addEventListener("click", () => { const collapsed = drawer.classList.toggle("collapsed"); document.body.classList.toggle("drawer-collapsed", collapsed); collapse.textContent = collapsed ? "‹" : "›"; collapse.setAttribute("aria-expanded", String(!collapsed)); collapse.setAttribute("aria-label", collapsed ? "Expand job editor" : "Collapse job editor"); });
   const updateArrows = () => { $("#board-scroll-left").disabled = board.scrollLeft <= 1; $("#board-scroll-right").disabled = board.scrollLeft + board.clientWidth >= board.scrollWidth - 1; };
+  // Measure the board's actual position, including wrapped toolbars and the
+  // editor, so its lane scrollbars remain within the available viewport.
+  let heightFrame = 0;
+  const updateBoardHeight = () => {
+    cancelAnimationFrame(heightFrame);
+    heightFrame = requestAnimationFrame(() => {
+      if (!board.getClientRects().length) return;
+      const nav = document.querySelector(".mobile-nav");
+      const navHeight = nav && getComputedStyle(nav).display !== "none" ? nav.getBoundingClientRect().height : 0;
+      const available = window.innerHeight - board.getBoundingClientRect().top - navHeight - 8;
+      board.style.setProperty("--board-viewport-height", `${Math.max(220, Math.floor(available))}px`);
+    });
+  };
+  window.addEventListener("resize", updateBoardHeight);
+  new ResizeObserver(updateBoardHeight).observe($("#view-jobs .toolbar"));
+  new ResizeObserver(updateBoardHeight).observe($("#board-layout"));
+  document.querySelectorAll("[data-layout], [data-view], [data-board-density]").forEach((button) => button.addEventListener("click", updateBoardHeight));
+  updateBoardHeight();
   board.addEventListener("scroll", updateArrows, { passive:true });
   new ResizeObserver(updateArrows).observe(board);
   new MutationObserver(updateArrows).observe(board, { childList:true, attributes:true, attributeFilter:["data-density"] });
