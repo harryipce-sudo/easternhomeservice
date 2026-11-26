@@ -1054,6 +1054,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const updateArrows = () => { $("#board-scroll-left").disabled = board.scrollLeft <= 1; $("#board-scroll-right").disabled = board.scrollLeft + board.clientWidth >= board.scrollWidth - 1; };
   board.addEventListener("scroll", updateArrows, { passive:true });
   new ResizeObserver(updateArrows).observe(board);
+  new MutationObserver(updateArrows).observe(board, { childList:true, attributes:true, attributeFilter:["data-density"] });
   $("#board-scroll-left").addEventListener("click", () => board.scrollBy({ left:-board.clientWidth * .75, behavior:"smooth" }));
   $("#board-scroll-right").addEventListener("click", () => board.scrollBy({ left:board.clientWidth * .75, behavior:"smooth" }));
   board.addEventListener("wheel", (event) => { if (event.shiftKey && event.deltaY) { event.preventDefault(); board.scrollLeft += event.deltaY; } }, { passive:false });
