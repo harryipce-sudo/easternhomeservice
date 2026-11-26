@@ -179,6 +179,9 @@ body { background: var(--refresh-canvas); color: var(--refresh-ink); }
   .detail-drawer { width:var(--job-drawer-width,35vw) !important; overflow-y:auto; overflow-x:hidden; }
   body.drawer-open .drawer-collapse { display:block; }
   body.drawer-collapsed .drawer-collapse { right:0; }
+  body.drawer-open:not(.drawer-collapsed) #view-jobs .toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  body.drawer-open:not(.drawer-collapsed) #view-jobs .toolbar .search { grid-column:1 / -1; }
+  body.drawer-open:not(.drawer-collapsed) #view-jobs .toolbar #job-payment-filter, body.drawer-open:not(.drawer-collapsed) #view-jobs .toolbar .view-switch { grid-column:auto; }
   body.drawer-open .workspace, body.drawer-open.sidebar-open .workspace { width:calc(100% - var(--job-drawer-width,35vw)); margin-right:var(--job-drawer-width,35vw); }
   body.drawer-open.drawer-collapsed .workspace { width:100%; margin-right:0; }
   .detail-drawer.collapsed { transform:translateX(100%); overflow:visible; }
