@@ -79,3 +79,28 @@ body:has(#view-invoices.active) .topbar p { color:#647b90; }
 #view-invoices .invoice-quick-menu button:hover { background:#edf6ff; }
 #view-invoices .invoice-list-note { margin-top:10px; color:#647b90; font-size:12px; }
 @media(max-width:700px) { #view-invoices .invoice-heading { margin:0 0 12px; } #view-invoices .invoice-metric { padding:10px; } #view-invoices .invoice-toolbar { flex-direction:row; } }
+
+/* Invoice list layout fixes, scoped to this view. */
+.invoice-header-import { display:none; }
+body:has(#view-invoices.active) .invoice-header-import { display:inline-flex; }
+body:has(#view-invoices.active) .top-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; }
+body:has(#view-invoices.active) .topbar { gap:12px; flex-wrap:wrap; }
+#view-invoices .table-frame { margin-top:0; }
+#view-invoices .table-scroll { max-width:100%; overflow:auto; }
+#view-invoices table { min-width:1050px; width:100%; table-layout:fixed; }
+#view-invoices th:first-child { width:150px; }
+#view-invoices th:nth-child(2) { width:28%; }
+#view-invoices th:nth-child(3), #view-invoices th:nth-child(4) { width:110px; }
+#view-invoices th:nth-child(5) { width:130px; }
+#view-invoices th:nth-child(6), #view-invoices th:nth-child(7) { width:105px; }
+#view-invoices th:nth-child(8) { width:76px; }
+#view-invoices th, #view-invoices td { overflow-wrap:break-word; word-break:normal; }
+#view-invoices td:first-child { white-space:normal; overflow-wrap:anywhere; background:#fff; z-index:1; }
+#view-invoices th:first-child { background:#f1f5f9; z-index:4; }
+#view-invoices td:first-child .invoice-sub { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+#view-invoices .invoice-property { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#view-invoices td:nth-child(8) { white-space:normal; }
+#view-invoices .tag.payment-toggle.late { background:#fce8e7; color:#b42318; }
+#view-invoices .tag.payment-toggle.paid { background:#e4f4e9; color:#187340; }
+#view-invoices .tag.payment-toggle.unpaid { background:#fff3d6; color:#a65a00; }
+#view-invoices .tag.payment-toggle.partially-paid, #view-invoices .tag.payment-toggle.deposit-paid { background:#e2f1ff; color:#1769b5; }
