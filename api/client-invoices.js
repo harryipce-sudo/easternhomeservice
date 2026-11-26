@@ -44,6 +44,7 @@ function normaliseInvoice(row) {
     invoiceDate: job.invoiceDate || "",
     dueDate: dueDateForJob(job),
     payment: job.payment || "unpaid",
+    referralStatus: job.referral || "pending",
     paymentDate: job.paymentDate || "",
     detail: job.detail || "",
     amount: Number(job.quote) || Number(row.total_quote) || 0,
@@ -84,12 +85,14 @@ module.exports = async (req, res) => {
     const invoices = clientInvoices.filter((invoice) => invoice.payment !== "paid");
     const paidInvoices = clientInvoices.filter((invoice) => invoice.payment === "paid");
 
-    // Keep the client portal aligned with the Tracker's "Unpaid referral payable"
-    // total. Referral becomes payable only while its related invoice remains unpaid.
     const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-    const totalReferralFee = invoices.reduce((sum, invoice) => sum + invoice.referralFee, 0);
-    const unpaidReferralInvoiceCount = invoices.filter((invoice) => invoice.referralFee > 0).length;
-    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, paidInvoices, totalReferralFee, unpaidReferralInvoiceCount });
+    const pendingReferrals = clientInvoices.filter((invoice) => invoice.referralStatus === "pending" && invoice.referralFee > 0);
+    const paidReferrals = clientInvoices.filter((invoice) => invoice.referralStatus === "paid" && invoice.referralFee > 0);
+    const totalReferralFee = pendingReferrals.reduce((sum, invoice) => sum + invoice.referralFee, 0);
+    const unpaidReferralInvoiceCount = pendingReferrals.length;
+    const paidReferralTotal = paidReferrals.reduce((sum, invoice) => sum + invoice.referralFee, 0);
+    const paidReferralInvoiceCount = paidReferrals.length;
+    return res.status(200).json({ clientName: token.clientName, invoices, totalAmount, paidInvoices, totalReferralFee, unpaidReferralInvoiceCount, paidReferralTotal, paidReferralInvoiceCount });
   } catch {
     return res.status(500).json({ error: "Unable to load invoices." });
   }
