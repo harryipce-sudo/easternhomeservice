@@ -34,7 +34,8 @@
 
 /* Prototype structure: metrics, overview, status tabs, then filters and table. */
 body:has(#view-invoices.active) .topbar p { color:#647b90; }
-#view-invoices .invoice-heading { display:flex; justify-content:flex-end; margin:-55px 0 20px; min-height:40px; }
+#view-invoices .invoice-heading { display:flex; justify-content:flex-end; margin:0 0 16px; min-height:40px; }
+#view-invoices .invoice-filter-note:empty, #view-invoices .invoice-review-list:empty { display:none; }
 #view-invoices .invoice-heading .primary-button { background:#0878dc; border-color:#0878dc; }
 #view-invoices .invoice-summary { margin:0; }
 #view-invoices .invoice-metric { display:flex; flex-direction:column; align-items:stretch; gap:8px; text-align:left; padding:15px; min-height:0; border:1px solid #d7e4ee; }
