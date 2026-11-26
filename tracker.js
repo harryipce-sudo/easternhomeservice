@@ -2132,8 +2132,16 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#invoice-preview-done").addEventListener("click", closeInvoicePreview);
   $("#invoice-preview-print").addEventListener("click", printInvoicePdf);
   $("#job-create-invoice").addEventListener("click", async () => {
-    const record = state.selected;
+    let record = state.selected;
     if (!record) { window.alert("Save the job first, then create its invoice."); return; }
+    const currentRich = EHRich.clean(window.EHJobEditor?.get());
+    const storedRich = EHRich.clean(record.job.detailRich);
+    const baseline = storedRich.length ? storedRich : EHRich.clean(EHRich.fromText(record.job.detail));
+    if (JSON.stringify(currentRich) !== JSON.stringify(baseline) || $("#job-detail").value.trim() !== String(record.job.detail || "").trim()) {
+      if (!$("#job-form").reportValidity()) return;
+      try { const updatedJob = formRecord(); record = normalise(await request("?id=" + encodeURIComponent(record.id), { method:"PATCH", body:JSON.stringify(updatedJob) })); state.records = state.records.map(item => item.id === record.id ? record : item); state.selected = record; }
+      catch (error) { window.alert("Unable to save the job report. The invoice was not created."); console.warn(error); return; }
+    }
     if (record.job.invoice?.status === "draft" || record.job.invoiceNumber) {
       closeDrawer();
       openInvoiceWorkspace(record.id);
