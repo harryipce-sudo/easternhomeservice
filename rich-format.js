@@ -1,6 +1,6 @@
 (function(root,factory){if(typeof module==="object"&&module.exports)module.exports=factory();else root.EHRich=factory();})(typeof globalThis!=="undefined"?globalThis:this,function(){
   const types=new Set(["p","h1","h2","h3","bullet","number"]);
-  function clean(value){if(!Array.isArray(value))return [];return value.slice(0,2000).map(b=>({type:types.has(b?.type)?b.type:"p",runs:Array.isArray(b?.runs)?b.runs.slice(0,1000).map(r=>({text:String(r?.text??"").slice(0,10000),bold:r?.bold===true,italic:r?.italic===true,underline:r?.underline===true})):[]})).filter(b=>b.runs.length);}
+  function clean(value){if(!Array.isArray(value))return [];return value.map(b=>({type:types.has(b?.type)?b.type:"p",runs:Array.isArray(b?.runs)?b.runs.map(r=>({text:String(r?.text??""),bold:r?.bold===true,italic:r?.italic===true,underline:r?.underline===true})):[]})).filter(b=>b.runs.length);}
   const text=blocks=>clean(blocks).map(b=>b.runs.map(r=>r.text).join("")).join("\n");
   const fromText=value=>String(value||"").replace(/\r\n?/g,"\n").split("\n").map(text=>({type:"p",runs:[{text}]}));
   const escape=value=>String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

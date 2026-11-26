@@ -973,7 +973,7 @@ function ensureJobInvoiceDropzone() {
   zone.setAttribute("role", "button");
   zone.setAttribute("aria-label", "Choose an Odoo invoice PDF to match this job");
   zone.innerHTML = `<input type="file" accept="application/pdf,.pdf" hidden><div><strong>Drop Odoo invoice PDF here to match this job</strong><small>The job will be moved to Invoiced only after you save.</small><p aria-live="polite"></p></div>`;
-  $("#job-detail").closest("label").insertAdjacentElement("afterend", zone);
+  $("#job-detail").closest(".job-detail-field, label").insertAdjacentElement("afterend", zone);
   const fileInput = zone.querySelector("input");
   const message = zone.querySelector("p");
   const setMessage = (text, type = "") => { message.textContent = text; message.className = type; };
