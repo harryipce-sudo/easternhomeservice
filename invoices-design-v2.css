@@ -30,4 +30,4 @@
 #view-invoices tbody tr:hover td { background: #f6faff; }
 #view-invoices .invoice-row-link { color: #0878dc; font-weight: 700; }
 @media (max-width: 1200px) { #view-invoices .invoice-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 700px) { #view-invoices .invoice-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } #view-invoices .invoice-toolbar label:not(.invoice-search) { width: auto; flex: 1 1 140px; } #view-invoices .table-scroll { max-height: 65vh; } }
+@media (max-width: 700px) { #view-invoices .invoice-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } #view-invoices .invoice-toolbar { flex-direction: row; align-items: end; } #view-invoices .invoice-toolbar label.invoice-search { flex: 1 0 100%; } #view-invoices .invoice-toolbar label:not(.invoice-search) { width: auto; flex: 1 1 140px; } #view-invoices .invoice-toolbar .invoice-import-button { width: 100%; margin-left: 0; } #view-invoices .table-scroll { max-height: 65vh; } }
