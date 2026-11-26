@@ -82,6 +82,7 @@ body:has(#view-invoices.active) .topbar p { color:#647b90; }
 
 /* Invoice list layout fixes, scoped to this view. */
 .invoice-header-import { display:none; }
+body:has(#view-invoices.active) { overflow-x:clip; }
 body:has(#view-invoices.active) .invoice-header-import { display:inline-flex; }
 body:has(#view-invoices.active) .top-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; }
 body:has(#view-invoices.active) .topbar { gap:12px; flex-wrap:wrap; }
