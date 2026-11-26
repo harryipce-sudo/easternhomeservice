@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
+const rich = require("../rich-format");
 
 const NAVY = "#073f78";
 const INK = "#16263b";
@@ -20,6 +21,7 @@ function normalLines(job, invoice) {
     if (!description) return lines;
     lines.push({
       description,
+      detailRich:rich.clean(line?.detailRich),
       quantity:Math.max(0, Number(line?.quantity) || 0),
       unitPrice:Math.max(0, Number(line?.unitPrice) || 0)
     });
@@ -37,10 +39,10 @@ function drawHeader(doc, invoiceNumber) {
   else doc.fillColor(NAVY).font("Helvetica-Bold").fontSize(16).text("EASTERN", width - margin - 100, 52, { width:100, align:"right" });
   doc.fillColor(NAVY).font("Helvetica").fontSize(25).text(`Tax Invoice ${invoiceNumber}`, margin, 166, { width:width - margin * 2, align:"center" });
 }
-function drawFooter(doc) {
+function drawFooter(doc, page = 1, pages = 1) {
   const { margin, width, height } = PAGE;
   doc.fillColor(INK).font("Helvetica-Bold").fontSize(8).text("Your Home Maintenance and Service Solution", margin, height - 45, { width:width - margin * 2, align:"right" });
-  doc.fillColor(MUTED).font("Helvetica").fontSize(7).text("Page 1 / 1", margin, height - 32, { width:width - margin * 2, align:"right" });
+  doc.fillColor(MUTED).font("Helvetica").fontSize(7).text(`Page ${page} / ${pages}`, margin, height - 32, { width:width - margin * 2, align:"right" });
 }
 
 function createInvoicePdf(job = {}) {
@@ -53,7 +55,7 @@ function createInvoicePdf(job = {}) {
     const subtotal = Number(invoice.subtotal ?? lines.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0)) || 0;
     const gst = Number(invoice.gst ?? subtotal * 0.1) || 0;
     const total = Number(invoice.total ?? subtotal + gst) || 0;
-    const doc = new PDFDocument({ size:"A4", margin:0, info:{ Title:`Tax Invoice ${invoiceNumber}`, Author:"Eastern Home Service" } });
+    const doc = new PDFDocument({ size:"A4", margin:0, bufferPages:true, info:{ Title:`Tax Invoice ${invoiceNumber}`, Author:"Eastern Home Service" } });
     const chunks = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("error", reject);
@@ -75,14 +77,76 @@ function createInvoicePdf(job = {}) {
     doc.text("Description", margin + 5, y + 11, { width:columns.quantity - margin - 10 });
     doc.text("Quantity", columns.quantity, y + 11, { width:50, align:"right" }); doc.text("Unit Price", columns.price, y + 11, { width:58, align:"right" }); doc.text("Taxes", columns.tax, y + 11, { width:44, align:"right" }); doc.text("Amount", columns.amount, y + 11, { width:38, align:"right" });
     y += 30;
+    const descriptionWidth = columns.quantity - margin - 14;
+    const continuationPage = () => {
+      doc.addPage(); drawHeader(doc, invoiceNumber);
+      y = 215;
+      doc.fillColor(SAGE).rect(margin, y, tableWidth, 30).fill();
+      doc.fillColor(INK).font("Helvetica").fontSize(8).text("Description (continued)", margin + 5, y + 11);
+      y += 30;
+    };
+    const wrapDescription = (text) => {
+      const output = [];
+      doc.font("Helvetica-Bold").fontSize(9);
+      String(text).replace(/\r\n?/g, "\n").split("\n").forEach((paragraph) => {
+        if (!paragraph.trim()) { output.push(""); return; }
+        let current = "";
+        paragraph.split(/\s+/).forEach((word) => {
+          while (doc.widthOfString(word) > descriptionWidth) {
+            if (current) { output.push(current); current = ""; }
+            let cut = 1; while (cut < word.length && doc.widthOfString(word.slice(0, cut + 1)) <= descriptionWidth) cut++;
+            output.push(word.slice(0,cut)); word = word.slice(cut);
+          }
+          const candidate = current ? current + " " + word : word;
+          if (current && doc.widthOfString(candidate) > descriptionWidth) { output.push(current); current = word; } else current = candidate;
+        });
+        output.push(current);
+      });
+      return output;
+    };
+    const richFont = (run, heading) => (run.bold || heading) ? (run.italic ? "Helvetica-BoldOblique" : "Helvetica-Bold") : (run.italic ? "Helvetica-Oblique" : "Helvetica");
+    const wrapRich = (blocks) => {
+      const output = []; let number = 0;
+      for (const block of rich.clean(blocks)) {
+        if (block.type !== "number") number = 0; else number++;
+        const prefix = block.type === "bullet" ? "• " : block.type === "number" ? `${number}. ` : "";
+        const runs = prefix ? [{text:prefix},...block.runs] : block.runs;
+        let current = [], used = 0; const heading = /^h[123]$/.test(block.type);
+        const flush = () => { output.push(current); current=[]; used=0; };
+        for (const run of runs) {
+          const font = richFont(run, heading); doc.font(font).fontSize(9);
+          const parts = String(run.text).split(/(\n|\s+)/);
+          for (let part of parts) {
+            if (!part) continue; if (part === "\n") { flush(); continue; }
+            if (!current.length && /^\s+$/.test(part)) continue;
+            while (doc.widthOfString(part) > descriptionWidth) {
+              if (current.length) flush(); let cut=1;
+              while (cut < part.length && doc.widthOfString(part.slice(0,cut+1)) <= descriptionWidth) cut++;
+              const chunk=part.slice(0,cut); current.push({text:chunk,font,underline:run.underline}); flush(); part=part.slice(cut);
+            }
+            const width=doc.widthOfString(part); if (current.length && used+width>descriptionWidth) flush();
+            if (!current.length && /^\s+$/.test(part)) continue;
+            current.push({text:part,font,underline:run.underline}); used+=width;
+          }
+        }
+        flush();
+      }
+      return output;
+    };
     lines.forEach((item) => {
-      const rowHeight = lineHeight(doc, item, columns.quantity - margin - 14);
-      if (y + rowHeight > 520) return;
+      const richBlocks = rich.clean(item.detailRich);
+      const useRich = richBlocks.length && rich.text(richBlocks) === item.description;
+      const wrapped = useRich ? wrapRich(richBlocks) : wrapDescription(item.description);
       const hasPrice = Number(item.quantity) > 0 && Number(item.unitPrice) > 0;
-      doc.fillColor(INK).font("Helvetica-Bold").fontSize(9).text(String(item.description), margin + 5, y + 10, { width:columns.quantity - margin - 14, lineGap:2 });
-      if (hasPrice) { doc.font("Helvetica").fontSize(10); doc.text(Number(item.quantity).toFixed(Number(item.quantity) % 1 ? 2 : 0), columns.quantity, y + 11, { width:50, align:"right" }); doc.text(money(item.unitPrice), columns.price, y + 11, { width:58, align:"right" }); doc.text("10% GST", columns.tax, y + 11, { width:44, align:"right" }); doc.text(money(Number(item.quantity) * Number(item.unitPrice)), columns.amount, y + 11, { width:38, align:"right" }); }
-      y += rowHeight; doc.strokeColor(RULE).lineWidth(0.6).moveTo(margin, y).lineTo(width - margin, y).stroke();
+      if (y + 30 > 760) continuationPage();
+      if (hasPrice) { doc.fillColor(INK).font("Helvetica").fontSize(10); doc.text(Number(item.quantity).toFixed(Number(item.quantity) % 1 ? 2 : 0), columns.quantity, y + 11, { width:50, align:"right" }); doc.text(money(item.unitPrice), columns.price, y + 11, { width:58, align:"right" }); doc.text("10% GST", columns.tax, y + 11, { width:44, align:"right" }); doc.text(money(Number(item.quantity) * Number(item.unitPrice)), columns.amount, y + 11, { width:38, align:"right" }); }
+      y += 10;
+      wrapped.forEach((text) => { if (y + 14 > 760) continuationPage(); doc.fillColor(INK).fontSize(9); if (useRich) { let x=margin+5; for(const run of text) { doc.font(run.font); if(run.text)doc.text(run.text,x,y,{lineBreak:false,underline:Boolean(run.underline)}); x+=doc.widthOfString(run.text); } } else { doc.font("Helvetica-Bold"); if (text) doc.text(text, margin + 5, y, { width:descriptionWidth, lineBreak:false }); } y += 14; });
+      y += 6; doc.strokeColor(RULE).lineWidth(0.6).moveTo(margin,y).lineTo(width-margin,y).stroke();
     });
+    // The payment and bank details need the lower half of a page. Continue on
+    // a fresh page rather than dropping or overlapping a long description.
+    if (y > 430) continuationPage();
     const termsY = Math.min(y + 18, 545);
     doc.fillColor(INK).font("Helvetica").fontSize(9).text(`Payment terms: ${Number(invoice.termsDays) || 0} Days`, margin, termsY);
     const totalY = Math.max(termsY + 72, 505);
@@ -94,7 +158,9 @@ function createInvoicePdf(job = {}) {
     doc.text("Note:", margin, 616); doc.fillColor(MUTED).font("Helvetica").fontSize(8).text(String(invoice.note || "Price includes labour and material costs. Not including rubbish disposal unless mentioned."), margin, 630, { width:360, lineGap:2 });
     doc.fillColor(INK).font("Helvetica-Bold").fontSize(8).text("Bank Detail", margin, 677);
     doc.fillColor(MUTED).font("Helvetica").fontSize(8).text("SWIFT: CTBAAU2S\nBank Name: Commonwealth Bank\nAccount Name: Eastern Group VIC\nBSB: 063 109\nAccount Number: 13349243 (AUD ONLY)\nBank Address: 28 Main Street, Box Hill, VIC 3128\n\"Please mark 'AUD only' on bank instruction.\"", margin, 691, { lineGap:3 });
-    drawFooter(doc); doc.end();
+    const pageRange = doc.bufferedPageRange();
+    for (let page = 0; page < pageRange.count; page++) { doc.switchToPage(page); drawFooter(doc, page + 1, pageRange.count); }
+    doc.end();
   });
 }
 

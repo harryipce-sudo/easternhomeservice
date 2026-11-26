@@ -189,7 +189,7 @@ async function loadPdf(config, source, invoiceNumber) {
 }
 
 async function generatedPdf(record, invoiceNumber) {
-  const bytes = await createEmailInvoicePdf(record?.payload?.job || {});
+  const bytes = await require("./_generated-invoice-pdf").createInvoicePdf(record?.payload?.job || {});
   if (!bytes.length || bytes.length > MAX_ATTACHMENT_BYTES) {
     throw Object.assign(new Error("The generated invoice PDF is too large to attach by email."), { statusCode:413 });
   }

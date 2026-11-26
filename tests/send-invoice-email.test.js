@@ -63,7 +63,7 @@ test("sends a private invoice PDF with multiple CC recipients and records the re
     assert.deepEqual(payload.bcc, ["owner@example.com"]);
     assert.equal(payload.attachments[0].filename, "INV-25228.pdf");
     assert.match(payload.text, /amount due/i);
-    const saved = calls.find((call) => call.url.includes("quote_records?id=eq.record-1"));
+    const saved = calls.find((call) => call.url.includes("quote_records?id=eq.record-1") && call.options.method === "PATCH");
     const activity = JSON.parse(saved.options.body).payload.job.invoice.activity.at(-1);
     assert.match(activity.message, /CC: manager@example\.com, team@example\.com/i);
     assert.match(activity.message, /BCC: owner@example\.com/i);
