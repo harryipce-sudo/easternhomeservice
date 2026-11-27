@@ -1149,7 +1149,26 @@ function formRecord() {
   if (note) { comments.push({ at:new Date().toISOString(), author:"Eastern Home Service", text:note }); activity.push({ at:new Date().toISOString(), type:"note", message:`Note added: ${note}` }); }
   return { ...base, customerName:client, phone, address, quoteNumber:$("#job-number").value.trim(), totalQuote:currency(quote), subtotalExGst:currency(subtotal), gstTotal:currency(gst), jobStage:status, job:{ number:$("#job-number").value.trim(), detail, detailRich:window.EHJobEditor?.get() || [], quote, markup, markupStatus:markup > 0 ? "included" : "not-recorded", status, payment:$("#job-payment").value, paymentAmount, paymentDate:$("#job-payment-date").value, payments:state.selected?.job?.payments || [], referral:$("#job-referral").value, invoiceNumber, invoiceDate:$("#job-invoice-date").value, scheduledDate:$("#job-scheduled-date").value, email, emailCc, emailBcc, invoice, checklist, comments, activity, archived:state.selected?.job?.archived === true, groupKey:state.selected?.job?.groupKey || "", boardOrder:status === "invoiced" && imported ? -Date.now() : state.selected?.job?.boardOrder ?? undefined } };
 }
-async function saveJob(event) { event.preventDefault(); const record = formRecord(); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; const recipients = [record.job.email, ...String(record.job.emailCc || "").split(/[;,\n]+/), ...String(record.job.emailBcc || "").split(/[;,\n]+/)].filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()) && String(email).trim().toLowerCase() !== INTERNAL_EMAIL_COPY); closeDrawer(); renderActiveView(); if (record.customerName !== "-" && recipients.length) void saveClientEmails(record.customerName, recipients).catch((error) => console.warn("Job saved, but client contacts could not be updated.", error)); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
+function syncLinkedDraftDescription(record, previous) {
+  const invoice = record?.job?.invoice;
+  if (!previous || invoice?.status !== "draft") return record;
+  const before = String(previous.job?.detail || "").trim();
+  const after = String(record.job.detail || "").trim();
+  if (!before) return record;
+  const lines = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
+  const matches = lines.map((line, index) => String(line?.description || "").trim() === before ? index : -1).filter(index => index >= 0);
+  if (lines.length && matches.length !== 1) return record;
+  if (!lines.length && String(invoice.description || "").trim() !== before) return record;
+  const updated = { ...invoice };
+  if (lines.length) {
+    updated.lineItems = lines.map((line, index) => index === matches[0] ? { ...line, description:after, detailRich:EHRich.clean(record.job.detailRich) } : line);
+    if (lines.length === 1 && String(invoice.description || "").trim() === before) updated.description = after;
+  } else {
+    updated.description = after;
+  }
+  return { ...record, job:{ ...record.job, invoice:updated } };
+}
+async function saveJob(event) { event.preventDefault(); const record = syncLinkedDraftDescription(formRecord(), state.selected); try { const saved = normalise(await request(state.selected ? `?id=${encodeURIComponent(record.id)}` : "", { method: state.selected ? "PATCH" : "POST", body: JSON.stringify(record) })); state.records = state.selected ? state.records.map((item) => item.id === saved.id ? saved : item) : [saved, ...state.records]; const recipients = [record.job.email, ...String(record.job.emailCc || "").split(/[;,\n]+/), ...String(record.job.emailBcc || "").split(/[;,\n]+/)].filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()) && String(email).trim().toLowerCase() !== INTERNAL_EMAIL_COPY); closeDrawer(); renderActiveView(); if (record.customerName !== "-" && recipients.length) void saveClientEmails(record.customerName, recipients).catch((error) => console.warn("Job saved, but client contacts could not be updated.", error)); } catch (error) { window.alert("Unable to save this job to the shared tracker. Check the cloud connection and try again."); console.warn(error); } }
 function renderQuotes() {
   const records = activeRecords();
   const quotesBody = $("#quotes-body");
@@ -2139,7 +2158,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const baseline = storedRich.length ? storedRich : EHRich.clean(EHRich.fromText(record.job.detail));
     if (JSON.stringify(currentRich) !== JSON.stringify(baseline) || $("#job-detail").value.trim() !== String(record.job.detail || "").trim()) {
       if (!$("#job-form").reportValidity()) return;
-      try { const updatedJob = formRecord(); record = normalise(await request("?id=" + encodeURIComponent(record.id), { method:"PATCH", body:JSON.stringify(updatedJob) })); state.records = state.records.map(item => item.id === record.id ? record : item); state.selected = record; }
+      try { const updatedJob = syncLinkedDraftDescription(formRecord(), record); record = normalise(await request("?id=" + encodeURIComponent(record.id), { method:"PATCH", body:JSON.stringify(updatedJob) })); state.records = state.records.map(item => item.id === record.id ? record : item); state.selected = record; }
       catch (error) { window.alert("Unable to save the job report. The invoice was not created."); console.warn(error); return; }
     }
     if (record.job.invoice?.status === "draft" || record.job.invoiceNumber) {
