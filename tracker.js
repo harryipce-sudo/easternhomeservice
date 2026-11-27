@@ -1154,15 +1154,13 @@ function syncLinkedDraftDescription(record, previous) {
   if (!previous || invoice?.status !== "draft") return record;
   const before = String(previous.job?.detail || "").trim();
   const after = String(record.job.detail || "").trim();
-  if (!before) return record;
   const lines = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
-  const matches = lines.map((line, index) => String(line?.description || "").trim() === before ? index : -1).filter(index => index >= 0);
-  if (lines.length && matches.length !== 1) return record;
-  if (!lines.length && String(invoice.description || "").trim() !== before) return record;
+  const matches = lines.length === 1 ? [0] : lines.map((line, index) => before && String(line?.description || "").trim() === before ? index : -1).filter(index => index >= 0);
+  if (lines.length > 1 && matches.length !== 1) return record;
   const updated = { ...invoice };
   if (lines.length) {
     updated.lineItems = lines.map((line, index) => index === matches[0] ? { ...line, description:after, detailRich:EHRich.clean(record.job.detailRich) } : line);
-    if (lines.length === 1 && String(invoice.description || "").trim() === before) updated.description = after;
+    if (lines.length === 1) updated.description = after;
   } else {
     updated.description = after;
   }
@@ -2218,7 +2216,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const payments = depositAmount > 0 ? [...priorPayments, { id:"invoice-deposit", date:invoice.date, amount:depositAmount, method:"Deposit", reference:"", note:"Deposit recorded when invoice was created." }] : priorPayments;
     const received = Math.min(total, payments.reduce((sum, payment) => sum + Math.max(0, Number(payment.amount) || 0), 0));
     const payment = received >= total - 0.01 && total > 0 ? "paid" : received > 0 ? "partially-paid" : "unpaid";
-    const record = { ...state.selected, customerName:invoice.client || state.selected.customerName, address:invoice.address || state.selected.address, totalQuote:currency(total), subtotalExGst:currency(subtotal), gstTotal:currency(subtotal * .1), jobStage:"invoiced", job:{ ...state.selected.job, detail:invoice.description || state.selected.job.detail, quote:total, status:"invoiced", boardOrder:-Date.now(), payment, paymentAmount:received, paymentDate:received > 0 ? invoice.date : state.selected.job.paymentDate, payments, invoiceNumber:invoice.number, invoiceDate:invoice.date, invoice } };
+    const record = { ...state.selected, customerName:invoice.client || state.selected.customerName, address:invoice.address || state.selected.address, totalQuote:currency(total), subtotalExGst:currency(subtotal), gstTotal:currency(subtotal * .1), jobStage:"invoiced", job:{ ...state.selected.job, detail:state.selected.job.detail, quote:total, status:"invoiced", boardOrder:-Date.now(), payment, paymentAmount:received, paymentDate:received > 0 ? invoice.date : state.selected.job.paymentDate, payments, invoiceNumber:invoice.number, invoiceDate:invoice.date, invoice } };
     try {
       const saved = normalise(await request(`?id=${encodeURIComponent(record.id)}`, { method:"PATCH", body:JSON.stringify(record) }));
       state.records = state.records.map((item) => item.id === saved.id ? saved : item);
